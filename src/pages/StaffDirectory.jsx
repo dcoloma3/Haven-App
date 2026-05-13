@@ -238,40 +238,34 @@ function StaffModal({ member, communityId, currentUserId, onClose, onSaved, onDe
 }
 
 function InviteModal({ communityId, currentUserId, onClose, onInvited }) {
+  const { memberships } = useCommunity()
   const [email, setEmail] = useState('')
   const [role, setRole] = useState('staff')
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
 
+  // All community IDs this admin manages
+  const adminCommunityIds = memberships
+    .filter(m => m.role === 'admin')
+    .map(m => m.communities.id)
+
   async function handleInvite() {
     if (!email.trim()) { setError('Email is required.'); return }
     setSaving(true)
     setError('')
 
-    // Check if already a member
-    const { data: existing } = await supabase
-      .from('community_invites')
-      .select('id')
-      .eq('community_id', communityId)
-      .eq('email', email.trim())
-      .eq('accepted', false)
-      .maybeSingle()
-
-    if (existing) {
-      setError('An invite for this email already exists.')
-      setSaving(false)
-      return
-    }
+    // Create an invite for every community this admin manages
+    const invites = adminCommunityIds.map(cid => ({
+      community_id: cid,
+      email: email.trim().toLowerCase(),
+      role,
+      invited_by: currentUserId,
+    }))
 
     const { error: inviteErr } = await supabase
       .from('community_invites')
-      .insert([{
-        community_id: communityId,
-        email: email.trim().toLowerCase(),
-        role,
-        invited_by: currentUserId,
-      }])
+      .upsert(invites, { onConflict: 'community_id,email', ignoreDuplicates: true })
 
     setSaving(false)
     if (inviteErr) { setError(inviteErr.message); return }

@@ -52,15 +52,17 @@ export default function Onboarding() {
       setUserId(session.user.id)
       setUserEmail(session.user.email ?? '')
 
-      // Check for a pending invite for this email
-      const { data: invite } = await supabase
+      // Check for pending invites for this email (could be multiple communities)
+      const { data: invites } = await supabase
         .from('community_invites')
         .select('*, communities(name)')
         .eq('email', session.user.email)
         .eq('accepted', false)
-        .maybeSingle()
 
-      setPendingInvite(invite ?? null)
+      const firstInvite = invites?.[0] ?? null
+      setPendingInvite(firstInvite)
+      // Store all invites for joining later
+      if (invites?.length) window.__pendingInvites = invites
       setLoading(false)
     }
     init()
@@ -82,17 +84,16 @@ export default function Onboarding() {
       let communityId
 
       if (isStaff) {
-        // Join the community from the invite
-        communityId = pendingInvite.community_id
-        await supabase.from('community_members').upsert({
-          community_id: communityId,
-          user_id: userId,
-          role: pendingInvite.role,
-        })
+        // Join ALL communities from pending invites
+        const allInvites = window.__pendingInvites ?? [pendingInvite]
+        communityId = allInvites[0].community_id
+        await supabase.from('community_members').upsert(
+          allInvites.map(inv => ({ community_id: inv.community_id, user_id: userId, role: inv.role }))
+        )
         await supabase
           .from('community_invites')
           .update({ accepted: true })
-          .eq('id', pendingInvite.id)
+          .in('id', allInvites.map(i => i.id))
       } else {
         // Create a new community
         const { data: newCommunity, error: communityErr } = await supabase

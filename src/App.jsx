@@ -16,6 +16,7 @@ import StaffDirectory from './pages/StaffDirectory'
 import MyProfile from './pages/MyProfile'
 import Schedule from './pages/Schedule'
 import Dispense from './pages/Dispense'
+import SuperAdmin from './pages/SuperAdmin'
 
 function ProtectedRoute({ children }) {
   const { profile, loading: profileLoading } = useProfile()
@@ -79,6 +80,7 @@ export default function App() {
                 session ? <ProtectedRoute><RequireAdmin><Schedule /></RequireAdmin></ProtectedRoute> : <Navigate to="/login" replace />
               } />
 
+              <Route path="/superadmin" element={session ? <SuperAdmin /> : <Navigate to="/login" replace />} />
               <Route path="*" element={<Navigate to={session ? '/dashboard' : '/login'} replace />} />
             </Routes>
           </FacilityProvider>

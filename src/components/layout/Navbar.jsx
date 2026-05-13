@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useFacility } from '../../context/FacilityContext'
 import { useProfile } from '../../context/ProfileContext'
@@ -8,9 +8,7 @@ import HavenLogo from './HavenLogo'
 import GlobalSearch from './GlobalSearch'
 
 const navLinkCls = ({ isActive }) =>
-  `text-sm font-medium transition-colors ${
-    isActive ? 'text-white' : 'text-white/70 hover:text-white'
-  }`
+  `text-sm font-medium transition-colors ${isActive ? 'text-white' : 'text-white/70 hover:text-white'}`
 
 function SettingsIcon() {
   return (
@@ -29,18 +27,131 @@ function ChevronDown() {
   )
 }
 
-function InfoRow({ label, value }) {
-  if (!value) return null
+function CreateCommunityModal({ onClose, onCreated }) {
+  const { reload } = useCommunity()
+  const [form, setForm] = useState({ name: '', address: '', phone: '', license_number: '', email: '', website: '' })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
+
+  function set(f, v) { setForm(p => ({ ...p, [f]: v })) }
+
+  async function handleCreate() {
+    if (!form.name.trim()) { setError('Community name is required.'); return }
+    setSaving(true)
+    setError('')
+    const { data: { session } } = await supabase.auth.getSession()
+    const { data: community, error: err } = await supabase
+      .from('communities')
+      .insert([{ name: form.name.trim(), address: form.address || null, phone: form.phone || null, license_number: form.license_number || null, email: form.email || null, website: form.website || null }])
+      .select().single()
+    if (err) { setError(err.message); setSaving(false); return }
+    await supabase.from('community_members').insert([{ community_id: community.id, user_id: session.user.id, role: 'admin' }])
+    await reload()
+    setSaving(false)
+    onCreated(community.id)
+  }
+
   return (
-    <div>
-      <dt className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-0.5">{label}</dt>
-      <dd className="text-sm text-slate-700 whitespace-pre-wrap">{value}</dd>
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="font-semibold text-slate-800">New Community</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Community Name <span className="text-red-500">*</span></label>
+            <input className={inputCls} value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. Sunrise Senior Living" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">License Number</label>
+            <input className={inputCls} value={form.license_number} onChange={e => set('license_number', e.target.value)} placeholder="e.g. CA-123456" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Address</label>
+            <input className={inputCls} value={form.address} onChange={e => set('address', e.target.value)} placeholder="123 Main St, City, CA 90000" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+              <input type="tel" className={inputCls} value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="(555) 000-0000" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+              <input type="email" className={inputCls} value={form.email} onChange={e => set('email', e.target.value)} placeholder="info@facility.com" />
+            </div>
+          </div>
+          {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
+          <div className="flex gap-3 pt-1">
+            <button onClick={onClose} className="flex-1 border border-slate-300 text-slate-700 rounded-lg py-2 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
+            <button onClick={handleCreate} disabled={saving} className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-lg py-2 text-sm font-medium transition-colors">
+              {saving ? 'Creating…' : 'Create Community'}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
 
-function UserMenu({ profile, isAdmin, memberships, onSwitchCommunity }) {
+function CommunityDropdown({ community, memberships, isAdmin, isSuperAdmin, onSwitch, onNew }) {
   const [open, setOpen] = useState(false)
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-1.5 text-sm font-medium text-white/90 hover:text-white transition-colors max-w-[180px]"
+      >
+        <span className="truncate">{community?.name ?? 'Select Community'}</span>
+        <ChevronDown />
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full mt-2 z-50 bg-white rounded-xl shadow-lg border border-slate-200 w-64 overflow-hidden">
+            <div className="px-3 py-2 border-b border-slate-100">
+              <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">Your Communities</p>
+            </div>
+            {memberships.map(m => (
+              <button
+                key={m.communities.id}
+                onClick={() => { onSwitch(m.communities.id); setOpen(false) }}
+                className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between ${
+                  m.communities.id === community?.id ? 'bg-[#E6F1FB] text-[#185FA5]' : 'text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                <span className="truncate">{m.communities.name}</span>
+                {m.communities.id === community?.id && (
+                  <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                )}
+              </button>
+            ))}
+            {isAdmin && !isSuperAdmin && (
+              <>
+                <div className="border-t border-slate-100" />
+                <button
+                  onClick={() => { onNew(); setOpen(false) }}
+                  className="w-full text-left px-4 py-2.5 text-sm text-[#185FA5] hover:bg-slate-50 transition-colors font-medium"
+                >
+                  + New Community
+                </button>
+              </>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+function UserMenu({ profile, isAdmin, isSuperAdmin }) {
+  const [open, setOpen] = useState(false)
+  const navigate = useNavigate()
 
   const displayName = profile?.full_name || profile?.email?.split('@')[0] || 'Account'
   const avatarInitials = profile?.full_name
@@ -49,10 +160,7 @@ function UserMenu({ profile, isAdmin, memberships, onSwitchCommunity }) {
 
   return (
     <div className="relative">
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1.5 hover:opacity-90 transition-opacity"
-      >
+      <button onClick={() => setOpen(o => !o)} className="flex items-center gap-1.5 hover:opacity-90 transition-opacity">
         <div className="w-7 h-7 rounded-full bg-[#185FA5] text-white text-xs font-semibold flex items-center justify-center flex-shrink-0">
           {avatarInitials}
         </div>
@@ -66,26 +174,33 @@ function UserMenu({ profile, isAdmin, memberships, onSwitchCommunity }) {
             <div className="px-4 py-3 border-b border-slate-100">
               <p className="text-sm font-medium text-slate-800 truncate">{displayName}</p>
               <span className={`inline-flex items-center mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                isAdmin ? 'bg-[#E6F1FB] text-[#185FA5]' : 'bg-slate-100 text-slate-600'
+                isSuperAdmin ? 'bg-amber-100 text-amber-700' : isAdmin ? 'bg-[#E6F1FB] text-[#185FA5]' : 'bg-slate-100 text-slate-600'
               }`}>
-                {isAdmin ? 'Admin' : 'Staff'}
+                {isSuperAdmin ? 'Super Admin' : isAdmin ? 'Admin' : 'Staff'}
               </span>
             </div>
-            <Link
-              to="/profile"
-              onClick={() => setOpen(false)}
-              className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
-            >
-              My Profile
-            </Link>
-            {memberships.length > 1 && (
+
+            {isSuperAdmin && (
               <button
-                onClick={() => { setOpen(false); onSwitchCommunity() }}
-                className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors border-t border-slate-100"
+                onClick={() => { setOpen(false); navigate('/superadmin') }}
+                className="w-full text-left px-4 py-2.5 text-sm text-amber-700 hover:bg-amber-50 transition-colors font-medium"
               >
-                Switch Community
+                Super Admin Panel
               </button>
             )}
+
+            <Link to="/profile" onClick={() => setOpen(false)} className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
+              My Profile
+            </Link>
+
+            <a
+              href="mailto:domcoloma@gmail.com?subject=Haven App Support"
+              onClick={() => setOpen(false)}
+              className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors border-t border-slate-100"
+            >
+              Contact Support
+            </a>
+
             <button
               onClick={() => { setOpen(false); supabase.auth.signOut() }}
               className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors border-t border-slate-100"
@@ -100,94 +215,65 @@ function UserMenu({ profile, isAdmin, memberships, onSwitchCommunity }) {
 }
 
 export default function Navbar() {
-  const { facility } = useFacility()
   const { profile } = useProfile()
-  const { isAdmin, memberships, setCommunityId } = useCommunity()
-  const [popoverOpen, setPopoverOpen] = useState(false)
+  const { isAdmin, isSuperAdmin, community, memberships, setCommunityId } = useCommunity()
+  const [showNewCommunity, setShowNewCommunity] = useState(false)
+  const navigate = useNavigate()
 
-  const displayName = facility?.facility_name || 'Our Facility'
-  const hasDetails = facility?.license_number || facility?.address || facility?.phone_number
+  function handleCreated(newId) {
+    setCommunityId(newId)
+    setShowNewCommunity(false)
+    navigate('/dashboard')
+  }
 
   return (
-    <nav
-      className="px-4 py-3 flex items-center gap-4 relative z-30 border-b"
-      style={{ backgroundColor: '#042C53', borderBottomColor: 'rgba(255,255,255,0.1)' }}
-    >
-      {/* Logo — navigates home */}
-      <Link to="/dashboard" className="flex-shrink-0 hover:opacity-80 transition-opacity">
-        <HavenLogo variant="white" />
-      </Link>
+    <>
+      <nav
+        className="px-4 py-3 flex items-center gap-4 relative z-30 border-b"
+        style={{ backgroundColor: '#042C53', borderBottomColor: 'rgba(255,255,255,0.1)' }}
+      >
+        <Link to="/dashboard" className="flex-shrink-0 hover:opacity-80 transition-opacity">
+          <HavenLogo variant="white" />
+        </Link>
 
-      {/* Global search — fills center space */}
-      <div className="flex-1 max-w-lg">
-        <GlobalSearch />
-      </div>
-
-      {/* Right-side nav + facility info + user menu */}
-      <div className="flex items-center gap-4 flex-shrink-0 ml-auto">
-        <NavLink to="/dashboard" className={navLinkCls}>Residents</NavLink>
-        <NavLink to="/calendar" className={navLinkCls}>Calendar</NavLink>
-        <NavLink to="/dispense" className={navLinkCls}>Dispense</NavLink>
-        {isAdmin && <NavLink to="/staff" className={navLinkCls}>Staff</NavLink>}
-        {isAdmin && <NavLink to="/schedule" className={navLinkCls}>Schedule</NavLink>}
-
-        <div className="w-px h-4 bg-white/20" />
-
-        {isAdmin && (
-          <Link
-            to="/settings"
-            className="text-white/60 hover:text-white transition-colors"
-            title="Facility Settings"
-          >
-            <SettingsIcon />
-          </Link>
-        )}
-
-        {/* Facility popover */}
-        <div className="relative">
-          <button
-            onClick={() => setPopoverOpen(o => !o)}
-            className="flex items-center gap-1.5 text-sm font-medium text-white/90 hover:text-white transition-colors max-w-[180px]"
-          >
-            <span className="truncate">{displayName}</span>
-            <ChevronDown />
-          </button>
-
-          {popoverOpen && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setPopoverOpen(false)} />
-              <div className="absolute right-0 top-full mt-2 z-50 bg-white rounded-xl shadow-lg border border-slate-200 p-4 w-72">
-                <p className="font-semibold text-slate-800 mb-3">{displayName}</p>
-                {hasDetails ? (
-                  <dl className="space-y-2.5">
-                    <InfoRow label="License" value={facility?.license_number} />
-                    <InfoRow label="Address" value={facility?.address} />
-                    <InfoRow label="Phone" value={facility?.phone_number} />
-                  </dl>
-                ) : (
-                  <p className="text-sm text-slate-400">
-                    No details on file.{' '}
-                    <Link
-                      to="/settings"
-                      className="text-[#185FA5] hover:underline"
-                      onClick={() => setPopoverOpen(false)}
-                    >
-                      Add them in Settings.
-                    </Link>
-                  </p>
-                )}
-              </div>
-            </>
-          )}
+        <div className="flex-1 max-w-lg">
+          <GlobalSearch />
         </div>
 
-        <UserMenu
-          profile={profile}
-          isAdmin={isAdmin}
-          memberships={memberships}
-          onSwitchCommunity={() => setCommunityId(null)}
+        <div className="flex items-center gap-4 flex-shrink-0 ml-auto">
+          <NavLink to="/dashboard" className={navLinkCls}>Residents</NavLink>
+          <NavLink to="/calendar" className={navLinkCls}>Calendar</NavLink>
+          <NavLink to="/dispense" className={navLinkCls}>Dispense</NavLink>
+          {isAdmin && <NavLink to="/staff" className={navLinkCls}>Staff</NavLink>}
+          {isAdmin && <NavLink to="/schedule" className={navLinkCls}>Schedule</NavLink>}
+
+          <div className="w-px h-4 bg-white/20" />
+
+          {isAdmin && (
+            <Link to="/settings" className="text-white/60 hover:text-white transition-colors" title="Community Settings">
+              <SettingsIcon />
+            </Link>
+          )}
+
+          <CommunityDropdown
+            community={community}
+            memberships={memberships}
+            isAdmin={isAdmin}
+            isSuperAdmin={isSuperAdmin}
+            onSwitch={setCommunityId}
+            onNew={() => setShowNewCommunity(true)}
+          />
+
+          <UserMenu profile={profile} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} />
+        </div>
+      </nav>
+
+      {showNewCommunity && (
+        <CreateCommunityModal
+          onClose={() => setShowNewCommunity(false)}
+          onCreated={handleCreated}
         />
-      </div>
-    </nav>
+      )}
+    </>
   )
 }
