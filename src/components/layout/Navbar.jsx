@@ -246,9 +246,9 @@ export default function Navbar() {
           <HavenLogo variant="white" markHeight={32} textSize={24} />
         </Link>
 
-        {/* Desktop: search bar */}
+        {/* Desktop: search bar — absolutely centered */}
         {!isMobile && (
-          <div className="flex-1 max-w-lg ml-4">
+          <div className="absolute left-1/2 -translate-x-1/2 w-full max-w-md px-4">
             <GlobalSearch />
           </div>
         )}
