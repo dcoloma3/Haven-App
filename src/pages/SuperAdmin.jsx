@@ -124,7 +124,7 @@ function AddSuperAdminModal({ onClose, onAdded }) {
 
 export default function SuperAdmin() {
   const navigate = useNavigate()
-  const { allCommunities, isSuperAdmin, setCommunityId, setEditMode, reloadAllCommunities } = useCommunity()
+  const { allCommunities, isSuperAdmin, setCommunityId, reloadAllCommunities } = useCommunity()
   const { profile } = useProfile()
   const [stats, setStats] = useState({}) // communityId → { residentCount, adminName }
   const [superAdmins, setSuperAdmins] = useState([])
@@ -173,9 +173,8 @@ export default function SuperAdmin() {
     setSuperAdmins(data ?? [])
   }
 
-  function enterCommunity(id, withEdit = false) {
+  function enterCommunity(id) {
     setCommunityId(id)
-    setEditMode(withEdit)
     navigate('/dashboard')
   }
 
@@ -240,24 +239,16 @@ export default function SuperAdmin() {
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-slate-800">{c.name}</p>
                     <p className="text-xs text-slate-400 mt-0.5">
-                      Admin: {stats[c.id]?.adminName ?? '—'} · {stats[c.id]?.residentCount ?? 0} resident{stats[c.id]?.residentCount !== 1 ? 's' : ''}
+                      Manager: {stats[c.id]?.adminName ?? '—'} · {stats[c.id]?.residentCount ?? 0} resident{stats[c.id]?.residentCount !== 1 ? 's' : ''}
                       {c.address ? ` · ${c.address}` : ''}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <button
-                      onClick={() => enterCommunity(c.id, false)}
-                      className="text-sm text-[#185FA5] hover:text-[#0C447C] font-medium transition-colors"
-                    >
-                      View
-                    </button>
-                    <button
-                      onClick={() => enterCommunity(c.id, true)}
-                      className="text-sm bg-amber-50 text-amber-700 hover:bg-amber-100 font-medium px-3 py-1 rounded-lg transition-colors"
-                    >
-                      Edit
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => enterCommunity(c.id)}
+                    className="flex-shrink-0 text-sm bg-[#185FA5] hover:bg-[#0C447C] text-white font-medium px-4 py-1.5 rounded-lg transition-colors"
+                  >
+                    Enter →
+                  </button>
                 </div>
               ))}
             </div>

@@ -8,7 +8,7 @@ export function CommunityProvider({ children }) {
   const [activeCommunityId, setActiveCommunityId] = useState(null)
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
   const [allCommunities, setAllCommunities] = useState([])
-  const [editMode, setEditMode] = useState(false)
+  const [editMode] = useState(true) // super admin always has full edit access
 
   const load = useCallback(async (userId, email) => {
     if (!userId) {
@@ -77,6 +77,8 @@ export function CommunityProvider({ children }) {
     await load(data.session?.user?.id ?? null, data.session?.user?.email ?? '')
   }
 
+  function setEditMode() {} // no-op kept for any legacy references
+
   async function reloadAllCommunities() {
     const { data } = await supabase
       .from('communities')
@@ -94,8 +96,7 @@ export function CommunityProvider({ children }) {
       isAdmin: isSuperAdmin || role === 'admin',
       isSuperAdmin,
       allCommunities,
-      editMode: isSuperAdmin ? editMode : true,
-      setEditMode,
+      editMode: true,
       loading: memberships === null,
       setCommunityId: setActiveCommunityId,
       reload,
