@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import Layout from '../components/layout/Layout'
 import ResidentForm from '../components/residents/ResidentForm'
 import { useFacility } from '../context/FacilityContext'
+import { useCommunity } from '../context/CommunityContext'
 
 function getResidentFullName(r) {
   const parts = [r.first_name, r.middle_name, r.last_name].filter(Boolean)
@@ -55,19 +56,27 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const location = useLocation()
   const unauthorized = location.state?.unauthorized
+  const openAddResident = location.state?.openAddResident
   const { facility } = useFacility()
+  const { communityId } = useCommunity()
   const facilityName = facility?.facility_name || 'Haven'
 
   useEffect(() => {
+    if (openAddResident) setShowForm(true)
+  }, [openAddResident])
+
+  useEffect(() => {
+    if (!communityId) return
     supabase
       .from('residents')
       .select('*')
+      .eq('community_id', communityId)
       .order('full_name')
       .then(({ data }) => {
         setResidents(data ?? [])
         setLoading(false)
       })
-  }, [])
+  }, [communityId])
 
   function handleSaved(newResident) {
     setResidents(prev => [...prev, newResident].sort((a, b) => getResidentFullName(a).localeCompare(getResidentFullName(b))))

@@ -37,8 +37,8 @@ export function ProfileProvider({ children }) {
   return (
     <ProfileContext.Provider value={{
       profile,
-      isAdmin: profile?.role === 'admin',
       loading: profile === undefined,
+      setProfile,
     }}>
       {children}
     </ProfileContext.Provider>

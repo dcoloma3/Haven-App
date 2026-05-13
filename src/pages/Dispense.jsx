@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import Layout from '../components/layout/Layout'
+import { useCommunity } from '../context/CommunityContext'
 
 function fmt12(t) {
   const [h, m] = t.split(':').map(Number)
@@ -108,6 +109,7 @@ export default function Dispense() {
   const [staffMap, setStaffMap] = useState({})
   const [loading, setLoading] = useState(true)
   const [toggling, setToggling] = useState(new Set())
+  const { communityId } = useCommunity()
 
   const dateStr = toDateStr(date)
   const isToday = toDateStr(today) === dateStr
@@ -124,14 +126,17 @@ export default function Dispense() {
   }, [])
 
   useEffect(() => {
+    if (!communityId) return
     supabase
       .from('medications')
       .select(`*, residents!resident_id(${RESIDENT_COLS})`)
+      .eq('community_id', communityId)
       .then(({ data, error }) => {
         if (error) {
           supabase
             .from('medications')
             .select(`*, residents!resident_id(${RESIDENT_COLS_SAFE})`)
+            .eq('community_id', communityId)
             .then(({ data: fallback }) => {
               setMedications((fallback ?? []).filter(m => m.scheduled_times?.length > 0))
               setLoading(false)
@@ -141,7 +146,7 @@ export default function Dispense() {
         setMedications((data ?? []).filter(m => m.scheduled_times?.length > 0))
         setLoading(false)
       })
-  }, [])
+  }, [communityId])
 
   useEffect(() => {
     supabase

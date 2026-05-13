@@ -3,6 +3,7 @@ import { Link, NavLink } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useFacility } from '../../context/FacilityContext'
 import { useProfile } from '../../context/ProfileContext'
+import { useCommunity } from '../../context/CommunityContext'
 import HavenLogo from './HavenLogo'
 import GlobalSearch from './GlobalSearch'
 
@@ -38,7 +39,7 @@ function InfoRow({ label, value }) {
   )
 }
 
-function UserMenu({ profile }) {
+function UserMenu({ profile, isAdmin, memberships, onSwitchCommunity }) {
   const [open, setOpen] = useState(false)
 
   const displayName = profile?.full_name || profile?.email?.split('@')[0] || 'Account'
@@ -65,11 +66,9 @@ function UserMenu({ profile }) {
             <div className="px-4 py-3 border-b border-slate-100">
               <p className="text-sm font-medium text-slate-800 truncate">{displayName}</p>
               <span className={`inline-flex items-center mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                profile?.role === 'admin'
-                  ? 'bg-[#E6F1FB] text-[#185FA5]'
-                  : 'bg-slate-100 text-slate-600'
+                isAdmin ? 'bg-[#E6F1FB] text-[#185FA5]' : 'bg-slate-100 text-slate-600'
               }`}>
-                {profile?.role === 'admin' ? 'Admin' : 'Staff'}
+                {isAdmin ? 'Admin' : 'Staff'}
               </span>
             </div>
             <Link
@@ -79,6 +78,14 @@ function UserMenu({ profile }) {
             >
               My Profile
             </Link>
+            {memberships.length > 1 && (
+              <button
+                onClick={() => { setOpen(false); onSwitchCommunity() }}
+                className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors border-t border-slate-100"
+              >
+                Switch Community
+              </button>
+            )}
             <button
               onClick={() => { setOpen(false); supabase.auth.signOut() }}
               className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors border-t border-slate-100"
@@ -94,7 +101,8 @@ function UserMenu({ profile }) {
 
 export default function Navbar() {
   const { facility } = useFacility()
-  const { profile, isAdmin } = useProfile()
+  const { profile } = useProfile()
+  const { isAdmin, memberships, setCommunityId } = useCommunity()
   const [popoverOpen, setPopoverOpen] = useState(false)
 
   const displayName = facility?.facility_name || 'Our Facility'
@@ -173,7 +181,12 @@ export default function Navbar() {
           )}
         </div>
 
-        <UserMenu profile={profile} />
+        <UserMenu
+          profile={profile}
+          isAdmin={isAdmin}
+          memberships={memberships}
+          onSwitchCommunity={() => setCommunityId(null)}
+        />
       </div>
     </nav>
   )

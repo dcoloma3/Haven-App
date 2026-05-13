@@ -1,24 +1,30 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { useCommunity } from './CommunityContext'
 
 const FacilityContext = createContext({ facility: null, refresh: () => {} })
 
 export function FacilityProvider({ children }) {
+  const { community, reload } = useCommunity()
   const [facility, setFacility] = useState(null)
 
-  async function refresh() {
-    const { data } = await supabase
-      .from('facility_settings')
-      .select('*')
-      .limit(1)
-      .maybeSingle()
-    setFacility(data)
-  }
-
-  useEffect(() => { refresh() }, [])
+  useEffect(() => {
+    if (community) {
+      setFacility({
+        id: community.id,
+        facility_name: community.name,
+        license_number: community.license_number,
+        address: community.address,
+        phone_number: community.phone,
+        email: community.email,
+        website: community.website,
+      })
+    } else {
+      setFacility(null)
+    }
+  }, [community])
 
   return (
-    <FacilityContext.Provider value={{ facility, refresh }}>
+    <FacilityContext.Provider value={{ facility, refresh: reload }}>
       {children}
     </FacilityContext.Provider>
   )

@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { useCommunity } from '../../context/CommunityContext'
 
 export default function ResidentForm({ onClose, onSaved }) {
+  const { communityId } = useCommunity()
   const [form, setForm] = useState({
     first_name: '',
     middle_name: '',
@@ -30,7 +32,7 @@ export default function ResidentForm({ onClose, onSaved }) {
     const full_name = [form.first_name, form.middle_name, form.last_name].filter(Boolean).join(' ')
     const { data, error } = await supabase
       .from('residents')
-      .insert([{ ...form, full_name }])
+      .insert([{ ...form, full_name, community_id: communityId }])
       .select()
       .single()
     setSaving(false)

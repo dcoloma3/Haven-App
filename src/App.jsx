@@ -2,9 +2,12 @@ import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './lib/supabase'
 import { FacilityProvider } from './context/FacilityContext'
-import { ProfileProvider } from './context/ProfileContext'
+import { ProfileProvider, useProfile } from './context/ProfileContext'
+import { CommunityProvider, useCommunity } from './context/CommunityContext'
 import RequireAdmin from './components/auth/RequireAdmin'
 import Login from './pages/Login'
+import Onboarding from './pages/Onboarding'
+import CommunityPicker from './pages/CommunityPicker'
 import Dashboard from './pages/Dashboard'
 import ResidentDetail from './pages/ResidentDetail'
 import Calendar from './pages/Calendar'
@@ -13,6 +16,28 @@ import StaffDirectory from './pages/StaffDirectory'
 import MyProfile from './pages/MyProfile'
 import Schedule from './pages/Schedule'
 import Dispense from './pages/Dispense'
+
+function ProtectedRoute({ children }) {
+  const { profile, loading: profileLoading } = useProfile()
+  const { memberships, communityId, loading: communityLoading } = useCommunity()
+
+  if (profileLoading || communityLoading) return null
+
+  // Needs onboarding
+  if (profile !== null && profile?.onboarding_complete === false) {
+    return <Navigate to="/onboarding" replace />
+  }
+  if (profile !== null && profile?.onboarding_complete == null) {
+    return <Navigate to="/onboarding" replace />
+  }
+
+  // Multiple communities, none selected yet
+  if (memberships.length > 1 && !communityId) {
+    return <Navigate to="/community" replace />
+  }
+
+  return children
+}
 
 export default function App() {
   const [session, setSession] = useState(undefined)
@@ -29,35 +54,36 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <FacilityProvider>
+      <CommunityProvider>
         <ProfileProvider>
-          <Routes>
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            <Route path="/login" element={session ? <Navigate to="/dashboard" replace /> : <Login />} />
-            <Route path="/dashboard" element={session ? <Dashboard /> : <Navigate to="/login" replace />} />
-            <Route path="/residents/:id" element={session ? <ResidentDetail /> : <Navigate to="/login" replace />} />
-            <Route path="/calendar" element={session ? <Calendar /> : <Navigate to="/login" replace />} />
-            <Route path="/settings" element={
-              session
-                ? <RequireAdmin><FacilitySettings /></RequireAdmin>
-                : <Navigate to="/login" replace />
-            } />
-            <Route path="/staff" element={
-              session
-                ? <RequireAdmin><StaffDirectory /></RequireAdmin>
-                : <Navigate to="/login" replace />
-            } />
-            <Route path="/profile" element={session ? <MyProfile /> : <Navigate to="/login" replace />} />
-            <Route path="/schedule" element={
-              session
-                ? <RequireAdmin><Schedule /></RequireAdmin>
-                : <Navigate to="/login" replace />
-            } />
-            <Route path="/dispense" element={session ? <Dispense /> : <Navigate to="/login" replace />} />
-            <Route path="*" element={<Navigate to={session ? '/dashboard' : '/login'} replace />} />
-          </Routes>
+          <FacilityProvider>
+            <Routes>
+              <Route path="/" element={<Navigate to={session ? '/dashboard' : '/login'} replace />} />
+              <Route path="/login" element={session ? <Navigate to="/dashboard" replace /> : <Login />} />
+              <Route path="/onboarding" element={session ? <Onboarding /> : <Navigate to="/login" replace />} />
+              <Route path="/community" element={session ? <CommunityPicker /> : <Navigate to="/login" replace />} />
+
+              <Route path="/dashboard" element={session ? <ProtectedRoute><Dashboard /></ProtectedRoute> : <Navigate to="/login" replace />} />
+              <Route path="/residents/:id" element={session ? <ProtectedRoute><ResidentDetail /></ProtectedRoute> : <Navigate to="/login" replace />} />
+              <Route path="/calendar" element={session ? <ProtectedRoute><Calendar /></ProtectedRoute> : <Navigate to="/login" replace />} />
+              <Route path="/dispense" element={session ? <ProtectedRoute><Dispense /></ProtectedRoute> : <Navigate to="/login" replace />} />
+              <Route path="/profile" element={session ? <ProtectedRoute><MyProfile /></ProtectedRoute> : <Navigate to="/login" replace />} />
+
+              <Route path="/settings" element={
+                session ? <ProtectedRoute><RequireAdmin><FacilitySettings /></RequireAdmin></ProtectedRoute> : <Navigate to="/login" replace />
+              } />
+              <Route path="/staff" element={
+                session ? <ProtectedRoute><RequireAdmin><StaffDirectory /></RequireAdmin></ProtectedRoute> : <Navigate to="/login" replace />
+              } />
+              <Route path="/schedule" element={
+                session ? <ProtectedRoute><RequireAdmin><Schedule /></RequireAdmin></ProtectedRoute> : <Navigate to="/login" replace />
+              } />
+
+              <Route path="*" element={<Navigate to={session ? '/dashboard' : '/login'} replace />} />
+            </Routes>
+          </FacilityProvider>
         </ProfileProvider>
-      </FacilityProvider>
+      </CommunityProvider>
     </BrowserRouter>
   )
 }

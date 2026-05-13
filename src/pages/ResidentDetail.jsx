@@ -10,15 +10,20 @@ import LeaseDetails from '../components/lease/LeaseDetails'
 import HealthCare from '../components/health/HealthCare'
 import PhotoGallery from '../components/photos/PhotoGallery'
 import ResidentMedHistory from '../components/residents/ResidentMedHistory'
+import { useCommunity } from '../context/CommunityContext'
 
-const TABS = ['Profile', 'Medications', 'Contacts', 'Health & Care', 'Lease', 'Photos', 'Med History']
+const ALL_TABS = ['Profile', 'Medications', 'Contacts', 'Health & Care', 'Lease', 'Photos', 'Med History']
+const STAFF_TABS = ['Profile', 'Medications', 'Contacts', 'Health & Care', 'Photos', 'Med History']
 
 export default function ResidentDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { isAdmin } = useCommunity()
   const [resident, setResident] = useState(null)
   const [activeTab, setActiveTab] = useState('Profile')
   const [loading, setLoading] = useState(true)
+
+  const TABS = isAdmin ? ALL_TABS : STAFF_TABS
 
   useEffect(() => {
     supabase
