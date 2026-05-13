@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useFacility } from '../../context/FacilityContext'
 import { useProfile } from '../../context/ProfileContext'
 import { useCommunity } from '../../context/CommunityContext'
+import { useIsMobile } from '../../hooks/useIsMobile'
 import HavenLogo from './HavenLogo'
 import GlobalSearch from './GlobalSearch'
 
@@ -111,7 +112,7 @@ function CommunityDropdown({ community, memberships, isAdmin, isSuperAdmin, onSw
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-2 z-50 bg-white rounded-xl shadow-lg border border-slate-200 w-64 overflow-hidden">
+          <div className="absolute right-0 top-full mt-2 z-50 bg-white rounded-xl shadow-lg border border-slate-200 w-56 sm:w-64 overflow-hidden">
             <div className="px-3 py-2 border-b border-slate-100">
               <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">Your Communities</p>
             </div>
@@ -170,7 +171,7 @@ function UserMenu({ profile, isAdmin, isSuperAdmin }) {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-2 z-50 bg-white rounded-xl shadow-lg border border-slate-200 w-52 overflow-hidden">
+          <div className="absolute right-0 top-full mt-2 z-50 bg-white rounded-xl shadow-lg border border-slate-200 w-48 sm:w-52 overflow-hidden">
             <div className="px-4 py-3 border-b border-slate-100">
               <p className="text-sm font-medium text-slate-800 truncate">{displayName}</p>
               <span className={`inline-flex items-center mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -219,6 +220,7 @@ export default function Navbar() {
   const { isAdmin, isSuperAdmin, community, memberships, setCommunityId } = useCommunity()
   const [showNewCommunity, setShowNewCommunity] = useState(false)
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
 
   function handleCreated(newId) {
     setCommunityId(newId)
@@ -229,43 +231,54 @@ export default function Navbar() {
   return (
     <>
       <nav
-        className="px-4 py-3 flex items-center gap-4 relative z-30 border-b"
-        style={{ backgroundColor: '#042C53', borderBottomColor: 'rgba(255,255,255,0.1)' }}
+        className="flex items-center gap-2 relative z-30 border-b w-full"
+        style={{
+          backgroundColor: '#042C53',
+          borderBottomColor: 'rgba(255,255,255,0.1)',
+          paddingLeft: 'max(12px, env(safe-area-inset-left))',
+          paddingRight: 'max(12px, env(safe-area-inset-right))',
+          paddingTop: isMobile ? 'max(12px, env(safe-area-inset-top))' : '12px',
+          paddingBottom: '12px',
+        }}
       >
+        {/* Logo */}
         <Link to="/dashboard" className="flex-shrink-0 hover:opacity-80 transition-opacity">
           <HavenLogo variant="white" />
         </Link>
 
-        <div className="flex-1 max-w-lg">
-          <GlobalSearch />
-        </div>
+        {/* Desktop: search bar */}
+        {!isMobile && (
+          <div className="flex-1 max-w-lg">
+            <GlobalSearch />
+          </div>
+        )}
 
-        <div className="flex items-center gap-4 flex-shrink-0 ml-auto">
-          <NavLink to="/dashboard" className={navLinkCls}>Residents</NavLink>
-          <NavLink to="/calendar" className={navLinkCls}>Calendar</NavLink>
-          <NavLink to="/dispense" className={navLinkCls}>Dispense</NavLink>
-          {isAdmin && <NavLink to="/staff" className={navLinkCls}>Staff</NavLink>}
-          {isAdmin && <NavLink to="/schedule" className={navLinkCls}>Schedule</NavLink>}
+        {/* Desktop: nav links */}
+        {!isMobile && (
+          <div className="flex items-center gap-4 flex-shrink-0 ml-auto">
+            <NavLink to="/dashboard" className={navLinkCls}>Residents</NavLink>
+            <NavLink to="/calendar" className={navLinkCls}>Calendar</NavLink>
+            <NavLink to="/dispense" className={navLinkCls}>Dispense</NavLink>
+            {isAdmin && <NavLink to="/staff" className={navLinkCls}>Staff</NavLink>}
+            {isAdmin && <NavLink to="/schedule" className={navLinkCls}>Schedule</NavLink>}
+            <div className="w-px h-4 bg-white/20" />
+            {isAdmin && (
+              <Link to="/settings" className="text-white/60 hover:text-white transition-colors" title="Community Settings">
+                <SettingsIcon />
+              </Link>
+            )}
+            <CommunityDropdown community={community} memberships={memberships} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} onSwitch={setCommunityId} onNew={() => setShowNewCommunity(true)} />
+            <UserMenu profile={profile} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} />
+          </div>
+        )}
 
-          <div className="w-px h-4 bg-white/20" />
-
-          {isAdmin && (
-            <Link to="/settings" className="text-white/60 hover:text-white transition-colors" title="Community Settings">
-              <SettingsIcon />
-            </Link>
-          )}
-
-          <CommunityDropdown
-            community={community}
-            memberships={memberships}
-            isAdmin={isAdmin}
-            isSuperAdmin={isSuperAdmin}
-            onSwitch={setCommunityId}
-            onNew={() => setShowNewCommunity(true)}
-          />
-
-          <UserMenu profile={profile} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} />
-        </div>
+        {/* Mobile: community + user on right */}
+        {isMobile && (
+          <div className="flex items-center gap-2 ml-auto flex-shrink-0">
+            <CommunityDropdown community={community} memberships={memberships} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} onSwitch={setCommunityId} onNew={() => setShowNewCommunity(true)} />
+            <UserMenu profile={profile} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} />
+          </div>
+        )}
       </nav>
 
       {showNewCommunity && (

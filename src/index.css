@@ -1,18 +1,35 @@
 @import "tailwindcss";
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 html {
-  overflow-x: clip;
+  overflow-x: hidden;
+  max-width: 100vw;
   -webkit-text-size-adjust: 100%;
 }
 
 body {
-  overflow-x: clip;
+  overflow-x: hidden;
+  max-width: 100vw;
   width: 100%;
   -webkit-tap-highlight-color: transparent;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Hide scrollbars on tab bars */
+#root {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Hide scrollbars on tab strips */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
