@@ -1,1 +1,18 @@
 @import "tailwindcss";
+
+html {
+  overflow-x: clip;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  overflow-x: clip;
+  width: 100%;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Hide scrollbars on tab bars */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
