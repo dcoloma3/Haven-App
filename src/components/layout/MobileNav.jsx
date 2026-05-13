@@ -106,16 +106,14 @@ export default function MobileNav() {
         )}
       </NavLink>
 
-      {isAdmin && (
-        <NavLink to="/staff" className={tabCls}>
-          {({ isActive }) => (
-            <>
-              <StaffIcon active={isActive} />
-              <span className="text-[10px] font-medium tracking-wide">Staff</span>
-            </>
-          )}
-        </NavLink>
-      )}
+      <NavLink to="/staff" className={tabCls}>
+        {({ isActive }) => (
+          <>
+            <StaffIcon active={isActive} />
+            <span className="text-[10px] font-medium tracking-wide">Staff</span>
+          </>
+        )}
+      </NavLink>
 
       <NavLink to="/profile" className={tabCls}>
         {({ isActive }) => (

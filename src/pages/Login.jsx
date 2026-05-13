@@ -7,7 +7,8 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [fullName, setFullName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
@@ -35,11 +36,23 @@ export default function Login() {
         return
       }
       setLoading(true)
-      const { error } = await supabase.auth.signUp({
+      const fullName = [firstName, lastName].filter(Boolean).join(' ')
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { full_name: fullName } },
+        options: { data: { first_name: firstName, last_name: lastName, full_name: fullName } },
       })
+      if (!error && data?.user) {
+        // Create profile immediately so the app can find them
+        await supabase.from('profiles').upsert({
+          user_id: data.user.id,
+          email,
+          full_name: fullName,
+          first_name: firstName,
+          last_name: lastName,
+          profile_completed: false,
+        }, { onConflict: 'user_id' })
+      }
       setLoading(false)
       if (error) {
         setError(error.message)
@@ -124,16 +137,29 @@ export default function Login() {
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
 
           {mode === 'signup' && (
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
-              <input
-                type="text"
-                required
-                value={fullName}
-                onChange={e => setFullName(e.target.value)}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent"
-                placeholder="Alex Coloma"
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">First Name</label>
+                <input
+                  type="text"
+                  required
+                  value={firstName}
+                  onChange={e => setFirstName(e.target.value)}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent"
+                  placeholder="Alex"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Last Name</label>
+                <input
+                  type="text"
+                  required
+                  value={lastName}
+                  onChange={e => setLastName(e.target.value)}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent"
+                  placeholder="Coloma"
+                />
+              </div>
             </div>
           )}
 

@@ -17,6 +17,7 @@ import MyProfile from './pages/MyProfile'
 import Schedule from './pages/Schedule'
 import Dispense from './pages/Dispense'
 import SuperAdmin from './pages/SuperAdmin'
+import ProfileCompletion from './pages/ProfileCompletion'
 
 function ProtectedRoute({ children }) {
   const { profile, loading: profileLoading } = useProfile()
@@ -30,6 +31,11 @@ function ProtectedRoute({ children }) {
   }
   if (profile !== null && profile?.onboarding_complete == null) {
     return <Navigate to="/onboarding" replace />
+  }
+
+  // Needs profile completion (new users only — existing users have null, not false)
+  if (profile !== null && profile?.profile_completed === false) {
+    return <Navigate to="/complete-profile" replace />
   }
 
   // Multiple communities, none selected yet
@@ -63,6 +69,7 @@ export default function App() {
               <Route path="/login" element={session ? <Navigate to="/dashboard" replace /> : <Login />} />
               <Route path="/onboarding" element={session ? <Onboarding /> : <Navigate to="/login" replace />} />
               <Route path="/community" element={session ? <CommunityPicker /> : <Navigate to="/login" replace />} />
+              <Route path="/complete-profile" element={session ? <ProfileCompletion /> : <Navigate to="/login" replace />} />
 
               <Route path="/dashboard" element={session ? <ProtectedRoute><Dashboard /></ProtectedRoute> : <Navigate to="/login" replace />} />
               <Route path="/residents/:id" element={session ? <ProtectedRoute><ResidentDetail /></ProtectedRoute> : <Navigate to="/login" replace />} />
@@ -74,7 +81,7 @@ export default function App() {
                 session ? <ProtectedRoute><RequireAdmin><FacilitySettings /></RequireAdmin></ProtectedRoute> : <Navigate to="/login" replace />
               } />
               <Route path="/staff" element={
-                session ? <ProtectedRoute><RequireAdmin><StaffDirectory /></RequireAdmin></ProtectedRoute> : <Navigate to="/login" replace />
+                session ? <ProtectedRoute><StaffDirectory /></ProtectedRoute> : <Navigate to="/login" replace />
               } />
               <Route path="/schedule" element={
                 session ? <ProtectedRoute><RequireAdmin><Schedule /></RequireAdmin></ProtectedRoute> : <Navigate to="/login" replace />

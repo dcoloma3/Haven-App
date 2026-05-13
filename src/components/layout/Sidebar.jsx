@@ -99,15 +99,17 @@ export default function Sidebar() {
           {({ isActive }) => (<><CalendarIcon active={isActive} /><span>Calendar</span></>)}
         </NavLink>
 
+        {/* Staff — visible to everyone */}
+        <NavLink to="/staff" className={linkCls}>
+          {({ isActive }) => (<><StaffIcon active={isActive} /><span>Staff</span></>)}
+        </NavLink>
+
+        {/* Manager-only: Schedule + Settings */}
         {isAdmin && (
           <>
             <div className="pt-3 pb-1 px-3">
               <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Manager</p>
             </div>
-
-            <NavLink to="/staff" className={linkCls}>
-              {({ isActive }) => (<><StaffIcon active={isActive} /><span>Staff</span></>)}
-            </NavLink>
 
             <NavLink to="/schedule" className={linkCls}>
               {({ isActive }) => (<><ScheduleIcon active={isActive} /><span>Schedule</span></>)}

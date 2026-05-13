@@ -7,11 +7,13 @@ import CertInput from '../components/ui/CertInput'
 
 const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
 
+const RELATIONSHIPS = ['Spouse', 'Parent', 'Sibling', 'Child', 'Friend', 'Other']
+
 function formatDate(dateStr) {
   if (!dateStr) return null
   const [y, m, d] = dateStr.split('-')
   return new Date(Number(y), Number(m) - 1, Number(d)).toLocaleDateString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric',
+    month: 'long', day: 'numeric', year: 'numeric',
   })
 }
 
@@ -26,39 +28,128 @@ function RoleBadge({ role }) {
     : <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">Staff</span>
 }
 
-function StaffCard({ member, onClick }) {
+// ─── My Profile Card (shown at top for the logged-in user) ───────────────────
+
+function MyProfileCard({ member, onEdit }) {
   const { profile, role } = member
+  const name = profile?.full_name || [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || 'Your Profile'
+
   return (
-    <button
-      onClick={() => onClick(member)}
-      className="text-left bg-white border border-slate-200 rounded-2xl p-5 hover:shadow-md hover:border-[#378ADD] transition-all"
-    >
-      <div className="flex items-center gap-3 mb-3">
-        <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 font-semibold text-sm flex items-center justify-center flex-shrink-0">
-          {initials(profile?.full_name)}
-        </div>
-        <div className="min-w-0">
-          <p className="font-medium text-slate-800 truncate">{profile?.full_name || <span className="italic text-slate-400">No name set</span>}</p>
-          <div className="mt-0.5">
-            <RoleBadge role={role} />
+    <div className="bg-white border-2 border-[#185FA5] rounded-2xl p-5 mb-6">
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-full bg-[#E6F1FB] text-[#185FA5] font-bold text-lg flex items-center justify-center flex-shrink-0">
+            {initials(name)}
+          </div>
+          <div>
+            <p className="font-semibold text-slate-800 text-base">{name}</p>
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              <RoleBadge role={role} />
+              {profile?.position && (
+                <span className="text-xs text-slate-500">{profile.position}</span>
+              )}
+            </div>
           </div>
         </div>
+        <button
+          onClick={onEdit}
+          className="text-sm text-[#185FA5] font-medium hover:text-[#0C447C] transition-colors flex-shrink-0"
+        >
+          Edit
+        </button>
       </div>
-      {profile?.phone && <p className="text-xs text-slate-500 mb-1.5">{profile.phone}</p>}
-      {profile?.hire_date && <p className="text-xs text-slate-400 mb-1.5">Hired {formatDate(profile.hire_date)}</p>}
-      {profile?.certifications?.length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-2">
-          {profile.certifications.slice(0, 3).map(c => (
-            <span key={c} className="bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-full">{c}</span>
-          ))}
-          {profile.certifications.length > 3 && (
-            <span className="text-xs text-slate-400">+{profile.certifications.length - 3} more</span>
-          )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+        {profile?.phone && (
+          <InfoRow label="Phone" value={profile.phone} />
+        )}
+        {profile?.address && (
+          <InfoRow label="Address" value={profile.address} />
+        )}
+        {profile?.date_of_birth && (
+          <InfoRow label="Date of Birth" value={formatDate(profile.date_of_birth)} />
+        )}
+        {profile?.hire_date && (
+          <InfoRow label="Hire Date" value={formatDate(profile.hire_date)} />
+        )}
+      </div>
+
+      {/* Emergency Contact */}
+      {profile?.emergency_contact_name && (
+        <div className="mt-4 pt-4 border-t border-slate-100">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Emergency Contact</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
+            <InfoRow label="Name" value={profile.emergency_contact_name} />
+            {profile.emergency_contact_relationship && (
+              <InfoRow label="Relationship" value={profile.emergency_contact_relationship} />
+            )}
+            {profile.emergency_contact_phone && (
+              <InfoRow label="Phone" value={profile.emergency_contact_phone} />
+            )}
+          </div>
         </div>
       )}
+
+      {profile?.certifications?.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {profile.certifications.map(c => (
+            <span key={c} className="bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-full">{c}</span>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function InfoRow({ label, value }) {
+  return (
+    <div>
+      <p className="text-xs text-slate-400 mb-0.5">{label}</p>
+      <p className="text-sm text-slate-700">{value}</p>
+    </div>
+  )
+}
+
+// ─── Staff list row (shown to all users for other staff members) ──────────────
+
+function StaffListRow({ member, onClick }) {
+  const { profile, role } = member
+  const name = profile?.full_name || [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || 'Unknown'
+
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors ${
+        onClick ? 'hover:bg-slate-50 active:bg-slate-100 cursor-pointer' : 'cursor-default'
+      }`}
+    >
+      <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-600 font-semibold text-sm flex items-center justify-center flex-shrink-0">
+        {initials(name)}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-slate-800 truncate">{name}</p>
+        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+          <RoleBadge role={role} />
+          {profile?.position && (
+            <span className="text-xs text-slate-500">{profile.position}</span>
+          )}
+        </div>
+      </div>
+      <div className="text-right flex-shrink-0">
+        {profile?.phone && (
+          <p className="text-sm text-slate-500">{profile.phone}</p>
+        )}
+        {onClick && (
+          <svg className="w-4 h-4 text-slate-300 ml-auto mt-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        )}
+      </div>
     </button>
   )
 }
+
+// ─── Full detail modal (manager-only for other staff) ────────────────────────
 
 function StaffModal({ member, communityId, currentUserId, onClose, onSaved, onDeleted, onTransfer }) {
   const isEditing = !!member
@@ -67,9 +158,17 @@ function StaffModal({ member, communityId, currentUserId, onClose, onSaved, onDe
 
   const [form, setForm] = useState({
     full_name: profile.full_name ?? '',
+    first_name: profile.first_name ?? '',
+    last_name: profile.last_name ?? '',
     phone: profile.phone ?? '',
-    emergency_contact: profile.emergency_contact ?? '',
+    address: profile.address ?? '',
+    position: profile.position ?? '',
+    date_of_birth: profile.date_of_birth ?? '',
     hire_date: profile.hire_date ?? '',
+    emergency_contact: profile.emergency_contact ?? '',
+    emergency_contact_name: profile.emergency_contact_name ?? '',
+    emergency_contact_relationship: profile.emergency_contact_relationship ?? '',
+    emergency_contact_phone: profile.emergency_contact_phone ?? '',
     certifications: profile.certifications ?? [],
     role: member?.role ?? 'staff',
   })
@@ -84,23 +183,29 @@ function StaffModal({ member, communityId, currentUserId, onClose, onSaved, onDe
   async function handleSave() {
     setSaving(true)
     setError('')
+    const fullName = [form.first_name, form.last_name].filter(Boolean).join(' ') || form.full_name
 
-    // Update profile info
     if (profile.user_id) {
       const { error: profileErr } = await supabase
         .from('profiles')
         .update({
-          full_name: form.full_name || null,
+          full_name: fullName || null,
+          first_name: form.first_name || null,
+          last_name: form.last_name || null,
           phone: form.phone || null,
-          emergency_contact: form.emergency_contact || null,
+          address: form.address || null,
+          position: form.position || null,
+          date_of_birth: form.date_of_birth || null,
           hire_date: form.hire_date || null,
+          emergency_contact_name: form.emergency_contact_name || null,
+          emergency_contact_relationship: form.emergency_contact_relationship || null,
+          emergency_contact_phone: form.emergency_contact_phone || null,
           certifications: form.certifications,
         })
         .eq('user_id', profile.user_id)
       if (profileErr) { setError(profileErr.message); setSaving(false); return }
     }
 
-    // Update role in community_members
     if (memberId) {
       const { error: roleErr } = await supabase
         .from('community_members')
@@ -120,41 +225,40 @@ function StaffModal({ member, communityId, currentUserId, onClose, onSaved, onDe
   }
 
   async function handleTransfer() {
-    // Transfer admin role: make this person admin, demote current admin to staff
-    await supabase
-      .from('community_members')
-      .update({ role: 'admin' })
-      .eq('id', memberId)
-    // Demote current user to staff
-    await supabase
-      .from('community_members')
-      .update({ role: 'staff' })
-      .eq('community_id', communityId)
-      .eq('user_id', currentUserId)
+    await supabase.from('community_members').update({ role: 'admin' }).eq('id', memberId)
+    await supabase.from('community_members').update({ role: 'staff' }).eq('community_id', communityId).eq('user_id', currentUserId)
     onTransfer()
     onClose()
   }
 
   const isCurrentUser = profile.user_id === currentUserId
   const isTheirAdmin = member?.role === 'admin'
+  const displayName = [form.first_name, form.last_name].filter(Boolean).join(' ') || form.full_name || 'Staff Member'
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4 py-6">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-          <h2 className="font-semibold text-slate-800">
-            {isEditing ? 'Edit Staff Member' : 'Staff Member'}
-          </h2>
+          <h2 className="font-semibold text-slate-800">{displayName}</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
         </div>
 
         <div className="overflow-y-auto px-6 py-5 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
-            <input className={inputCls} value={form.full_name} onChange={e => set('full_name', e.target.value)} placeholder="Jane Doe" />
+
+          {/* Name */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">First Name</label>
+              <input className={inputCls} value={form.first_name} onChange={e => set('first_name', e.target.value)} placeholder="First" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Last Name</label>
+              <input className={inputCls} value={form.last_name} onChange={e => set('last_name', e.target.value)} placeholder="Last" />
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          {/* Role + Position */}
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
               <select className={inputCls} value={form.role} onChange={e => set('role', e.target.value)}>
@@ -163,19 +267,45 @@ function StaffModal({ member, communityId, currentUserId, onClose, onSaved, onDe
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
-              <input type="tel" className={inputCls} value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="(555) 000-0000" />
+              <label className="block text-sm font-medium text-slate-700 mb-1">Position</label>
+              <input className={inputCls} value={form.position} onChange={e => set('position', e.target.value)} placeholder="e.g. Caregiver" />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          {/* Contact */}
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Hire Date</label>
-              <input type="date" className={inputCls} value={form.hire_date} onChange={e => set('hire_date', e.target.value)} />
+              <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+              <input type="tel" className={inputCls} value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="(555) 000-0000" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Emergency Contact</label>
-              <input className={inputCls} value={form.emergency_contact} onChange={e => set('emergency_contact', e.target.value)} placeholder="Name · phone" />
+              <label className="block text-sm font-medium text-slate-700 mb-1">Date of Birth</label>
+              <input type="date" className={inputCls} value={form.date_of_birth} onChange={e => set('date_of_birth', e.target.value)} />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Home Address</label>
+            <input className={inputCls} value={form.address} onChange={e => set('address', e.target.value)} placeholder="123 Main St, City, CA 90000" />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Hire Date</label>
+            <input type="date" className={inputCls} value={form.hire_date} onChange={e => set('hire_date', e.target.value)} />
+          </div>
+
+          {/* Emergency Contact */}
+          <div>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Emergency Contact</p>
+            <div className="space-y-3">
+              <input className={inputCls} value={form.emergency_contact_name} onChange={e => set('emergency_contact_name', e.target.value)} placeholder="Contact name" />
+              <div className="grid grid-cols-2 gap-3">
+                <select className={inputCls} value={form.emergency_contact_relationship} onChange={e => set('emergency_contact_relationship', e.target.value)}>
+                  <option value="">— Relationship —</option>
+                  {RELATIONSHIPS.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+                <input type="tel" className={inputCls} value={form.emergency_contact_phone} onChange={e => set('emergency_contact_phone', e.target.value)} placeholder="Best phone" />
+              </div>
             </div>
           </div>
 
@@ -184,11 +314,11 @@ function StaffModal({ member, communityId, currentUserId, onClose, onSaved, onDe
             <CertInput value={form.certifications} onChange={certs => set('certifications', certs)} />
           </div>
 
-          {/* Admin transfer */}
+          {/* Transfer Manager Role */}
           {isEditing && !isCurrentUser && !isTheirAdmin && (
             <div className="border border-amber-200 bg-amber-50 rounded-xl px-4 py-3">
               <p className="text-sm font-medium text-amber-800 mb-1">Transfer Manager Role</p>
-              <p className="text-xs text-amber-700 mb-2">This will make {form.full_name || 'this person'} the manager and change your role to staff.</p>
+              <p className="text-xs text-amber-700 mb-2">This will make {form.first_name || 'this person'} the manager and change your role to staff.</p>
               {!confirmTransfer ? (
                 <button onClick={() => setConfirmTransfer(true)} className="text-xs font-medium text-amber-700 hover:text-amber-900 underline">
                   Transfer manager role
@@ -203,9 +333,7 @@ function StaffModal({ member, communityId, currentUserId, onClose, onSaved, onDe
             </div>
           )}
 
-          {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
-          )}
+          {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
         </div>
 
         <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between gap-3">
@@ -237,6 +365,8 @@ function StaffModal({ member, communityId, currentUserId, onClose, onSaved, onDe
   )
 }
 
+// ─── Invite Modal ─────────────────────────────────────────────────────────────
+
 function InviteModal({ communityId, currentUserId, onClose, onInvited }) {
   const { memberships } = useCommunity()
   const [email, setEmail] = useState('')
@@ -245,28 +375,21 @@ function InviteModal({ communityId, currentUserId, onClose, onInvited }) {
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
 
-  // All community IDs this admin manages
-  const adminCommunityIds = memberships
-    .filter(m => m.role === 'admin')
-    .map(m => m.communities.id)
+  const adminCommunityIds = memberships.filter(m => m.role === 'admin').map(m => m.communities.id)
 
   async function handleInvite() {
     if (!email.trim()) { setError('Email is required.'); return }
     setSaving(true)
     setError('')
-
-    // Create an invite for every community this admin manages
     const invites = adminCommunityIds.map(cid => ({
       community_id: cid,
       email: email.trim().toLowerCase(),
       role,
       invited_by: currentUserId,
     }))
-
     const { error: inviteErr } = await supabase
       .from('community_invites')
       .upsert(invites, { onConflict: 'community_id,email', ignoreDuplicates: true })
-
     setSaving(false)
     if (inviteErr) { setError(inviteErr.message); return }
     setSuccess(true)
@@ -280,7 +403,6 @@ function InviteModal({ communityId, currentUserId, onClose, onInvited }) {
           <h2 className="font-semibold text-slate-800">Invite Staff Member</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
         </div>
-
         <div className="px-6 py-5 space-y-4">
           {success ? (
             <div className="text-center py-4">
@@ -290,24 +412,17 @@ function InviteModal({ communityId, currentUserId, onClose, onInvited }) {
                 </svg>
               </div>
               <p className="font-medium text-slate-800 mb-1">Invite created!</p>
-              <p className="text-sm text-slate-500">
-                Share the app link with <strong>{email}</strong>. When they sign up with this email, they'll automatically be added to your community as <strong>{role}</strong>.
+              <p className="text-sm text-slate-500 mb-1">
+                Share the app link with <strong>{email}</strong>. When they sign up, they'll automatically join your community as <strong>{role}</strong>.
               </p>
-              <button onClick={onClose} className="mt-4 bg-[#185FA5] text-white text-sm font-medium px-5 py-2 rounded-lg hover:bg-[#0C447C] transition-colors">
-                Done
-              </button>
+              <p className="text-xs font-mono bg-slate-100 rounded-lg px-3 py-2 mt-3 break-all">{window.location.origin}</p>
+              <button onClick={onClose} className="mt-4 bg-[#185FA5] text-white text-sm font-medium px-5 py-2 rounded-lg hover:bg-[#0C447C] transition-colors">Done</button>
             </div>
           ) : (
             <>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
-                <input
-                  type="email"
-                  className={inputCls}
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="jane@example.com"
-                />
+                <input type="email" className={inputCls} value={email} onChange={e => setEmail(e.target.value)} placeholder="jane@example.com" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
@@ -321,9 +436,7 @@ function InviteModal({ communityId, currentUserId, onClose, onInvited }) {
               </p>
               {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
               <div className="flex gap-3">
-                <button onClick={onClose} className="flex-1 border border-slate-300 text-slate-700 rounded-lg py-2 text-sm hover:bg-slate-50 transition-colors">
-                  Cancel
-                </button>
+                <button onClick={onClose} className="flex-1 border border-slate-300 text-slate-700 rounded-lg py-2 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
                 <button onClick={handleInvite} disabled={saving} className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-lg py-2 text-sm font-medium transition-colors">
                   {saving ? 'Creating…' : 'Create Invite'}
                 </button>
@@ -336,8 +449,10 @@ function InviteModal({ communityId, currentUserId, onClose, onInvited }) {
   )
 }
 
+// ─── Main component ───────────────────────────────────────────────────────────
+
 export default function StaffDirectory() {
-  const { communityId, reload: reloadCommunity } = useCommunity()
+  const { communityId, isAdmin, reload: reloadCommunity } = useCommunity()
   const { profile: currentProfile } = useProfile()
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -346,64 +461,96 @@ export default function StaffDirectory() {
 
   async function loadMembers() {
     if (!communityId) return
-    const { data } = await supabase
+    // Step 1: get user_ids for this community
+    const { data: cms } = await supabase
       .from('community_members')
-      .select('id, role, user_id, profiles!user_id(*)')
+      .select('id, role, user_id')
       .eq('community_id', communityId)
       .order('created_at')
-    setMembers((data ?? []).map(m => ({
+
+    if (!cms?.length) { setMembers([]); setLoading(false); return }
+
+    // Step 2: fetch profiles for those user_ids
+    const userIds = cms.map(m => m.user_id)
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('*')
+      .in('user_id', userIds)
+
+    const profileMap = {}
+    ;(profiles ?? []).forEach(p => { profileMap[p.user_id] = p })
+
+    setMembers(cms.map(m => ({
       memberId: m.id,
       role: m.role,
       userId: m.user_id,
-      profile: m.profiles,
+      profile: profileMap[m.user_id] ?? null,
     })))
     setLoading(false)
   }
 
   useEffect(() => { loadMembers() }, [communityId])
 
-  async function handleSaved() {
-    await loadMembers()
-    setEditing(null)
-  }
+  async function handleSaved() { await loadMembers(); setEditing(null) }
+  function handleDeleted(memberId) { setMembers(prev => prev.filter(m => m.memberId !== memberId)); setEditing(null) }
+  async function handleTransfer() { await loadMembers(); await reloadCommunity() }
 
-  function handleDeleted(memberId) {
-    setMembers(prev => prev.filter(m => m.memberId !== memberId))
-    setEditing(null)
-  }
-
-  async function handleTransfer() {
-    await loadMembers()
-    await reloadCommunity()
-  }
+  // Split into my card and the rest
+  const myMember = members.find(m => m.userId === currentProfile?.user_id)
+  const otherMembers = members.filter(m => m.userId !== currentProfile?.user_id)
 
   return (
     <Layout>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-5">
         <h1 className="text-xl font-semibold text-slate-800">Staff</h1>
-        <button
-          onClick={() => setShowInvite(true)}
-          className="bg-[#185FA5] hover:bg-[#0C447C] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-        >
-          + Invite Staff
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => setShowInvite(true)}
+            className="bg-[#185FA5] hover:bg-[#0C447C] text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
+          >
+            + Invite Staff
+          </button>
+        )}
       </div>
 
       {loading && <p className="text-slate-400 text-sm">Loading…</p>}
 
-      {!loading && members.length === 0 && (
-        <div className="text-center py-16 text-slate-400">
-          <p className="text-lg">No staff members yet</p>
-          <p className="text-sm mt-1">Click "Invite Staff" to add someone.</p>
-        </div>
-      )}
+      {!loading && (
+        <>
+          {/* My Profile Card */}
+          {myMember && (
+            <MyProfileCard
+              member={myMember}
+              onEdit={() => setEditing(myMember)}
+            />
+          )}
 
-      {!loading && members.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {members.map(m => (
-            <StaffCard key={m.memberId} member={m} onClick={setEditing} />
-          ))}
-        </div>
+          {/* Other Staff List */}
+          {otherMembers.length > 0 && (
+            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-slate-100">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                  Team · {otherMembers.length} member{otherMembers.length !== 1 ? 's' : ''}
+                </p>
+              </div>
+              {otherMembers.map((m, i) => (
+                <div key={m.memberId} className={i !== 0 ? 'border-t border-slate-100' : ''}>
+                  <StaffListRow
+                    member={m}
+                    onClick={isAdmin ? () => setEditing(m) : undefined}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {members.length === 0 && (
+            <div className="text-center py-16 text-slate-400">
+              <p className="font-medium text-slate-500">No staff members yet</p>
+              {isAdmin && <p className="text-sm mt-1">Click "+ Invite Staff" to add someone.</p>}
+            </div>
+          )}
+        </>
       )}
 
       {showInvite && (
