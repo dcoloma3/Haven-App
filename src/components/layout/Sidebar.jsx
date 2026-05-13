@@ -13,8 +13,14 @@ function ResidentsIcon({ active }) {
   )
 }
 
-function DispenseIcon() {
-  return <span className="text-lg leading-none flex-shrink-0">💊</span>
+function DispenseIcon({ active }) {
+  return (
+    <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="9" width="18" height="6" rx="3" />
+      <line x1="12" y1="9" x2="12" y2="15" />
+    </svg>
+  )
 }
 
 function CalendarIcon({ active }) {
