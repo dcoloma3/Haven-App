@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { adminKey, isMedDueOnDate, computeResidentStatus } from '../lib/medStatus'
 import Layout from '../components/layout/Layout'
 import ResidentAvatar from '../components/residents/ResidentAvatar'
 import ResidentProfile from '../components/residents/ResidentProfile'
@@ -104,7 +105,10 @@ export default function ResidentDetail() {
   const [loading, setLoading] = useState(true)
   const [showRemovalModal, setShowRemovalModal] = useState(false)
   const [reactivating, setReactivating] = useState(false)
+  const [medStatus, setMedStatus] = useState(null)
   const tabsRef = useRef(null)
+
+  const todayStr = new Date().toISOString().split('T')[0]
 
   const TABS = isAdmin ? ALL_TABS : STAFF_TABS
   const isInactive = resident?.status === 'inactive'
@@ -117,6 +121,18 @@ export default function ResidentDetail() {
       .single()
       .then(({ data }) => { setResident(data); setLoading(false) })
   }, [id])
+
+  // Fetch today's med status for the ring indicator
+  async function refreshMedStatus() {
+    const [{ data: meds }, { data: admins }] = await Promise.all([
+      supabase.from('medications').select('id, scheduled_times, frequency_type, frequency_days, frequency_interval, start_date, end_date').eq('resident_id', id),
+      supabase.from('medication_administrations').select('medication_id, scheduled_time').eq('resident_id', id).eq('administered_date', todayStr),
+    ])
+    const administeredSet = new Set((admins ?? []).map(a => adminKey(a.medication_id, a.scheduled_time)))
+    setMedStatus(computeResidentStatus(meds ?? [], administeredSet, todayStr))
+  }
+
+  useEffect(() => { refreshMedStatus() }, [id, todayStr]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleTabClick(tab) {
     setActiveTab(tab)
@@ -198,7 +214,7 @@ export default function ResidentDetail() {
 
       {/* Resident header */}
       <div className="flex items-center gap-4 mb-5">
-        <ResidentAvatar resident={resident} onUpdate={setResident} />
+        <ResidentAvatar resident={resident} onUpdate={setResident} medStatus={medStatus} />
         <div className="flex-1 min-w-0">
           <h1 className="text-xl font-bold text-slate-800 truncate">{fullName}</h1>
           <p className="text-sm text-slate-400 mt-0.5">Room {resident.room_number || '—'}</p>
@@ -224,7 +240,7 @@ export default function ResidentDetail() {
       </div>
 
       {activeTab === 'Profile' && <ResidentProfile resident={resident} onUpdate={setResident} />}
-      {activeTab === 'Medications' && <MedicationList residentId={id} />}
+      {activeTab === 'Medications' && <MedicationList residentId={id} onMedStatusChange={refreshMedStatus} />}
       {activeTab === 'Contacts' && <ContactList residentId={id} />}
       {activeTab === 'Lease' && <LeaseDetails residentId={id} />}
       {activeTab === 'Health & Care' && <HealthCare residentId={id} />}

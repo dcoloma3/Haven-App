@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { adminKey, isMedDueOnDate } from '../../lib/medStatus'
 
 const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
+
+const TODAY_STR = new Date().toISOString().split('T')[0]
 
 function fmt12(t) {
   const [h, m] = t.split(':').map(Number)
@@ -41,8 +44,6 @@ function describeFrequency(med) {
   return '—'
 }
 
-const TODAY = new Date().toISOString().split('T')[0]
-
 const EMPTY_FORM = {
   medication_name: '',
   dose: '',
@@ -55,6 +56,8 @@ const EMPTY_FORM = {
   start_date: '',
   end_date: '',
 }
+
+// ─── Medication Modal (Add / Edit) ────────────────────────────────────────────
 
 function MedicationModal({ residentId, medication, onClose, onSaved }) {
   const isEdit = !!medication
@@ -69,8 +72,7 @@ function MedicationModal({ residentId, medication, onClose, onSaved }) {
     setForm(f => ({
       ...f,
       frequency_type: type,
-      // Auto-set start_date to today for one_time if not already set
-      start_date: type === 'one_time' && !f.start_date ? TODAY : f.start_date,
+      start_date: type === 'one_time' && !f.start_date ? TODAY_STR : f.start_date,
     }))
   }
 
@@ -144,20 +146,16 @@ function MedicationModal({ residentId, medication, onClose, onSaved }) {
         </div>
 
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-
-          {/* Name */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Medication Name <span className="text-red-500">*</span></label>
             <input required className={inputCls} value={form.medication_name ?? ''} onChange={e => set('medication_name', e.target.value)} />
           </div>
 
-          {/* Dose */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Dose</label>
             <input className={inputCls} value={form.dose ?? ''} onChange={e => set('dose', e.target.value)} placeholder="e.g. 500mg" />
           </div>
 
-          {/* Frequency type */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">Frequency</label>
             <div className="grid grid-cols-2 gap-2">
@@ -177,7 +175,6 @@ function MedicationModal({ residentId, medication, onClose, onSaved }) {
               ))}
             </div>
 
-            {/* Specific days */}
             {freqType === 'specific_days' && (
               <div className="flex flex-wrap gap-2 mt-3">
                 {DAYS.map(day => (
@@ -197,7 +194,6 @@ function MedicationModal({ residentId, medication, onClose, onSaved }) {
               </div>
             )}
 
-            {/* Every X days */}
             {freqType === 'every_x_days' && (
               <div className="flex items-center gap-2 mt-3">
                 <span className="text-sm text-slate-600">Every</span>
@@ -212,40 +208,24 @@ function MedicationModal({ residentId, medication, onClose, onSaved }) {
               </div>
             )}
 
-            {/* One-time note */}
             {freqType === 'one_time' && (
-              <p className="text-xs text-slate-400 mt-2">
-                Will appear on the Dispense tab only on the start date below.
-              </p>
+              <p className="text-xs text-slate-400 mt-2">Will appear on the Dispense tab only on the start date below.</p>
             )}
           </div>
 
-          {/* Start & End dates */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
                 Start Date {freqType === 'one_time' && <span className="text-red-500">*</span>}
               </label>
-              <input
-                type="date"
-                className={inputCls}
-                value={form.start_date ?? ''}
-                onChange={e => set('start_date', e.target.value)}
-              />
+              <input type="date" className={inputCls} value={form.start_date ?? ''} onChange={e => set('start_date', e.target.value)} />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">End Date</label>
-              <input
-                type="date"
-                className={inputCls}
-                value={form.end_date ?? ''}
-                min={form.start_date || undefined}
-                onChange={e => set('end_date', e.target.value)}
-              />
+              <input type="date" className={inputCls} value={form.end_date ?? ''} min={form.start_date || undefined} onChange={e => set('end_date', e.target.value)} />
             </div>
           </div>
 
-          {/* Schedule times */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Schedule Times</label>
             <div className="flex gap-2">
@@ -277,35 +257,20 @@ function MedicationModal({ residentId, medication, onClose, onSaved }) {
             )}
           </div>
 
-          {/* Additional notes (was "frequency" text field) */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Additional Notes</label>
-            <input
-              className={inputCls}
-              value={form.frequency ?? ''}
-              onChange={e => set('frequency', e.target.value)}
-              placeholder="e.g. Take with food, avoid grapefruit…"
-            />
+            <input className={inputCls} value={form.frequency ?? ''} onChange={e => set('frequency', e.target.value)} placeholder="e.g. Take with food, avoid grapefruit…" />
           </div>
 
-          {/* Clinical notes */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Notes</label>
-            <textarea
-              className={`${inputCls} resize-none`}
-              rows={2}
-              value={form.notes ?? ''}
-              onChange={e => set('notes', e.target.value)}
-              placeholder="Special instructions, allergies, interactions…"
-            />
+            <textarea className={`${inputCls} resize-none`} rows={2} value={form.notes ?? ''} onChange={e => set('notes', e.target.value)} placeholder="Special instructions, allergies, interactions…" />
           </div>
 
           {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
 
           <div className="flex gap-3 pt-1">
-            <button type="button" onClick={onClose} className="flex-1 border border-slate-300 text-slate-700 rounded-lg py-2 text-sm hover:bg-slate-50 transition-colors">
-              Cancel
-            </button>
+            <button type="button" onClick={onClose} className="flex-1 border border-slate-300 text-slate-700 rounded-lg py-2 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
             <button type="submit" disabled={saving} className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-lg py-2 text-sm font-medium transition-colors">
               {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Medication'}
             </button>
@@ -316,7 +281,160 @@ function MedicationModal({ residentId, medication, onClose, onSaved }) {
   )
 }
 
-export default function MedicationList({ residentId }) {
+// ─── Today's Dispense Checkbox ────────────────────────────────────────────────
+
+function TodayCheckbox({ done, toggling, onToggle }) {
+  return (
+    <button
+      onClick={onToggle}
+      disabled={toggling}
+      className={`flex-shrink-0 w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all active:scale-95 ${
+        done ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-300 bg-white hover:border-[#185FA5]'
+      } ${toggling ? 'opacity-40' : ''}`}
+    >
+      {done && (
+        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      )}
+    </button>
+  )
+}
+
+// ─── Today's Medications Section ─────────────────────────────────────────────
+
+function TodayMedications({ residentId, medications, onStatusChange }) {
+  const [administered, setAdministered] = useState(new Map())
+  const [toggling, setToggling] = useState(new Set())
+  const [loadingAdmins, setLoadingAdmins] = useState(true)
+
+  const todayMeds = medications.filter(m => isMedDueOnDate(m, TODAY_STR))
+
+  useEffect(() => {
+    if (todayMeds.length === 0) { setLoadingAdmins(false); return }
+    supabase
+      .from('medication_administrations')
+      .select('*')
+      .eq('resident_id', residentId)
+      .eq('administered_date', TODAY_STR)
+      .then(({ data }) => {
+        const map = new Map()
+        ;(data ?? []).forEach(r => map.set(adminKey(r.medication_id, r.scheduled_time), r))
+        setAdministered(map)
+        setLoadingAdmins(false)
+      })
+  }, [residentId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleToggle(med, time) {
+    const key = adminKey(med.id, time)
+    if (toggling.has(key)) return
+    setToggling(prev => new Set(prev).add(key))
+
+    let next
+    if (administered.has(key)) {
+      const record = administered.get(key)
+      next = new Map(administered)
+      next.delete(key)
+      setAdministered(next)
+      await supabase.from('medication_administrations').delete().eq('id', record.id)
+    } else {
+      const { data: { session } } = await supabase.auth.getSession()
+      const payload = {
+        medication_id: med.id,
+        resident_id: residentId,
+        scheduled_time: time,
+        administered_date: TODAY_STR,
+        administered_by: session?.user?.id ?? null,
+      }
+      next = new Map(administered)
+      next.set(key, { ...payload, id: 'temp' })
+      setAdministered(next)
+      const { data } = await supabase.from('medication_administrations').insert([payload]).select().single()
+      if (data) {
+        setAdministered(prev => { const n = new Map(prev); n.set(key, data); return n })
+        next = new Map(next)
+        next.set(key, data)
+      }
+    }
+
+    setToggling(prev => { const n = new Set(prev); n.delete(key); return n })
+
+    // Notify parent so it can refresh the ring
+    if (onStatusChange) onStatusChange()
+  }
+
+  const todayLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+
+  // Flatten to time-sorted rows: one row per (med, time) pair
+  const rows = []
+  todayMeds.forEach(med => {
+    ;(med.scheduled_times ?? []).forEach(time => {
+      rows.push({ med, time })
+    })
+  })
+  rows.sort((a, b) => a.time.localeCompare(b.time))
+
+  const totalDoses = rows.length
+  const doneDoses = rows.filter(({ med, time }) => administered.has(adminKey(med.id, time))).length
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden mb-4">
+      {/* Header */}
+      <div className="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-2">
+        <div>
+          <h2 className="font-semibold text-slate-800">Today's Medications</h2>
+          <p className="text-xs text-slate-400 mt-0.5">{todayLabel}</p>
+        </div>
+        {totalDoses > 0 && !loadingAdmins && (
+          <span className={`text-sm font-semibold flex-shrink-0 mt-0.5 ${doneDoses === totalDoses ? 'text-emerald-600' : doneDoses > 0 ? 'text-amber-500' : 'text-slate-400'}`}>
+            {doneDoses}/{totalDoses} given
+          </span>
+        )}
+      </div>
+
+      {loadingAdmins && <p className="text-slate-400 text-sm px-5 py-4">Loading…</p>}
+
+      {!loadingAdmins && todayMeds.length === 0 && (
+        <p className="text-sm text-slate-400 px-5 py-4">No medications scheduled for today.</p>
+      )}
+
+      {!loadingAdmins && rows.length > 0 && (
+        <div className="divide-y divide-slate-100">
+          {rows.map(({ med, time }) => {
+            const key = adminKey(med.id, time)
+            const isDone = administered.has(key)
+            const isTogg = toggling.has(key)
+            return (
+              <div
+                key={key}
+                className={`flex items-center gap-3 px-5 py-3.5 transition-colors ${isDone ? 'bg-emerald-50/50' : ''}`}
+              >
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-medium truncate ${isDone ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
+                    {med.medication_name}
+                  </p>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {[med.dose, fmt12(time)].filter(Boolean).join(' · ')}
+                  </p>
+                  {isDone && administered.get(key)?.administered_at && (
+                    <p className="text-xs text-emerald-600 mt-0.5">
+                      Given at {new Date(administered.get(key).administered_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                    </p>
+                  )}
+                </div>
+                <TodayCheckbox done={isDone} toggling={isTogg} onToggle={() => handleToggle(med, time)} />
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Main MedicationList ──────────────────────────────────────────────────────
+
+export default function MedicationList({ residentId, onMedStatusChange }) {
   const [medications, setMedications] = useState([])
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
@@ -347,73 +465,70 @@ export default function MedicationList({ residentId }) {
   }
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-6">
-      <div className="flex items-center justify-between mb-5">
-        <h2 className="font-medium text-slate-700">Medications</h2>
-        <button onClick={() => setShowAdd(true)} className="text-sm text-[#185FA5] hover:text-[#0C447C] transition-colors">+ Add</button>
-      </div>
+    <div>
+      {/* ── Today's Dispense Section ── */}
+      {!loading && (
+        <TodayMedications
+          residentId={residentId}
+          medications={medications}
+          onStatusChange={onMedStatusChange}
+        />
+      )}
 
-      {loading && <p className="text-slate-400 text-sm">Loading…</p>}
-      {!loading && medications.length === 0 && <p className="text-sm text-slate-400">No medications listed.</p>}
+      {/* ── Manage Medications ── */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="font-medium text-slate-700">Manage Medications</h2>
+          <button onClick={() => setShowAdd(true)} className="text-sm text-[#185FA5] hover:text-[#0C447C] transition-colors">+ Add</button>
+        </div>
 
-      {!loading && medications.length > 0 && (
-        <div className="divide-y divide-slate-100">
-          {medications.map(med => {
-            const dateRange = [shortDate(med.start_date), shortDate(med.end_date)].filter(Boolean)
-            return (
-              <div key={med.id} className="py-3">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-800">{med.medication_name}</p>
+        {loading && <p className="text-slate-400 text-sm">Loading…</p>}
+        {!loading && medications.length === 0 && <p className="text-sm text-slate-400">No medications listed.</p>}
 
-                    {/* Dose + frequency description */}
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      {[med.dose, describeFrequency(med)].filter(Boolean).join(' · ')}
-                    </p>
-
-                    {/* Date range */}
-                    {dateRange.length > 0 && (
+        {!loading && medications.length > 0 && (
+          <div className="divide-y divide-slate-100">
+            {medications.map(med => {
+              const dateRange = [shortDate(med.start_date), shortDate(med.end_date)].filter(Boolean)
+              return (
+                <div key={med.id} className="py-3">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-800">{med.medication_name}</p>
                       <p className="text-xs text-slate-400 mt-0.5">
-                        {med.start_date && med.end_date
-                          ? `${shortDate(med.start_date)} – ${shortDate(med.end_date)}`
-                          : med.start_date
-                            ? `From ${shortDate(med.start_date)}`
-                            : `Until ${shortDate(med.end_date)}`}
+                        {[med.dose, describeFrequency(med)].filter(Boolean).join(' · ')}
                       </p>
-                    )}
-
-                    {/* Schedule times */}
-                    {med.scheduled_times?.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mt-1.5">
-                        {med.scheduled_times.map(t => (
-                          <span key={t} className="inline-block bg-[#E6F1FB] text-[#185FA5] text-xs font-medium px-2 py-0.5 rounded-full">
-                            {fmt12(t)}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Additional notes */}
-                    {med.frequency && (
-                      <p className="text-xs text-slate-500 mt-1.5">{med.frequency}</p>
-                    )}
-
-                    {/* Clinical notes */}
-                    {med.notes && (
-                      <p className="text-xs text-slate-500 mt-1 italic leading-relaxed">{med.notes}</p>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-3 flex-shrink-0 mt-0.5">
-                    <button onClick={() => setEditing(med)} className="text-xs text-[#185FA5] hover:text-[#0C447C] transition-colors">Edit</button>
-                    <button onClick={() => handleDelete(med.id)} className="text-xs text-red-400 hover:text-red-600 transition-colors">Delete</button>
+                      {dateRange.length > 0 && (
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          {med.start_date && med.end_date
+                            ? `${shortDate(med.start_date)} – ${shortDate(med.end_date)}`
+                            : med.start_date
+                              ? `From ${shortDate(med.start_date)}`
+                              : `Until ${shortDate(med.end_date)}`}
+                        </p>
+                      )}
+                      {med.scheduled_times?.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-1.5">
+                          {med.scheduled_times.map(t => (
+                            <span key={t} className="inline-block bg-[#E6F1FB] text-[#185FA5] text-xs font-medium px-2 py-0.5 rounded-full">
+                              {fmt12(t)}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {med.frequency && <p className="text-xs text-slate-500 mt-1.5">{med.frequency}</p>}
+                      {med.notes && <p className="text-xs text-slate-500 mt-1 italic leading-relaxed">{med.notes}</p>}
+                    </div>
+                    <div className="flex items-center gap-3 flex-shrink-0 mt-0.5">
+                      <button onClick={() => setEditing(med)} className="text-xs text-[#185FA5] hover:text-[#0C447C] transition-colors">Edit</button>
+                      <button onClick={() => handleDelete(med.id)} className="text-xs text-red-400 hover:text-red-600 transition-colors">Delete</button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
+              )
+            })}
+          </div>
+        )}
+      </div>
 
       {showAdd && <MedicationModal residentId={residentId} onClose={() => setShowAdd(false)} onSaved={handleSaved} />}
       {editing && <MedicationModal medication={editing} onClose={() => setEditing(null)} onSaved={handleSaved} />}

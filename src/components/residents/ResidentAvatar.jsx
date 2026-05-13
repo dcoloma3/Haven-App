@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { getColor } from '../../lib/colors'
+import { ringBoxShadow } from '../../lib/medStatus'
 import PhotoSourcePicker from '../ui/PhotoSourcePicker'
 
 function CameraIcon() {
@@ -24,7 +25,7 @@ function getDisplayName(resident) {
   return parts.length ? parts.join(' ') : (resident.full_name || '')
 }
 
-export default function ResidentAvatar({ resident, onUpdate }) {
+export default function ResidentAvatar({ resident, onUpdate, medStatus }) {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const [imgError, setImgError] = useState(false)
@@ -82,7 +83,8 @@ export default function ResidentAvatar({ resident, onUpdate }) {
           <button
             type="button"
             onClick={() => !uploading && openMenu()}
-            className="relative group block w-16 h-16 rounded-full focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:ring-offset-2"
+            className="relative group block w-16 h-16 rounded-full focus:outline-none"
+            style={medStatus ? { boxShadow: ringBoxShadow(medStatus) } : undefined}
             title="Change photo"
           >
             {hasPhoto ? (

@@ -6,6 +6,7 @@ import ResidentForm from '../components/residents/ResidentForm'
 import { useFacility } from '../context/FacilityContext'
 import { useCommunity } from '../context/CommunityContext'
 import { useIsMobile } from '../hooks/useIsMobile'
+import { adminKey, computeResidentStatus, ringBoxShadow, RING_COLOR } from '../lib/medStatus'
 
 function getResidentFullName(r) {
   const parts = [r.first_name, r.middle_name, r.last_name].filter(Boolean)
@@ -41,14 +42,26 @@ function CardPhoto({ resident }) {
   )
 }
 
-function ListAvatar({ resident }) {
+function ListAvatar({ resident, medStatus }) {
   const [imgError, setImgError] = useState(false)
   const initials = getResidentInitials(resident)
+  const shadow = medStatus ? ringBoxShadow(medStatus) : undefined
   if (resident.avatar_url && !imgError) {
-    return <img src={resident.avatar_url} alt={getResidentFullName(resident)} onError={() => setImgError(true)} className="w-12 h-12 rounded-full object-cover flex-shrink-0" />
+    return (
+      <img
+        src={resident.avatar_url}
+        alt={getResidentFullName(resident)}
+        onError={() => setImgError(true)}
+        className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+        style={shadow ? { boxShadow: shadow } : undefined}
+      />
+    )
   }
   return (
-    <div className="w-12 h-12 rounded-full bg-[#E6F1FB] flex items-center justify-center flex-shrink-0">
+    <div
+      className="w-12 h-12 rounded-full bg-[#E6F1FB] flex items-center justify-center flex-shrink-0"
+      style={shadow ? { boxShadow: shadow } : undefined}
+    >
       <span className="text-[#185FA5] font-semibold text-lg">{initials}</span>
     </div>
   )
@@ -71,12 +84,15 @@ function StatusBadge({ reason }) {
   )
 }
 
+const TODAY_STR = new Date().toISOString().split('T')[0]
+
 export default function Dashboard() {
   const [residents, setResidents] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [showFormer, setShowFormer] = useState(false)
   const [search, setSearch] = useState('')
+  const [medStatusMap, setMedStatusMap] = useState({})
   const navigate = useNavigate()
   const location = useLocation()
   const unauthorized = location.state?.unauthorized
@@ -105,6 +121,34 @@ export default function Dashboard() {
   }, [communityId, showFormer])
 
   useEffect(() => { fetchResidents() }, [fetchResidents])
+
+  // Fetch today's med status for all residents (for ring indicators)
+  useEffect(() => {
+    if (!communityId || showFormer) return
+    async function fetchMedStatuses() {
+      const [{ data: meds }, { data: admins }] = await Promise.all([
+        supabase.from('medications').select('id, resident_id, scheduled_times, frequency_type, frequency_days, frequency_interval, start_date, end_date').eq('community_id', communityId),
+        supabase.from('medication_administrations').select('medication_id, scheduled_time, resident_id').eq('administered_date', TODAY_STR),
+      ])
+      if (!meds) return
+      const statusMap = {}
+      const medsByResident = {}
+      meds.forEach(m => {
+        if (!medsByResident[m.resident_id]) medsByResident[m.resident_id] = []
+        medsByResident[m.resident_id].push(m)
+      })
+      const adminsByResident = {}
+      ;(admins ?? []).forEach(a => {
+        if (!adminsByResident[a.resident_id]) adminsByResident[a.resident_id] = new Set()
+        adminsByResident[a.resident_id].add(adminKey(a.medication_id, a.scheduled_time))
+      })
+      Object.entries(medsByResident).forEach(([rid, rMeds]) => {
+        statusMap[rid] = computeResidentStatus(rMeds, adminsByResident[rid] ?? new Set(), TODAY_STR)
+      })
+      setMedStatusMap(statusMap)
+    }
+    fetchMedStatuses()
+  }, [communityId, showFormer])
 
   function handleSaved(newResident) {
     setResidents(prev => [...prev, newResident].sort((a, b) => getResidentFullName(a).localeCompare(getResidentFullName(b))))
@@ -208,13 +252,14 @@ export default function Dashboard() {
           {filtered.map((r, i) => {
             const age = getAge(r.date_of_birth)
             const name = getResidentFullName(r)
+            const status = !showFormer ? (medStatusMap[r.id] ?? 'no_meds') : undefined
             return (
               <button
                 key={r.id}
                 onClick={() => navigate(`/residents/${r.id}`)}
                 className={`w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-slate-50 transition-colors ${i !== 0 ? 'border-t border-slate-100' : ''}`}
               >
-                <ListAvatar resident={r} />
+                <ListAvatar resident={r} medStatus={status} />
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-slate-800 truncate">{name}</p>
                   <div className="flex items-center gap-2 mt-0.5 flex-wrap">
@@ -234,6 +279,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {filtered.map(r => {
             const age = getAge(r.date_of_birth)
+            const status = !showFormer ? (medStatusMap[r.id] ?? 'no_meds') : undefined
             return (
               <button
                 key={r.id}
@@ -242,6 +288,14 @@ export default function Dashboard() {
               >
                 <div className="aspect-[3/4] w-full relative">
                   <CardPhoto resident={r} />
+                  {/* Med status dot — bottom-right corner of photo */}
+                  {status && (
+                    <span
+                      className="absolute bottom-2 right-2 w-4 h-4 rounded-full border-2 border-white"
+                      style={{ background: RING_COLOR[status] }}
+                      title={status === 'all' ? 'All meds given' : status === 'partial' ? 'Partially given' : status === 'none' ? 'No meds given yet' : 'No medications'}
+                    />
+                  )}
                   {showFormer && (
                     <div className="absolute bottom-2 left-2 right-2">
                       <StatusBadge reason={r.removal_reason} />

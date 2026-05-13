@@ -1,7 +1,9 @@
 import { useEffect, useState, useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import Layout from '../components/layout/Layout'
 import { useCommunity } from '../context/CommunityContext'
+import { RING_COLOR } from '../lib/medStatus'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -166,29 +168,31 @@ function GivenByLine({ record, staffMap }) {
   )
 }
 
-// Row of resident photos shown inside collapsed card
+// Row of resident photos shown inside collapsed card — with status ring
 function ResidentPhotoRow({ residentList, time, administered }) {
   const MAX_SHOW = 6
   const shown = residentList.slice(0, MAX_SHOW)
   const extra = residentList.length - MAX_SHOW
 
   return (
-    <div className="flex items-end gap-2 mt-3 flex-wrap">
+    <div className="flex items-center gap-2 mt-3 flex-wrap">
       {shown.map(([rid, { resident, meds }]) => {
         const status = calcStatus(meds, time, administered)
+        // Map Dispense status ('none'/'partial'/'all') to RING_COLOR keys
+        const ringKey = status === 'all' ? 'all' : status === 'partial' ? 'partial' : 'none'
         return (
-          <div key={rid} className="flex flex-col items-center gap-1">
+          <div
+            key={rid}
+            className="rounded-full"
+            style={{ boxShadow: `0 0 0 2.5px ${RING_COLOR[ringKey]}` }}
+          >
             <ResidentAvatar resident={resident} size="sm" />
-            <span className={`w-2.5 h-2.5 rounded-full ${residentDotCls(status)}`} />
           </div>
         )
       })}
       {extra > 0 && (
-        <div className="flex flex-col items-center gap-1">
-          <div className="w-9 h-9 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-xs font-semibold text-slate-500">
-            +{extra}
-          </div>
-          <span className="w-2.5 h-2.5" />
+        <div className="w-9 h-9 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-xs font-semibold text-slate-500">
+          +{extra}
         </div>
       )}
     </div>
@@ -451,7 +455,13 @@ export default function Dispense() {
 
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2">
-                                    <p className="font-semibold text-slate-800 text-sm truncate">{residentName(resident)}</p>
+                                    <Link
+                                      to={`/residents/${rid}`}
+                                      onClick={e => e.stopPropagation()}
+                                      className="font-semibold text-slate-800 text-sm truncate hover:text-[#185FA5] hover:underline transition-colors"
+                                    >
+                                      {residentName(resident)}
+                                    </Link>
                                     {resident.room_number && (
                                       <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded flex-shrink-0">Rm {resident.room_number}</span>
                                     )}
