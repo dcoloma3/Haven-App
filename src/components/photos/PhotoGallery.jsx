@@ -124,7 +124,11 @@ export default function PhotoGallery({ residentId }) {
       .select('*')
       .eq('resident_id', residentId)
       .order('uploaded_at', { ascending: false })
-      .then(({ data }) => { setPhotos(data ?? []); setLoading(false) })
+      .then(({ data, error }) => {
+        if (error) console.error('Fetch photos error:', error)
+        setPhotos(data ?? [])
+        setLoading(false)
+      })
   }, [residentId])
 
   // Step 1: file selected → show note modal
@@ -146,7 +150,8 @@ export default function PhotoGallery({ residentId }) {
       .upload(path, pendingFile)
 
     if (uploadErr) {
-      setError('Upload failed. Please try again.')
+      console.error('Storage upload error:', uploadErr)
+      setError(`Upload failed: ${uploadErr.message}`)
       setSaving(false)
       setPendingFile(null)
       return
@@ -162,6 +167,11 @@ export default function PhotoGallery({ residentId }) {
       }])
       .select()
       .single()
+
+    if (dbErr) {
+      console.error('DB insert error:', dbErr)
+      setError(`Save failed: ${dbErr.message}`)
+    }
 
     setSaving(false)
     setPendingFile(null)
