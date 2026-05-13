@@ -199,6 +199,252 @@ function ResidentPhotoRow({ residentList, time, administered }) {
   )
 }
 
+// ─── PRN Tab ──────────────────────────────────────────────────────────────────
+
+function PRNTab({ communityId }) {
+  const [search, setSearch] = useState('')
+  const [residents, setResidents] = useState([])
+  const [showResults, setShowResults] = useState(false)
+  const [selectedResident, setSelectedResident] = useState(null)
+  const [prnHistory, setPrnHistory] = useState([])
+  const [prnStaffMap, setPrnStaffMap] = useState({})
+  const [form, setForm] = useState({ medication_name: '', dose: '', reason: '', notes: '', time: '' })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const todayStr = toDateStr(new Date())
+  const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
+
+  useEffect(() => {
+    if (!communityId) return
+    supabase
+      .from('residents')
+      .select('id, first_name, middle_name, last_name, full_name, room_number')
+      .eq('community_id', communityId)
+      .eq('status', 'active')
+      .order('full_name')
+      .then(({ data }) => setResidents(data ?? []))
+  }, [communityId])
+
+  useEffect(() => {
+    supabase.from('profiles').select('user_id, full_name, email').then(({ data }) => {
+      const map = {}
+      ;(data ?? []).forEach(p => { map[p.user_id] = p.full_name || p.email || 'Staff' })
+      setPrnStaffMap(map)
+    })
+  }, [])
+
+  async function loadPrnHistory(resident) {
+    const { data } = await supabase
+      .from('prn_administrations')
+      .select('*')
+      .eq('resident_id', resident.id)
+      .gte('administered_at', todayStr + 'T00:00:00')
+      .lte('administered_at', todayStr + 'T23:59:59')
+      .order('administered_at', { ascending: false })
+    setPrnHistory(data ?? [])
+  }
+
+  const filtered = search.trim()
+    ? residents.filter(r => residentName(r).toLowerCase().includes(search.trim().toLowerCase()))
+    : []
+
+  function selectResident(r) {
+    setSelectedResident(r)
+    setSearch(residentName(r))
+    setShowResults(false)
+    setError('')
+    loadPrnHistory(r)
+  }
+
+  function clearResident() {
+    setSelectedResident(null)
+    setSearch('')
+    setPrnHistory([])
+    setError('')
+    setForm({ medication_name: '', dose: '', reason: '', notes: '', time: '' })
+  }
+
+  async function handleLog() {
+    if (!form.medication_name.trim()) { setError('Medication name is required.'); return }
+    if (!form.reason.trim()) { setError('Reason for administering is required.'); return }
+    setSaving(true)
+    setError('')
+
+    const { data: { session } } = await supabase.auth.getSession()
+    let administeredAt
+    if (form.time) {
+      const [h, m] = form.time.split(':').map(Number)
+      const d = new Date()
+      d.setHours(h, m, 0, 0)
+      administeredAt = d.toISOString()
+    } else {
+      administeredAt = new Date().toISOString()
+    }
+
+    const { error: err } = await supabase.from('prn_administrations').insert([{
+      resident_id: selectedResident.id,
+      community_id: communityId,
+      medication_name: form.medication_name.trim(),
+      dose: form.dose.trim() || null,
+      reason: form.reason.trim(),
+      notes: form.notes.trim() || null,
+      administered_at: administeredAt,
+      administered_by: session?.user?.id ?? null,
+    }])
+
+    setSaving(false)
+    if (err) { setError(err.message); return }
+    setForm({ medication_name: '', dose: '', reason: '', notes: '', time: '' })
+    loadPrnHistory(selectedResident)
+  }
+
+  const initials = r => ((r.first_name?.[0] ?? '') + (r.last_name?.[0] ?? '')).toUpperCase() || (r.full_name ?? '').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+
+  return (
+    <div>
+      {/* Resident search */}
+      <div className="relative mb-4">
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input
+          type="text"
+          placeholder="Search resident name…"
+          value={search}
+          onChange={e => {
+            setSearch(e.target.value)
+            setShowResults(true)
+            if (selectedResident && e.target.value !== residentName(selectedResident)) clearResident()
+          }}
+          onFocus={() => setShowResults(true)}
+          onBlur={() => setTimeout(() => setShowResults(false), 150)}
+          className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent"
+        />
+        {showResults && filtered.length > 0 && (
+          <div className="absolute top-full left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-lg z-20 mt-1 overflow-hidden max-h-60 overflow-y-auto">
+            {filtered.slice(0, 8).map(r => (
+              <button
+                key={r.id}
+                onMouseDown={e => e.preventDefault()}
+                onClick={() => selectResident(r)}
+                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 border-b border-slate-100 last:border-0 transition-colors"
+              >
+                <div className="w-8 h-8 rounded-full bg-[#E6F1FB] text-[#185FA5] font-semibold text-xs flex items-center justify-center flex-shrink-0">
+                  {initials(r)}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-800">{residentName(r)}</p>
+                  {r.room_number && <p className="text-xs text-slate-400">Room {r.room_number}</p>}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Empty state */}
+      {!selectedResident && (
+        <div className="text-center py-16">
+          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+            </svg>
+          </div>
+          <p className="font-semibold text-slate-500">Search for a resident above</p>
+          <p className="text-sm mt-1 text-slate-400">Select a resident to log a PRN medication.</p>
+        </div>
+      )}
+
+      {selectedResident && (
+        <>
+          {/* Selected resident pill */}
+          <div className="flex items-center gap-3 bg-[#E6F1FB] rounded-xl px-4 py-3 mb-4">
+            <div className="w-9 h-9 rounded-full bg-[#185FA5] text-white font-bold text-sm flex items-center justify-center flex-shrink-0">
+              {initials(selectedResident)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-[#185FA5] text-sm">{residentName(selectedResident)}</p>
+              {selectedResident.room_number && <p className="text-xs text-[#185FA5]/70">Room {selectedResident.room_number}</p>}
+            </div>
+            <button onClick={clearResident} className="text-[#185FA5]/50 hover:text-[#185FA5] text-xl leading-none transition-colors">&times;</button>
+          </div>
+
+          {/* Log form */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 mb-4">
+            <h3 className="font-semibold text-slate-800 text-sm mb-4">Log PRN Medication</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Medication Name <span className="text-red-500">*</span></label>
+                <input type="text" value={form.medication_name} onChange={e => setForm(f => ({ ...f, medication_name: e.target.value }))} placeholder="e.g. Tylenol" className={inputCls} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Dose</label>
+                  <input type="text" value={form.dose} onChange={e => setForm(f => ({ ...f, dose: e.target.value }))} placeholder="e.g. 500mg" className={inputCls} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Time Given</label>
+                  <input type="time" value={form.time} onChange={e => setForm(f => ({ ...f, time: e.target.value }))} className={inputCls} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Reason for Administering <span className="text-red-500">*</span></label>
+                <input type="text" value={form.reason} onChange={e => setForm(f => ({ ...f, reason: e.target.value }))} placeholder="e.g. Complaint of headache" className={inputCls} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Notes</label>
+                <input type="text" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Optional additional notes" className={inputCls} />
+              </div>
+              {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
+              <button
+                onClick={handleLog}
+                disabled={saving}
+                className="w-full bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white font-medium rounded-lg py-2.5 text-sm transition-colors"
+              >
+                {saving ? 'Logging…' : 'Log PRN Medication'}
+              </button>
+            </div>
+          </div>
+
+          {/* Today's PRN history for this resident */}
+          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-100">
+              <h3 className="font-semibold text-slate-800 text-sm">Today's PRN Log</h3>
+              <p className="text-xs text-slate-400 mt-0.5">{residentName(selectedResident)}</p>
+            </div>
+            {prnHistory.length === 0 ? (
+              <p className="text-sm text-slate-400 px-5 py-4">No PRN medications logged today.</p>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {prnHistory.map(record => (
+                  <div key={record.id} className="px-5 py-3.5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-slate-800">
+                          {record.medication_name}{record.dose ? ` · ${record.dose}` : ''}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-0.5"><span className="font-medium">Reason:</span> {record.reason}</p>
+                        {record.notes && <p className="text-xs text-slate-400 mt-0.5 italic">{record.notes}</p>}
+                        {record.administered_by && prnStaffMap[record.administered_by] && (
+                          <p className="text-xs text-slate-400 mt-0.5">Given by {prnStaffMap[record.administered_by]}</p>
+                        )}
+                      </div>
+                      <span className="text-xs font-semibold text-emerald-600 flex-shrink-0 mt-0.5">
+                        {new Date(record.administered_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function Dispense() {
@@ -212,6 +458,7 @@ export default function Dispense() {
   const [expandedTimes, setExpandedTimes] = useState(new Set())
   const [expandedResidents, setExpandedResidents] = useState(new Set())
   const { communityId } = useCommunity()
+  const [dispenseTab, setDispenseTab] = useState('routine')
 
   const dateStr = toDateStr(date)
   const isToday = toDateStr(today) === dateStr
@@ -326,12 +573,32 @@ export default function Dispense() {
       {/* ── Header ── */}
       <div className="flex items-center justify-between mb-1">
         <h1 className="text-xl font-bold text-slate-800">Dispense</h1>
-        {!loading && totalMeds > 0 && (
+        {dispenseTab === 'routine' && !loading && totalMeds > 0 && (
           <span className="text-sm text-slate-500">
             <span className="font-bold text-[#185FA5]">{totalDone}</span> / {totalMeds} given
           </span>
         )}
       </div>
+
+      {/* ── Routine / PRN tabs ── */}
+      <div className="flex bg-slate-100 rounded-xl p-1 gap-1 mb-5">
+        <button
+          onClick={() => setDispenseTab('routine')}
+          className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${dispenseTab === 'routine' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+        >
+          Routine
+        </button>
+        <button
+          onClick={() => setDispenseTab('prn')}
+          className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${dispenseTab === 'prn' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+        >
+          PRN / As Needed
+        </button>
+      </div>
+
+      {dispenseTab === 'prn' && <PRNTab communityId={communityId} />}
+
+      {dispenseTab === 'routine' && (<>
 
       {/* ── Date navigation ── */}
       <div className="flex items-center gap-2 mb-6">
@@ -523,6 +790,7 @@ export default function Dispense() {
           </div>
         </div>
       )}
+      </>)}
     </Layout>
   )
 }
