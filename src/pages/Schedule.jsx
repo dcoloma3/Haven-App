@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import Layout from '../components/layout/Layout'
+import { useCommunity } from '../context/CommunityContext'
 
 // ── Color palette assigned to staff members by index ─────────────────────────
 
@@ -113,7 +114,7 @@ function groupByDate(shifts) {
 
 // ── Shift modal (add + edit) ──────────────────────────────────────────────────
 
-function ShiftModal({ shift, defaultDate, staff, onClose, onSaved, onDeleted }) {
+function ShiftModal({ shift, defaultDate, staff, communityId, onClose, onSaved, onDeleted }) {
   const isEditing = !!shift
   const [form, setForm] = useState({
     staff_id:   shift?.staff_id   ?? '',
@@ -137,11 +138,12 @@ function ShiftModal({ shift, defaultDate, staff, onClose, onSaved, onDeleted }) 
     setSaving(true)
     setError('')
     const payload = {
-      staff_id:   form.staff_id,
-      shift_date: form.shift_date,
-      start_time: form.start_time,
-      end_time:   form.end_time,
-      notes:      form.notes || null,
+      staff_id:     form.staff_id,
+      shift_date:   form.shift_date,
+      start_time:   form.start_time,
+      end_time:     form.end_time,
+      notes:        form.notes || null,
+      community_id: communityId,
     }
     let data, error
     if (isEditing) {
@@ -463,6 +465,7 @@ function DailyView({ date, shifts, colorMap, onAddShift, onEditShift }) {
 const VIEW_TABS = ['daily', 'weekly', 'monthly']
 
 export default function Schedule() {
+  const { communityId } = useCommunity()
   const [view, setView]               = useState('weekly')
   const [currentDate, setCurrentDate] = useState(new Date())
   const [shifts, setShifts]           = useState([])
@@ -470,26 +473,35 @@ export default function Schedule() {
   const [loadingShifts, setLoading]   = useState(true)
   const [modal, setModal]             = useState(null)
 
+  // Load only staff who belong to this community
   useEffect(() => {
+    if (!communityId) return
     supabase
-      .from('profiles')
-      .select('id, full_name, email')
-      .order('full_name')
-      .then(({ data }) => setStaff(data ?? []))
-  }, [])
+      .from('community_members')
+      .select('user_id, profiles!user_id(id, full_name, email)')
+      .eq('community_id', communityId)
+      .then(({ data }) => {
+        const members = (data ?? []).map(m => m.profiles).filter(Boolean)
+        members.sort((a, b) => (a.full_name ?? '').localeCompare(b.full_name ?? ''))
+        setStaff(members)
+      })
+  }, [communityId])
 
+  // Load only shifts for this community
   useEffect(() => {
+    if (!communityId) return
     setLoading(true)
     const { start, end } = getDateRange(view, currentDate)
     supabase
       .from('shifts')
       .select('*, profiles(id, full_name)')
+      .eq('community_id', communityId)
       .gte('shift_date', start)
       .lte('shift_date', end)
       .order('shift_date')
       .order('start_time')
       .then(({ data }) => { setShifts(data ?? []); setLoading(false) })
-  }, [view, currentDate])
+  }, [view, currentDate, communityId])
 
   const colorMap = useMemo(() => {
     const map = {}
@@ -623,6 +635,7 @@ export default function Schedule() {
           shift={modal.type === 'edit' ? modal.shift : undefined}
           defaultDate={modal.type === 'add' ? modal.date : undefined}
           staff={staff}
+          communityId={communityId}
           onClose={() => setModal(null)}
           onSaved={handleSaved}
           onDeleted={handleDeleted}
