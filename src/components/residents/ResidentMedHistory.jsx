@@ -103,6 +103,7 @@ export default function ResidentMedHistory({ residentId, resident }) {
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [marMode, setMarMode] = useState('administered') // 'administered' | 'clinical'
+  const [selectedMed, setSelectedMed] = useState('')
 
   const { from, to } = getDateRange(rangePreset, customFrom, customTo)
 
@@ -148,23 +149,41 @@ export default function ResidentMedHistory({ residentId, resident }) {
 
   useEffect(() => { loadRecords() }, [loadRecords])
 
+  // Unique medication names across both routine and PRN records in range
+  const medOptions = useMemo(() => {
+    const names = new Set()
+    routineRecords.forEach(r => { if (r.medications?.medication_name) names.add(r.medications.medication_name) })
+    prnRecords.forEach(r => { if (r.medication_name) names.add(r.medication_name) })
+    return [...names].sort()
+  }, [routineRecords, prnRecords])
+
+  // Apply medication filter
+  const filteredRoutine = useMemo(() =>
+    selectedMed ? routineRecords.filter(r => r.medications?.medication_name === selectedMed) : routineRecords,
+    [routineRecords, selectedMed]
+  )
+  const filteredPrn = useMemo(() =>
+    selectedMed ? prnRecords.filter(r => r.medication_name === selectedMed) : prnRecords,
+    [prnRecords, selectedMed]
+  )
+
   // Group combined records by date for on-screen display
   const grouped = useMemo(() => {
     const map = {}
-    routineRecords.forEach(r => {
+    filteredRoutine.forEach(r => {
       const d = r.administered_date
       if (!map[d]) map[d] = { routine: [], prn: [] }
       map[d].routine.push(r)
     })
-    prnRecords.forEach(r => {
+    filteredPrn.forEach(r => {
       const d = r.administered_at.split('T')[0]
       if (!map[d]) map[d] = { routine: [], prn: [] }
       map[d].prn.push(r)
     })
     return Object.entries(map).sort((a, b) => b[0].localeCompare(a[0]))
-  }, [routineRecords, prnRecords])
+  }, [filteredRoutine, filteredPrn])
 
-  const totalDoses = routineRecords.length + prnRecords.length
+  const totalDoses = filteredRoutine.length + filteredPrn.length
 
   // ─── PDF / MAR generation ──────────────────────────────────────────────────
 
@@ -176,10 +195,12 @@ export default function ResidentMedHistory({ residentId, resident }) {
       const generatedOn = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
       const rangeLabel = from === to ? formatDateShort(from) : `${formatDateShort(from)} – ${formatDateShort(to)}`
       const modeLabel = marMode === 'administered' ? 'Administered Medications Only' : 'Full Clinical MAR (with missed doses)'
+      const medLabel = selectedMed ? `Medication: ${selectedMed}` : 'All Medications'
 
-      // Header bar
+      // Header bar — taller when filtering a specific med
+      const headerH = selectedMed ? 36 : 30
       doc.setFillColor(4, 44, 83)
-      doc.rect(0, 0, 220, 30, 'F')
+      doc.rect(0, 0, 220, headerH, 'F')
       doc.setTextColor(255, 255, 255)
       doc.setFontSize(14)
       doc.setFont('helvetica', 'bold')
@@ -188,12 +209,18 @@ export default function ResidentMedHistory({ residentId, resident }) {
       doc.setFont('helvetica', 'normal')
       doc.text(`The Haven  ·  Generated: ${generatedOn}`, 14, 18)
       doc.text(modeLabel, 14, 24)
+      if (selectedMed) {
+        doc.setFont('helvetica', 'bold')
+        doc.text(`Medication Filter: ${selectedMed}`, 14, 31)
+        doc.setFont('helvetica', 'normal')
+      }
 
       // Resident info
+      const residentY = headerH + 10
       doc.setTextColor(30, 30, 30)
       doc.setFontSize(13)
       doc.setFont('helvetica', 'bold')
-      doc.text(name || '—', 14, 40)
+      doc.text(name || '—', 14, residentY)
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(9)
       doc.setTextColor(80, 80, 80)
@@ -202,12 +229,14 @@ export default function ResidentMedHistory({ residentId, resident }) {
         resident?.date_of_birth ? `DOB: ${formatDateShort(resident.date_of_birth)}` : null,
         `Period: ${rangeLabel}`,
       ].filter(Boolean).join('   ·   ')
-      doc.text(infoLine, 14, 47)
+      doc.text(infoLine, 14, residentY + 7)
+
+      const tableStartY = residentY + 14
 
       // ── ADMINISTERED ONLY ──────────────────────────────────────────────────
       if (marMode === 'administered') {
         const rows = []
-        routineRecords.forEach(r => {
+        filteredRoutine.forEach(r => {
           rows.push({
             sortKey: r.administered_date + '_' + (r.scheduled_time ?? ''),
             cells: [
@@ -222,7 +251,7 @@ export default function ResidentMedHistory({ residentId, resident }) {
             type: 'routine',
           })
         })
-        prnRecords.forEach(r => {
+        filteredPrn.forEach(r => {
           const dateStr = r.administered_at.split('T')[0]
           rows.push({
             sortKey: r.administered_at,
@@ -241,7 +270,7 @@ export default function ResidentMedHistory({ residentId, resident }) {
         rows.sort((a, b) => a.sortKey.localeCompare(b.sortKey))
 
         autoTable(doc, {
-          startY: 54,
+          startY: tableStartY,
           head: [['Date', 'Time Given', 'Medication', 'Dose', 'Type', 'Reason', 'Given By']],
           body: rows.map(r => r.cells),
           styles: { fontSize: 8, cellPadding: 2.5 },
@@ -268,22 +297,28 @@ export default function ResidentMedHistory({ residentId, resident }) {
         const dates = datesInRange(from, to)
 
         // Build lookup: administered_date :: scheduled_time :: medication_id → record
+        // Use all routine records for the lookup (so we can mark missed doses correctly)
         const adminLookup = new Map()
         routineRecords.forEach(r => {
           adminLookup.set(`${r.administered_date}::${r.scheduled_time}::${r.medication_id}`, r)
         })
 
-        // PRN by date
+        // PRN by date — respect the medication filter
         const prnByDate = {}
-        prnRecords.forEach(r => {
+        filteredPrn.forEach(r => {
           const d = r.administered_at.split('T')[0]
           if (!prnByDate[d]) prnByDate[d] = []
           prnByDate[d].push(r)
         })
 
+        // Medications to show — filter by selected med if set
+        const medsToShow = selectedMed
+          ? allMedications.filter(m => m.medication_name === selectedMed)
+          : allMedications
+
         const rows = []
         dates.forEach(dateStr => {
-          const dueMeds = allMedications.filter(m => isMedDueOnDate(m, dateStr))
+          const dueMeds = medsToShow.filter(m => isMedDueOnDate(m, dateStr))
 
           dueMeds.forEach(med => {
             ;(med.scheduled_times ?? []).forEach(time => {
@@ -325,7 +360,7 @@ export default function ResidentMedHistory({ residentId, resident }) {
         })
 
         autoTable(doc, {
-          startY: 54,
+          startY: tableStartY,
           head: [['Date', 'Scheduled', 'Medication', 'Dose', 'Status', 'Given By', 'Type', 'Reason']],
           body: rows.map(r => r.cells),
           styles: { fontSize: 7.5, cellPadding: 2.5 },
@@ -371,7 +406,8 @@ export default function ResidentMedHistory({ residentId, resident }) {
       }
 
       const safeName = name.replace(/\s+/g, '_')
-      doc.save(`${safeName}_MAR_${from}_to_${to}.pdf`)
+      const safeMed = selectedMed ? `_${selectedMed.replace(/\s+/g, '_')}` : ''
+      doc.save(`${safeName}_MAR${safeMed}_${from}_to_${to}.pdf`)
     } finally {
       setGenerating(false)
     }
@@ -388,7 +424,9 @@ export default function ResidentMedHistory({ residentId, resident }) {
           <h2 className="font-medium text-slate-700">Medication History (MAR)</h2>
           {!loading && (
             <p className="text-xs text-slate-400 mt-0.5">
-              {totalDoses} record{totalDoses !== 1 ? 's' : ''} · {formatDateShort(from)}{from !== to ? ` – ${formatDateShort(to)}` : ''}
+              {totalDoses} record{totalDoses !== 1 ? 's' : ''}
+              {selectedMed ? <span className="text-purple-500 font-medium"> · {selectedMed}</span> : null}
+              {' · '}{formatDateShort(from)}{from !== to ? ` – ${formatDateShort(to)}` : ''}
             </p>
           )}
         </div>
@@ -474,10 +512,39 @@ export default function ResidentMedHistory({ residentId, resident }) {
         </div>
       )}
 
+      {/* Medication filter */}
+      {!loading && medOptions.length > 0 && (
+        <div className="flex items-center gap-3 mb-3">
+          <label className="text-xs font-medium text-slate-500 flex-shrink-0">Filter by medication</label>
+          <select
+            value={selectedMed}
+            onChange={e => setSelectedMed(e.target.value)}
+            className="flex-1 border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent bg-white"
+          >
+            <option value="">All Medications</option>
+            {medOptions.map(name => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
+          {selectedMed && (
+            <button
+              onClick={() => setSelectedMed('')}
+              className="text-xs text-slate-400 hover:text-slate-600 flex-shrink-0 transition-colors"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      )}
+
       {loading && <p className="text-slate-400 text-sm mt-4">Loading…</p>}
 
       {!loading && totalDoses === 0 && (
-        <p className="text-sm text-slate-400 mt-2">No medications recorded in this period.</p>
+        <p className="text-sm text-slate-400 mt-2">
+          {selectedMed
+            ? `No records for "${selectedMed}" in this period.`
+            : 'No medications recorded in this period.'}
+        </p>
       )}
 
       {/* Day-grouped log */}
