@@ -10,6 +10,14 @@ function fmt12(t) {
   const ampm = h < 12 ? 'AM' : 'PM'
   const hour = h === 0 ? 12 : h > 12 ? h - 12 : h
   return `${hour}:${m.toString().padStart(2, '0')} ${ampm}`
+
+}
+
+function fmtShort(t) {
+  const [h, m] = t.split(':').map(Number)
+  const ampm = h < 12 ? 'am' : 'pm'
+  const hour = h === 0 ? 12 : h > 12 ? h - 12 : h
+  return m === 0 ? `${hour}${ampm}` : `${hour}:${m.toString().padStart(2, '0')}${ampm}`
 }
 
 function toDateStr(d) {
@@ -58,7 +66,6 @@ const RESIDENT_COLS_SAFE = 'id, full_name, room_number, avatar_url'
 
 // ─── Status helpers ───────────────────────────────────────────────────────────
 
-// 'none' | 'partial' | 'all'
 function calcStatus(meds, time, administered) {
   const total = meds.length
   if (total === 0) return 'none'
@@ -68,60 +75,51 @@ function calcStatus(meds, time, administered) {
   return 'partial'
 }
 
-function slotBg(status) {
-  if (status === 'all') return 'bg-emerald-50 border-emerald-200'
-  if (status === 'partial') return 'bg-amber-50 border-amber-200'
-  return 'bg-white border-slate-200'
+// Timeline dot color
+function timelineDotCls(status) {
+  if (status === 'all') return 'bg-emerald-400 border-emerald-400'
+  if (status === 'partial') return 'bg-amber-400 border-amber-400'
+  return 'bg-white border-slate-300'
 }
 
-function slotDivider(status) {
+// Resident photo dot color
+function residentDotCls(status) {
+  if (status === 'all') return 'bg-emerald-400'
+  if (status === 'partial') return 'bg-amber-400'
+  return 'bg-white border-2 border-slate-300'
+}
+
+// Card border color
+function cardBorderCls(status) {
+  if (status === 'all') return 'border-emerald-200'
+  if (status === 'partial') return 'border-amber-200'
+  return 'border-slate-200'
+}
+
+// Divider color inside card
+function dividerCls(status) {
   if (status === 'all') return 'border-emerald-100'
   if (status === 'partial') return 'border-amber-100'
   return 'border-slate-100'
 }
 
-function StatusPill({ status, done, total }) {
-  const base = 'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold'
-  if (status === 'all') return (
-    <span className={`${base} bg-emerald-100 text-emerald-700`}>
-      <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-      {done}/{total} done
-    </span>
-  )
-  if (status === 'partial') return (
-    <span className={`${base} bg-amber-100 text-amber-700`}>
-      <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
-      {done}/{total} done
-    </span>
-  )
-  return (
-    <span className={`${base} bg-slate-100 text-slate-500`}>
-      <span className="w-2 h-2 rounded-full border-2 border-slate-300 inline-block" />
-      {total} pending
-    </span>
-  )
-}
-
-function ResidentDot({ status }) {
-  if (status === 'all') return <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 flex-shrink-0" />
-  if (status === 'partial') return <span className="w-2.5 h-2.5 rounded-full bg-amber-400 flex-shrink-0" />
-  return <span className="w-2.5 h-2.5 rounded-full border-2 border-slate-300 bg-white flex-shrink-0" />
-}
-
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function ResidentAvatar({ resident }) {
+function ResidentAvatar({ resident, size = 'md' }) {
   const [err, setErr] = useState(false)
   const name = residentName(resident)
   const initials = ((resident.first_name?.[0] ?? '') + (resident.last_name?.[0] ?? '')).toUpperCase()
     || name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+  const sz = size === 'sm' ? 'w-9 h-9 text-xs' : 'w-10 h-10 text-sm'
 
   if (resident.avatar_url && !err) {
-    return <img src={resident.avatar_url} alt={name} onError={() => setErr(true)}
-      className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
+    return (
+      <img src={resident.avatar_url} alt={name} onError={() => setErr(true)}
+        className={`${sz} rounded-full object-cover flex-shrink-0 border-2 border-white`} />
+    )
   }
   return (
-    <div className="w-9 h-9 rounded-full bg-[#E6F1FB] text-[#185FA5] font-semibold text-sm flex items-center justify-center flex-shrink-0">
+    <div className={`${sz} rounded-full bg-[#E6F1FB] text-[#185FA5] font-semibold flex items-center justify-center flex-shrink-0 border-2 border-white`}>
       {initials}
     </div>
   )
@@ -148,8 +146,7 @@ function Checkbox({ done, toggling, onToggle }) {
 function ChevronIcon({ open }) {
   return (
     <svg className={`w-4 h-4 text-slate-400 flex-shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
-      viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-      strokeLinecap="round" strokeLinejoin="round">
+      viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="6 9 12 15 18 9" />
     </svg>
   )
@@ -164,10 +161,37 @@ function GivenByLine({ record, staffMap }) {
   if (!t && !by) return null
   return (
     <p className="text-xs text-emerald-600 mt-0.5">
-      {t ? `Given at ${t}` : ''}
-      {t && by ? ' · ' : ''}
-      {by ? `by ${by}` : ''}
+      {t ? `Given at ${t}` : ''}{t && by ? ' · ' : ''}{by || ''}
     </p>
+  )
+}
+
+// Row of resident photos shown inside collapsed card
+function ResidentPhotoRow({ residentList, time, administered }) {
+  const MAX_SHOW = 6
+  const shown = residentList.slice(0, MAX_SHOW)
+  const extra = residentList.length - MAX_SHOW
+
+  return (
+    <div className="flex items-end gap-2 mt-3 flex-wrap">
+      {shown.map(([rid, { resident, meds }]) => {
+        const status = calcStatus(meds, time, administered)
+        return (
+          <div key={rid} className="flex flex-col items-center gap-1">
+            <ResidentAvatar resident={resident} size="sm" />
+            <span className={`w-2.5 h-2.5 rounded-full ${residentDotCls(status)}`} />
+          </div>
+        )
+      })}
+      {extra > 0 && (
+        <div className="flex flex-col items-center gap-1">
+          <div className="w-9 h-9 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-xs font-semibold text-slate-500">
+            +{extra}
+          </div>
+          <span className="w-2.5 h-2.5" />
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -238,7 +262,6 @@ export default function Dispense() {
 
   const sortedTimes = useMemo(() => Object.keys(timeGroups).sort(), [timeGroups])
 
-  // Overall progress
   const { totalMeds, totalDone } = useMemo(() => {
     let totalMeds = 0, totalDone = 0
     sortedTimes.forEach(time => {
@@ -270,7 +293,6 @@ export default function Dispense() {
     const key = adminKey(med.id, time)
     if (toggling.has(key)) return
     setToggling(prev => new Set(prev).add(key))
-
     if (administered.has(key)) {
       const record = administered.get(key)
       setAdministered(prev => { const n = new Map(prev); n.delete(key); return n })
@@ -288,7 +310,6 @@ export default function Dispense() {
       const { data } = await supabase.from('medication_administrations').insert([payload]).select().single()
       if (data) setAdministered(prev => { const n = new Map(prev); n.set(key, data); return n })
     }
-
     setToggling(prev => { const n = new Set(prev); n.delete(key); return n })
   }
 
@@ -310,26 +331,20 @@ export default function Dispense() {
 
       {/* ── Date navigation ── */}
       <div className="flex items-center gap-2 mb-6">
-        <button onClick={prevDay} className="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-500 active:bg-slate-100 transition-colors">
+        <button onClick={prevDay} className="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-500 active:bg-slate-100">
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
         </button>
-        <button onClick={nextDay} className="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-500 active:bg-slate-100 transition-colors">
+        <button onClick={nextDay} className="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-500 active:bg-slate-100">
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
         </button>
         <span className="text-sm font-medium text-slate-600 flex-1 truncate">{formatDisplayDate(date)}</span>
         {!isToday && (
-          <button onClick={() => setDate(new Date())} className="text-xs font-semibold text-[#185FA5] flex-shrink-0">
-            Today
-          </button>
+          <button onClick={() => setDate(new Date())} className="text-xs font-semibold text-[#185FA5]">Today</button>
         )}
       </div>
 
-      {/* ── Loading ── */}
-      {loading && (
-        <p className="text-slate-400 text-sm text-center py-12">Loading…</p>
-      )}
+      {loading && <p className="text-slate-400 text-sm text-center py-12">Loading…</p>}
 
-      {/* ── Empty ── */}
       {!loading && sortedTimes.length === 0 && (
         <div className="text-center py-16">
           <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -342,169 +357,160 @@ export default function Dispense() {
         </div>
       )}
 
-      {/* ── Time slot cards ── */}
+      {/* ── Timeline ── */}
       {!loading && sortedTimes.length > 0 && (
-        <div className="space-y-3">
-          {sortedTimes.map(time => {
-            const residentGroups = timeGroups[time]
-            const allMedsAtTime = Object.values(residentGroups).flatMap(rg => rg.meds)
-            const doneAtTime = allMedsAtTime.filter(m => administered.has(adminKey(m.id, time))).length
-            const totalAtTime = allMedsAtTime.length
-            const timeStatus = calcStatus(allMedsAtTime, time, administered)
-            const isOpen = expandedTimes.has(time)
+        <div className="relative">
+          {/* Vertical line */}
+          <div className="absolute left-[18px] top-3 bottom-3 w-0.5 bg-slate-200 z-0" />
 
-            const residentList = Object.entries(residentGroups)
-              .sort(([, a], [, b]) => residentName(a.resident ?? {}).localeCompare(residentName(b.resident ?? {})))
+          <div className="space-y-4">
+            {sortedTimes.map(time => {
+              const residentGroups = timeGroups[time]
+              const allMedsAtTime = Object.values(residentGroups).flatMap(rg => rg.meds)
+              const doneAtTime = allMedsAtTime.filter(m => administered.has(adminKey(m.id, time))).length
+              const totalAtTime = allMedsAtTime.length
+              const timeStatus = calcStatus(allMedsAtTime, time, administered)
+              const isOpen = expandedTimes.has(time)
 
-            return (
-              <div key={time} className={`border rounded-2xl overflow-hidden ${slotBg(timeStatus)}`}>
+              const residentList = Object.entries(residentGroups)
+                .sort(([, a], [, b]) => residentName(a.resident ?? {}).localeCompare(residentName(b.resident ?? {})))
 
-                {/* ── Time slot header ── */}
-                <button
-                  onClick={() => toggleTime(time)}
-                  className="w-full flex items-center gap-3 px-4 py-4 text-left"
-                >
-                  {/* Time label */}
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-lg font-bold tracking-tight ${
-                      timeStatus === 'all' ? 'text-emerald-800' :
-                      timeStatus === 'partial' ? 'text-amber-800' :
-                      'text-slate-800'
-                    }`}>
-                      {fmt12(time)}
-                    </p>
-                    <p className={`text-xs mt-0.5 ${
-                      timeStatus === 'all' ? 'text-emerald-600' :
-                      timeStatus === 'partial' ? 'text-amber-600' :
-                      'text-slate-400'
-                    }`}>
-                      {residentList.length} {residentList.length === 1 ? 'resident' : 'residents'}
-                    </p>
+              const totalResidents = residentList.length
+              const totalMedsAtTime = allMedsAtTime.length
+
+              return (
+                <div key={time} className="relative flex items-start gap-3">
+
+                  {/* ── Timeline dot ── */}
+                  <div className="flex-shrink-0 w-9 flex justify-center pt-5 z-10">
+                    <span className={`w-3.5 h-3.5 rounded-full border-2 ${timelineDotCls(timeStatus)}`} />
                   </div>
 
-                  {/* Status pill */}
-                  <StatusPill status={timeStatus} done={doneAtTime} total={totalAtTime} />
+                  {/* ── Card ── */}
+                  <div className={`flex-1 min-w-0 border rounded-2xl overflow-hidden bg-white ${cardBorderCls(timeStatus)}`}>
 
-                  {/* Chevron */}
-                  <ChevronIcon open={isOpen} />
-                </button>
+                    {/* Collapsed header — always visible */}
+                    <button
+                      onClick={() => toggleTime(time)}
+                      className="w-full text-left px-4 pt-4 pb-3"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          {/* Status label */}
+                          <p className={`font-bold text-sm ${
+                            timeStatus === 'all' ? 'text-emerald-700' :
+                            timeStatus === 'partial' ? 'text-amber-700' :
+                            'text-slate-800'
+                          }`}>
+                            {timeStatus === 'all' ? 'All medications given' : 'Medication to dispense'}
+                          </p>
+                          {/* Sub-label */}
+                          <p className="text-xs text-slate-400 mt-0.5">
+                            {totalResidents} {totalResidents === 1 ? 'resident' : 'residents'} · {totalMedsAtTime} {totalMedsAtTime === 1 ? 'medication' : 'medications'}
+                          </p>
+                        </div>
 
-                {/* ── Resident rows (expanded) ── */}
-                {isOpen && (
-                  <div className={`border-t ${slotDivider(timeStatus)}`}>
-                    {residentList.map(([rid, { resident, meds }], idx) => {
-                      if (!resident) return null
-                      const resStatus = calcStatus(meds, time, administered)
-                      const resKey = `${time}::${rid}`
-                      const isResOpen = expandedResidents.has(resKey)
-                      const hasMultiple = meds.length > 1
-                      const singleMed = hasMultiple ? null : meds[0]
-                      const singleKey = singleMed ? adminKey(singleMed.id, time) : null
-                      const singleDone = singleKey ? administered.has(singleKey) : false
-                      const singleToggling = singleKey ? toggling.has(singleKey) : false
+                        {/* Time + chevron */}
+                        <div className="flex items-center gap-1.5 flex-shrink-0 mt-0.5">
+                          <span className="text-sm font-semibold text-slate-400">{fmtShort(time)}</span>
+                          <ChevronIcon open={isOpen} />
+                        </div>
+                      </div>
 
-                      return (
-                        <div key={rid} className={idx !== 0 ? `border-t ${slotDivider(timeStatus)}` : ''}>
+                      {/* Resident photo row */}
+                      <ResidentPhotoRow
+                        residentList={residentList}
+                        time={time}
+                        administered={administered}
+                      />
+                    </button>
 
-                          {/* Resident row */}
-                          <div
-                            onClick={() => hasMultiple && toggleResident(time, rid)}
-                            className={`flex items-center gap-3 px-4 py-3.5 ${
-                              hasMultiple ? 'cursor-pointer active:bg-black/5' : ''
-                            } ${singleDone && !hasMultiple ? (timeStatus === 'all' ? 'bg-emerald-50/60' : 'bg-emerald-50/40') : ''}`}
-                          >
-                            <ResidentAvatar resident={resident} />
+                    {/* ── Expanded: resident rows ── */}
+                    {isOpen && (
+                      <div className={`border-t ${dividerCls(timeStatus)}`}>
+                        {residentList.map(([rid, { resident, meds }], idx) => {
+                          if (!resident) return null
+                          const resStatus = calcStatus(meds, time, administered)
+                          const resKey = `${time}::${rid}`
+                          const isResOpen = expandedResidents.has(resKey)
+                          const hasMultiple = meds.length > 1
+                          const singleMed = hasMultiple ? null : meds[0]
+                          const singleKey = singleMed ? adminKey(singleMed.id, time) : null
+                          const singleDone = singleKey ? administered.has(singleKey) : false
+                          const singleToggling = singleKey ? toggling.has(singleKey) : false
 
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <p className="font-semibold text-slate-800 text-sm truncate">
-                                  {residentName(resident)}
-                                </p>
-                                {resident.room_number && (
-                                  <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded flex-shrink-0">
-                                    Rm {resident.room_number}
-                                  </span>
+                          return (
+                            <div key={rid} className={idx !== 0 ? `border-t ${dividerCls(timeStatus)}` : ''}>
+
+                              {/* Resident row */}
+                              <div
+                                onClick={() => hasMultiple && toggleResident(time, rid)}
+                                className={`flex items-center gap-3 px-4 py-3.5 ${hasMultiple ? 'cursor-pointer active:bg-slate-50' : ''} ${singleDone && !hasMultiple ? 'bg-emerald-50/40' : ''}`}
+                              >
+                                <ResidentAvatar resident={resident} />
+
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <p className="font-semibold text-slate-800 text-sm truncate">{residentName(resident)}</p>
+                                    {resident.room_number && (
+                                      <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded flex-shrink-0">Rm {resident.room_number}</span>
+                                    )}
+                                  </div>
+                                  {singleMed && (
+                                    <p className="text-xs text-slate-500 mt-0.5 truncate">
+                                      {singleMed.medication_name}{singleMed.dose ? ` · ${singleMed.dose}` : ''}
+                                    </p>
+                                  )}
+                                  {hasMultiple && (
+                                    <p className="text-xs text-slate-400 mt-0.5">{meds.length} medications</p>
+                                  )}
+                                  {singleMed && singleDone && (
+                                    <GivenByLine record={administered.get(singleKey)} staffMap={staffMap} />
+                                  )}
+                                </div>
+
+                                {hasMultiple ? (
+                                  <div className="flex items-center gap-2 flex-shrink-0">
+                                    <span className={`w-2.5 h-2.5 rounded-full ${residentDotCls(resStatus)}`} />
+                                    <ChevronIcon open={isResOpen} />
+                                  </div>
+                                ) : (
+                                  <Checkbox done={singleDone} toggling={singleToggling} onToggle={() => handleToggle(singleMed, time)} />
                                 )}
                               </div>
 
-                              {/* Single med name inline */}
-                              {singleMed && (
-                                <p className="text-xs text-slate-500 mt-0.5 truncate">
-                                  {singleMed.medication_name}{singleMed.dose ? ` · ${singleMed.dose}` : ''}
-                                </p>
-                              )}
-
-                              {/* Multiple meds count */}
-                              {hasMultiple && (
-                                <p className="text-xs text-slate-400 mt-0.5">
-                                  {meds.length} medications
-                                </p>
-                              )}
-
-                              {/* Given-by for single med */}
-                              {singleMed && singleDone && (
-                                <GivenByLine record={administered.get(singleKey)} staffMap={staffMap} />
+                              {/* Expanded med list */}
+                              {hasMultiple && isResOpen && (
+                                <div className={`border-t ${dividerCls(timeStatus)} bg-slate-50/70`}>
+                                  {meds.map((med, mIdx) => {
+                                    const mKey = adminKey(med.id, time)
+                                    const isDone = administered.has(mKey)
+                                    const isTogg = toggling.has(mKey)
+                                    return (
+                                      <div key={med.id} className={`flex items-center gap-3 pl-16 pr-4 py-3 ${mIdx !== 0 ? 'border-t border-slate-100' : ''} ${isDone ? 'bg-emerald-50/50' : ''}`}>
+                                        <div className="flex-1 min-w-0">
+                                          <p className={`text-sm font-medium truncate ${isDone ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
+                                            {med.medication_name}
+                                          </p>
+                                          {med.dose && <p className="text-xs text-slate-400 mt-0.5">{med.dose}</p>}
+                                          {isDone && <GivenByLine record={administered.get(mKey)} staffMap={staffMap} />}
+                                        </div>
+                                        <Checkbox done={isDone} toggling={isTogg} onToggle={() => handleToggle(med, time)} />
+                                      </div>
+                                    )
+                                  })}
+                                </div>
                               )}
                             </div>
-
-                            {/* Right side */}
-                            {hasMultiple ? (
-                              <div className="flex items-center gap-2 flex-shrink-0">
-                                <ResidentDot status={resStatus} />
-                                <ChevronIcon open={isResOpen} />
-                              </div>
-                            ) : (
-                              <Checkbox
-                                done={singleDone}
-                                toggling={singleToggling}
-                                onToggle={() => handleToggle(singleMed, time)}
-                              />
-                            )}
-                          </div>
-
-                          {/* Expanded med list */}
-                          {hasMultiple && isResOpen && (
-                            <div className={`border-t ${slotDivider(timeStatus)} bg-slate-50/80`}>
-                              {meds.map((med, mIdx) => {
-                                const mKey = adminKey(med.id, time)
-                                const isDone = administered.has(mKey)
-                                const isTogg = toggling.has(mKey)
-                                return (
-                                  <div
-                                    key={med.id}
-                                    className={`flex items-center gap-3 pl-16 pr-4 py-3 ${
-                                      mIdx !== 0 ? 'border-t border-slate-100' : ''
-                                    } ${isDone ? 'bg-emerald-50/50' : ''}`}
-                                  >
-                                    <div className="flex-1 min-w-0">
-                                      <p className={`text-sm font-medium truncate ${isDone ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
-                                        {med.medication_name}
-                                      </p>
-                                      {med.dose && (
-                                        <p className="text-xs text-slate-400 mt-0.5">{med.dose}</p>
-                                      )}
-                                      {isDone && (
-                                        <GivenByLine record={administered.get(mKey)} staffMap={staffMap} />
-                                      )}
-                                    </div>
-                                    <Checkbox
-                                      done={isDone}
-                                      toggling={isTogg}
-                                      onToggle={() => handleToggle(med, time)}
-                                    />
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })}
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            )
-          })}
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
     </Layout>
