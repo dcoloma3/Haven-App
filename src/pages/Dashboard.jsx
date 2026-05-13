@@ -90,7 +90,7 @@ export default function Dashboard() {
   const unauthorized = location.state?.unauthorized
   const openAddResident = location.state?.openAddResident || new URLSearchParams(location.search).get('openAddResident')
   const { facility } = useFacility()
-  const { communityId } = useCommunity()
+  const { communityId, community } = useCommunity()
   const isMobile = useIsMobile()
 
   useEffect(() => {
@@ -134,6 +134,11 @@ export default function Dashboard() {
             Dismiss
           </button>
         </div>
+      )}
+
+      {/* Welcome */}
+      {community?.name && (
+        <p className="text-sm text-slate-500 mb-1">Welcome to <span className="font-semibold text-slate-700">{community.name}</span></p>
       )}
 
       {/* Header */}
