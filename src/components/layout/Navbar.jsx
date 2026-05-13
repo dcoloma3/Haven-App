@@ -177,7 +177,7 @@ function UserMenu({ profile, isAdmin, isSuperAdmin }) {
               <span className={`inline-flex items-center mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${
                 isSuperAdmin ? 'bg-amber-100 text-amber-700' : isAdmin ? 'bg-[#E6F1FB] text-[#185FA5]' : 'bg-slate-100 text-slate-600'
               }`}>
-                {isSuperAdmin ? 'Super Admin' : isAdmin ? 'Admin' : 'Staff'}
+                {isSuperAdmin ? 'Super Admin' : isAdmin ? 'Manager' : 'Staff'}
               </span>
             </div>
 

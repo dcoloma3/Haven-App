@@ -102,7 +102,7 @@ export default function Sidebar() {
         {isAdmin && (
           <>
             <div className="pt-3 pb-1 px-3">
-              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Admin</p>
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Manager</p>
             </div>
 
             <NavLink to="/staff" className={linkCls}>

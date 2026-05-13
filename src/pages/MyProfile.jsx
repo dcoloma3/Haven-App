@@ -63,7 +63,7 @@ export default function MyProfile() {
     return (
       <Layout>
         <div className="text-center py-16 text-slate-400">
-          <p>Profile not found. Please contact an admin.</p>
+          <p>Profile not found. Please contact your manager.</p>
         </div>
       </Layout>
     )
@@ -89,7 +89,7 @@ export default function MyProfile() {
                   ? 'bg-[#E6F1FB] text-[#185FA5]'
                   : 'bg-slate-100 text-slate-600'
               }`}>
-                {profile.role === 'admin' ? 'Admin' : 'Staff'}
+                {profile.role === 'admin' ? 'Manager' : 'Staff'}
               </span>
             </div>
           </div>
@@ -143,7 +143,7 @@ export default function MyProfile() {
               <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
               <select className={inputCls} value={form.role} onChange={e => set('role', e.target.value)}>
                 <option value="staff">Staff</option>
-                <option value="admin">Admin</option>
+                <option value="admin">Manager</option>
               </select>
             </div>
           )}

@@ -36,7 +36,7 @@ export default function CommunityPicker() {
               <span className={`inline-flex items-center mt-2 px-2 py-0.5 rounded-full text-xs font-medium ${
                 m.role === 'admin' ? 'bg-[#E6F1FB] text-[#185FA5]' : 'bg-slate-100 text-slate-600'
               }`}>
-                {m.role === 'admin' ? 'Admin' : 'Staff'}
+                {m.role === 'admin' ? 'Manager' : 'Staff'}
               </span>
             </button>
           ))}

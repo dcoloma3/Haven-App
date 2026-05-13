@@ -22,7 +22,7 @@ function initials(name) {
 
 function RoleBadge({ role }) {
   return role === 'admin'
-    ? <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[#E6F1FB] text-[#185FA5]">Admin</span>
+    ? <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[#E6F1FB] text-[#185FA5]">Manager</span>
     : <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">Staff</span>
 }
 
@@ -159,7 +159,7 @@ function StaffModal({ member, communityId, currentUserId, onClose, onSaved, onDe
               <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
               <select className={inputCls} value={form.role} onChange={e => set('role', e.target.value)}>
                 <option value="staff">Staff</option>
-                <option value="admin">Admin</option>
+                <option value="admin">Manager</option>
               </select>
             </div>
             <div>
@@ -187,11 +187,11 @@ function StaffModal({ member, communityId, currentUserId, onClose, onSaved, onDe
           {/* Admin transfer */}
           {isEditing && !isCurrentUser && !isTheirAdmin && (
             <div className="border border-amber-200 bg-amber-50 rounded-xl px-4 py-3">
-              <p className="text-sm font-medium text-amber-800 mb-1">Transfer Admin Role</p>
-              <p className="text-xs text-amber-700 mb-2">This will make {form.full_name || 'this person'} the admin and change your role to staff.</p>
+              <p className="text-sm font-medium text-amber-800 mb-1">Transfer Manager Role</p>
+              <p className="text-xs text-amber-700 mb-2">This will make {form.full_name || 'this person'} the manager and change your role to staff.</p>
               {!confirmTransfer ? (
                 <button onClick={() => setConfirmTransfer(true)} className="text-xs font-medium text-amber-700 hover:text-amber-900 underline">
-                  Transfer admin role
+                  Transfer manager role
                 </button>
               ) : (
                 <div className="flex items-center gap-3 text-xs">
@@ -313,7 +313,7 @@ function InviteModal({ communityId, currentUserId, onClose, onInvited }) {
                 <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
                 <select className={inputCls} value={role} onChange={e => setRole(e.target.value)}>
                   <option value="staff">Staff</option>
-                  <option value="admin">Admin</option>
+                  <option value="admin">Manager</option>
                 </select>
               </div>
               <p className="text-xs text-slate-400 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
