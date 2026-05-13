@@ -138,7 +138,10 @@ export default function Dashboard() {
 
       {/* Welcome */}
       {community?.name && (
-        <p className="text-sm text-slate-500 mb-1">Welcome to <span className="font-semibold text-slate-700">{community.name}</span></p>
+        <div className="mb-6">
+          <p className="text-sm font-medium text-slate-400 uppercase tracking-widest mb-1">Welcome to</p>
+          <h1 className="text-3xl font-bold text-slate-800 leading-tight">{community.name}</h1>
+        </div>
       )}
 
       {/* Header */}
