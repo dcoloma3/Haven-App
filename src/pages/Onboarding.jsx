@@ -139,7 +139,7 @@ export default function Onboarding() {
       if (!isStaff) {
         setShowResidentPrompt(true)
       } else {
-        navigate('/dashboard', { replace: true })
+        window.location.href = '/dashboard'
       }
     } catch (e) {
       setError(e.message)
@@ -165,13 +165,13 @@ export default function Onboarding() {
           </p>
           <div className="flex flex-col gap-3">
             <button
-              onClick={() => navigate('/dashboard', { replace: true, state: { openAddResident: true } })}
+              onClick={() => { window.location.href = '/dashboard?openAddResident=1' }}
               className="w-full bg-[#185FA5] hover:bg-[#0C447C] text-white font-medium py-2.5 rounded-lg text-sm transition-colors"
             >
               Add a Resident
             </button>
             <button
-              onClick={() => navigate('/dashboard', { replace: true })}
+              onClick={() => { window.location.href = '/dashboard' }}
               className="w-full text-slate-500 hover:text-slate-700 text-sm transition-colors py-2"
             >
               Skip for now

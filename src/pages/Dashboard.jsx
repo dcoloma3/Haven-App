@@ -56,7 +56,7 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const location = useLocation()
   const unauthorized = location.state?.unauthorized
-  const openAddResident = location.state?.openAddResident
+  const openAddResident = location.state?.openAddResident || new URLSearchParams(location.search).get('openAddResident')
   const { facility } = useFacility()
   const { communityId } = useCommunity()
   const facilityName = facility?.facility_name || 'Haven'
