@@ -241,33 +241,23 @@ export default function Navbar() {
           paddingBottom: '12px',
         }}
       >
-        {/* Logo */}
+        {/* Logo — slightly bigger */}
         <Link to="/dashboard" className="flex-shrink-0 hover:opacity-80 transition-opacity">
-          <HavenLogo variant="white" />
+          <HavenLogo variant="white" markHeight={32} textSize={24} />
         </Link>
 
         {/* Desktop: search bar */}
         {!isMobile && (
-          <div className="flex-1 max-w-lg">
+          <div className="flex-1 max-w-lg ml-4">
             <GlobalSearch />
           </div>
         )}
 
-        {/* Desktop: nav links */}
+        {/* Desktop: community switcher + user menu only (nav moved to sidebar) */}
         {!isMobile && (
-          <div className="flex items-center gap-4 flex-shrink-0 ml-auto">
-            <NavLink to="/dashboard" className={navLinkCls}>Residents</NavLink>
-            <NavLink to="/calendar" className={navLinkCls}>Calendar</NavLink>
-            <NavLink to="/dispense" className={navLinkCls}>Dispense</NavLink>
-            {isAdmin && <NavLink to="/staff" className={navLinkCls}>Staff</NavLink>}
-            {isAdmin && <NavLink to="/schedule" className={navLinkCls}>Schedule</NavLink>}
-            <div className="w-px h-4 bg-white/20" />
-            {isAdmin && (
-              <Link to="/settings" className="text-white/60 hover:text-white transition-colors" title="Community Settings">
-                <SettingsIcon />
-              </Link>
-            )}
+          <div className="flex items-center gap-3 flex-shrink-0 ml-auto">
             <CommunityDropdown community={community} memberships={memberships} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} onSwitch={setCommunityId} onNew={() => setShowNewCommunity(true)} />
+            <div className="w-px h-4 bg-white/20" />
             <UserMenu profile={profile} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} />
           </div>
         )}
