@@ -10,11 +10,12 @@ import LeaseDetails from '../components/lease/LeaseDetails'
 import HealthCare from '../components/health/HealthCare'
 import PhotoGallery from '../components/photos/PhotoGallery'
 import ResidentMedHistory from '../components/residents/ResidentMedHistory'
+import ResidentAppointments from '../components/appointments/ResidentAppointments'
 import { useCommunity } from '../context/CommunityContext'
 import { useIsMobile } from '../hooks/useIsMobile'
 
-const ALL_TABS = ['Profile', 'Medications', 'Contacts', 'Health & Care', 'Lease', 'Photos', 'Med History']
-const STAFF_TABS = ['Profile', 'Medications', 'Contacts', 'Health & Care', 'Photos', 'Med History']
+const ALL_TABS = ['Profile', 'Medications', 'Contacts', 'Health & Care', 'Lease', 'Photos', 'Appointments', 'Med History']
+const STAFF_TABS = ['Profile', 'Medications', 'Contacts', 'Health & Care', 'Photos', 'Appointments', 'Med History']
 
 const REMOVAL_REASONS = [
   'Moved Out',
@@ -96,7 +97,7 @@ function RemovalModal({ onClose, onConfirm }) {
 export default function ResidentDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { isAdmin } = useCommunity()
+  const { isAdmin, communityId } = useCommunity()
   const isMobile = useIsMobile()
   const [resident, setResident] = useState(null)
   const [activeTab, setActiveTab] = useState('Profile')
@@ -228,6 +229,7 @@ export default function ResidentDetail() {
       {activeTab === 'Lease' && <LeaseDetails residentId={id} />}
       {activeTab === 'Health & Care' && <HealthCare residentId={id} />}
       {activeTab === 'Photos' && <PhotoGallery residentId={id} />}
+      {activeTab === 'Appointments' && <ResidentAppointments residentId={id} communityId={communityId} />}
       {activeTab === 'Med History' && <ResidentMedHistory residentId={id} resident={resident} />}
 
       {/* Remove Resident — admin only, active residents only */}
