@@ -61,8 +61,8 @@ function isMedDueOnDate(med, dateStr) {
   return true
 }
 
-const RESIDENT_COLS = 'id, full_name, first_name, middle_name, last_name, room_number, avatar_url'
-const RESIDENT_COLS_SAFE = 'id, full_name, room_number, avatar_url'
+const RESIDENT_COLS = 'id, full_name, first_name, middle_name, last_name, room_number, avatar_url, status'
+const RESIDENT_COLS_SAFE = 'id, full_name, room_number, avatar_url, status'
 
 // ─── Status helpers ───────────────────────────────────────────────────────────
 
@@ -227,12 +227,12 @@ export default function Dispense() {
         if (error) {
           supabase.from('medications').select(`*, residents!resident_id(${RESIDENT_COLS_SAFE})`).eq('community_id', communityId)
             .then(({ data: fallback }) => {
-              setMedications((fallback ?? []).filter(m => m.scheduled_times?.length > 0))
+              setMedications((fallback ?? []).filter(m => m.scheduled_times?.length > 0 && m.residents?.status !== 'inactive'))
               setLoading(false)
             })
           return
         }
-        setMedications((data ?? []).filter(m => m.scheduled_times?.length > 0))
+        setMedications((data ?? []).filter(m => m.scheduled_times?.length > 0 && m.residents?.status !== 'inactive'))
         setLoading(false)
       })
   }, [communityId])
