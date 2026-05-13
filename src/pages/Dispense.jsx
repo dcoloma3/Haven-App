@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import Layout from '../components/layout/Layout'
 import { useCommunity } from '../context/CommunityContext'
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function fmt12(t) {
   const [h, m] = t.split(':').map(Number)
@@ -21,8 +21,9 @@ function formatDisplayDate(d) {
 }
 
 function residentName(r) {
+  if (!r) return '—'
   const parts = [r.first_name, r.middle_name, r.last_name].filter(Boolean)
-  return parts.length ? parts.join(' ') : (r.full_name || '')
+  return parts.length ? parts.join(' ') : (r.full_name || '—')
 }
 
 function adminKey(medicationId, time) {
@@ -55,7 +56,59 @@ function isMedDueOnDate(med, dateStr) {
 const RESIDENT_COLS = 'id, full_name, first_name, middle_name, last_name, room_number, avatar_url'
 const RESIDENT_COLS_SAFE = 'id, full_name, room_number, avatar_url'
 
-// ─── Small components ────────────────────────────────────────────────────────
+// ─── Status helpers ───────────────────────────────────────────────────────────
+
+// 'none' | 'partial' | 'all'
+function calcStatus(meds, time, administered) {
+  const total = meds.length
+  if (total === 0) return 'none'
+  const done = meds.filter(m => administered.has(adminKey(m.id, time))).length
+  if (done === 0) return 'none'
+  if (done === total) return 'all'
+  return 'partial'
+}
+
+function slotBg(status) {
+  if (status === 'all') return 'bg-emerald-50 border-emerald-200'
+  if (status === 'partial') return 'bg-amber-50 border-amber-200'
+  return 'bg-white border-slate-200'
+}
+
+function slotDivider(status) {
+  if (status === 'all') return 'border-emerald-100'
+  if (status === 'partial') return 'border-amber-100'
+  return 'border-slate-100'
+}
+
+function StatusPill({ status, done, total }) {
+  const base = 'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold'
+  if (status === 'all') return (
+    <span className={`${base} bg-emerald-100 text-emerald-700`}>
+      <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+      {done}/{total} done
+    </span>
+  )
+  if (status === 'partial') return (
+    <span className={`${base} bg-amber-100 text-amber-700`}>
+      <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
+      {done}/{total} done
+    </span>
+  )
+  return (
+    <span className={`${base} bg-slate-100 text-slate-500`}>
+      <span className="w-2 h-2 rounded-full border-2 border-slate-300 inline-block" />
+      {total} pending
+    </span>
+  )
+}
+
+function ResidentDot({ status }) {
+  if (status === 'all') return <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 flex-shrink-0" />
+  if (status === 'partial') return <span className="w-2.5 h-2.5 rounded-full bg-amber-400 flex-shrink-0" />
+  return <span className="w-2.5 h-2.5 rounded-full border-2 border-slate-300 bg-white flex-shrink-0" />
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
 
 function ResidentAvatar({ resident }) {
   const [err, setErr] = useState(false)
@@ -65,22 +118,22 @@ function ResidentAvatar({ resident }) {
 
   if (resident.avatar_url && !err) {
     return <img src={resident.avatar_url} alt={name} onError={() => setErr(true)}
-      className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+      className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
   }
   return (
-    <div className="w-10 h-10 rounded-full bg-[#E6F1FB] text-[#185FA5] font-semibold text-sm flex items-center justify-center flex-shrink-0">
+    <div className="w-9 h-9 rounded-full bg-[#E6F1FB] text-[#185FA5] font-semibold text-sm flex items-center justify-center flex-shrink-0">
       {initials}
     </div>
   )
 }
 
-function CheckCircle({ done, toggling, onToggle }) {
+function Checkbox({ done, toggling, onToggle }) {
   return (
     <button
       onClick={e => { e.stopPropagation(); onToggle() }}
       disabled={toggling}
       className={`flex-shrink-0 w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all active:scale-95 ${
-        done ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-300 bg-white'
+        done ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-300 bg-white hover:border-[#185FA5]'
       } ${toggling ? 'opacity-40' : ''}`}
     >
       {done && (
@@ -94,83 +147,31 @@ function CheckCircle({ done, toggling, onToggle }) {
 
 function ChevronIcon({ open }) {
   return (
-    <svg className={`w-4 h-4 text-slate-400 flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
-      viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg className={`w-4 h-4 text-slate-400 flex-shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+      viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+      strokeLinecap="round" strokeLinejoin="round">
       <polyline points="6 9 12 15 18 9" />
     </svg>
   )
 }
 
-function StatusDot({ status }) {
-  if (status === 'all') return <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 flex-shrink-0" />
-  if (status === 'partial') return <span className="w-2.5 h-2.5 rounded-full bg-amber-400 flex-shrink-0" />
-  return <span className="w-2.5 h-2.5 rounded-full border-2 border-slate-300 flex-shrink-0" />
-}
-
 function GivenByLine({ record, staffMap }) {
   if (!record) return null
-  const time = record.administered_at
+  const t = record.administered_at
     ? new Date(record.administered_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
     : null
-  const by = record.administered_by ? staffMap[record.administered_by] ?? 'Staff' : null
-  if (!time && !by) return null
+  const by = record.administered_by ? (staffMap[record.administered_by] ?? 'Staff') : null
+  if (!t && !by) return null
   return (
-    <p className="text-xs text-slate-400 mt-0.5">
-      {time ? `Given at ${time}` : ''}{time && by ? ' · ' : ''}{by ? `by ${by}` : ''}
+    <p className="text-xs text-emerald-600 mt-0.5">
+      {t ? `Given at ${t}` : ''}
+      {t && by ? ' · ' : ''}
+      {by ? `by ${by}` : ''}
     </p>
   )
 }
 
-// ─── Time slot status helpers ─────────────────────────────────────────────────
-
-function getTimeStatus(residentGroups, time, administered) {
-  const allMeds = Object.values(residentGroups).flatMap(rg => rg.meds)
-  const total = allMeds.length
-  const done = allMeds.filter(m => administered.has(adminKey(m.id, time))).length
-  if (total === 0) return 'none'
-  if (done === 0) return 'none'
-  if (done === total) return 'all'
-  return 'partial'
-}
-
-function getResidentStatus(meds, time, administered) {
-  const total = meds.length
-  const done = meds.filter(m => administered.has(adminKey(m.id, time))).length
-  if (done === 0) return 'none'
-  if (done === total) return 'all'
-  return 'partial'
-}
-
-function countForTime(residentGroups, time, administered) {
-  const allMeds = Object.values(residentGroups).flatMap(rg => rg.meds)
-  const total = allMeds.length
-  const done = allMeds.filter(m => administered.has(adminKey(m.id, time))).length
-  return { done, total }
-}
-
-// Time slot header colors
-function timeSlotStyles(status) {
-  if (status === 'all') return {
-    wrapper: 'bg-emerald-50 border-emerald-200',
-    header: 'bg-emerald-50',
-    label: 'text-emerald-800',
-    count: 'text-emerald-600',
-  }
-  if (status === 'partial') return {
-    wrapper: 'bg-amber-50 border-amber-200',
-    header: 'bg-amber-50',
-    label: 'text-amber-800',
-    count: 'text-amber-600',
-  }
-  return {
-    wrapper: 'bg-white border-slate-200',
-    header: 'bg-white',
-    label: 'text-slate-800',
-    count: 'text-slate-400',
-  }
-}
-
-// ─── Main component ───────────────────────────────────────────────────────────
+// ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function Dispense() {
   const today = useMemo(() => new Date(), [])
@@ -187,7 +188,6 @@ export default function Dispense() {
   const dateStr = toDateStr(date)
   const isToday = toDateStr(today) === dateStr
 
-  // Load staff names
   useEffect(() => {
     supabase.from('profiles').select('user_id, full_name, email').then(({ data }) => {
       const map = {}
@@ -196,7 +196,6 @@ export default function Dispense() {
     })
   }, [])
 
-  // Load medications
   useEffect(() => {
     if (!communityId) return
     supabase.from('medications').select(`*, residents!resident_id(${RESIDENT_COLS})`).eq('community_id', communityId)
@@ -214,7 +213,6 @@ export default function Dispense() {
       })
   }, [communityId])
 
-  // Load administrations for the selected date
   useEffect(() => {
     supabase.from('medication_administrations').select('*').eq('administered_date', dateStr)
       .then(({ data }) => {
@@ -224,7 +222,7 @@ export default function Dispense() {
       })
   }, [dateStr])
 
-  // Group medications: time → residentId → { resident, meds[] }
+  // Group: time → residentId → { resident, meds[] }
   const timeGroups = useMemo(() => {
     const groups = {}
     medications.filter(med => isMedDueOnDate(med, dateStr)).forEach(med => {
@@ -240,7 +238,7 @@ export default function Dispense() {
 
   const sortedTimes = useMemo(() => Object.keys(timeGroups).sort(), [timeGroups])
 
-  // Overall count
+  // Overall progress
   const { totalMeds, totalDone } = useMemo(() => {
     let totalMeds = 0, totalDone = 0
     sortedTimes.forEach(time => {
@@ -299,112 +297,129 @@ export default function Dispense() {
 
   return (
     <Layout>
-      {/* Page header */}
+
+      {/* ── Header ── */}
       <div className="flex items-center justify-between mb-1">
         <h1 className="text-xl font-bold text-slate-800">Dispense</h1>
         {!loading && totalMeds > 0 && (
           <span className="text-sm text-slate-500">
-            <span className="font-semibold text-[#185FA5]">{totalDone}</span>
-            <span> / {totalMeds} given</span>
+            <span className="font-bold text-[#185FA5]">{totalDone}</span> / {totalMeds} given
           </span>
         )}
       </div>
 
-      {/* Date nav */}
-      <div className="flex items-center gap-2 mb-5">
-        <button onClick={prevDay} className="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-500 active:bg-slate-50 transition-colors">
+      {/* ── Date navigation ── */}
+      <div className="flex items-center gap-2 mb-6">
+        <button onClick={prevDay} className="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-500 active:bg-slate-100 transition-colors">
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
         </button>
-        <button onClick={nextDay} className="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-500 active:bg-slate-50 transition-colors">
+        <button onClick={nextDay} className="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-500 active:bg-slate-100 transition-colors">
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
         </button>
-        <span className="text-sm font-medium text-slate-700 flex-1">{formatDisplayDate(date)}</span>
+        <span className="text-sm font-medium text-slate-600 flex-1 truncate">{formatDisplayDate(date)}</span>
         {!isToday && (
-          <button onClick={() => setDate(new Date())} className="text-xs text-[#185FA5] font-medium">
+          <button onClick={() => setDate(new Date())} className="text-xs font-semibold text-[#185FA5] flex-shrink-0">
             Today
           </button>
         )}
       </div>
 
-      {loading && <p className="text-slate-400 text-sm text-center py-10">Loading…</p>}
+      {/* ── Loading ── */}
+      {loading && (
+        <p className="text-slate-400 text-sm text-center py-12">Loading…</p>
+      )}
 
+      {/* ── Empty ── */}
       {!loading && sortedTimes.length === 0 && (
-        <div className="text-center py-16 text-slate-400">
+        <div className="text-center py-16">
           <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="w-8 h-8 text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18" />
             </svg>
           </div>
-          <p className="font-medium text-slate-500">No medications scheduled</p>
-          <p className="text-sm mt-1 text-slate-400">Add schedule times inside each resident's profile.</p>
+          <p className="font-semibold text-slate-500">No medications scheduled</p>
+          <p className="text-sm mt-1 text-slate-400">Add scheduled times inside each resident's profile.</p>
         </div>
       )}
 
-      {/* Time slot list */}
+      {/* ── Time slot cards ── */}
       {!loading && sortedTimes.length > 0 && (
         <div className="space-y-3">
           {sortedTimes.map(time => {
             const residentGroups = timeGroups[time]
-            const status = getTimeStatus(residentGroups, time, administered)
-            const { done, total } = countForTime(residentGroups, time, administered)
-            const styles = timeSlotStyles(status)
+            const allMedsAtTime = Object.values(residentGroups).flatMap(rg => rg.meds)
+            const doneAtTime = allMedsAtTime.filter(m => administered.has(adminKey(m.id, time))).length
+            const totalAtTime = allMedsAtTime.length
+            const timeStatus = calcStatus(allMedsAtTime, time, administered)
             const isOpen = expandedTimes.has(time)
+
             const residentList = Object.entries(residentGroups)
               .sort(([, a], [, b]) => residentName(a.resident ?? {}).localeCompare(residentName(b.resident ?? {})))
 
             return (
-              <div key={time} className={`border rounded-2xl overflow-hidden ${styles.wrapper}`}>
+              <div key={time} className={`border rounded-2xl overflow-hidden ${slotBg(timeStatus)}`}>
 
-                {/* ── Time slot header (tap to expand) ── */}
+                {/* ── Time slot header ── */}
                 <button
                   onClick={() => toggleTime(time)}
-                  className={`w-full flex items-center gap-3 px-4 py-4 text-left ${styles.header}`}
+                  className="w-full flex items-center gap-3 px-4 py-4 text-left"
                 >
-                  {/* Color pill */}
-                  <span className={`w-3 h-3 rounded-full flex-shrink-0 ${
-                    status === 'all' ? 'bg-emerald-400' :
-                    status === 'partial' ? 'bg-amber-400' :
-                    'border-2 border-slate-300 bg-white'
-                  }`} />
+                  {/* Time label */}
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-lg font-bold tracking-tight ${
+                      timeStatus === 'all' ? 'text-emerald-800' :
+                      timeStatus === 'partial' ? 'text-amber-800' :
+                      'text-slate-800'
+                    }`}>
+                      {fmt12(time)}
+                    </p>
+                    <p className={`text-xs mt-0.5 ${
+                      timeStatus === 'all' ? 'text-emerald-600' :
+                      timeStatus === 'partial' ? 'text-amber-600' :
+                      'text-slate-400'
+                    }`}>
+                      {residentList.length} {residentList.length === 1 ? 'resident' : 'residents'}
+                    </p>
+                  </div>
 
-                  <span className={`text-base font-bold flex-1 ${styles.label}`}>{fmt12(time)}</span>
+                  {/* Status pill */}
+                  <StatusPill status={timeStatus} done={doneAtTime} total={totalAtTime} />
 
-                  <span className={`text-sm font-medium mr-1 ${styles.count}`}>
-                    {done}/{total} given
-                  </span>
-
+                  {/* Chevron */}
                   <ChevronIcon open={isOpen} />
                 </button>
 
-                {/* ── Expanded: resident rows ── */}
+                {/* ── Resident rows (expanded) ── */}
                 {isOpen && (
-                  <div className={`border-t ${status === 'all' ? 'border-emerald-100' : status === 'partial' ? 'border-amber-100' : 'border-slate-100'}`}>
+                  <div className={`border-t ${slotDivider(timeStatus)}`}>
                     {residentList.map(([rid, { resident, meds }], idx) => {
                       if (!resident) return null
-                      const resStatus = getResidentStatus(meds, time, administered)
+                      const resStatus = calcStatus(meds, time, administered)
                       const resKey = `${time}::${rid}`
                       const isResOpen = expandedResidents.has(resKey)
                       const hasMultiple = meds.length > 1
-                      const singleMed = !hasMultiple ? meds[0] : null
+                      const singleMed = hasMultiple ? null : meds[0]
                       const singleKey = singleMed ? adminKey(singleMed.id, time) : null
                       const singleDone = singleKey ? administered.has(singleKey) : false
                       const singleToggling = singleKey ? toggling.has(singleKey) : false
 
                       return (
-                        <div key={rid} className={idx !== 0 ? 'border-t border-slate-100' : ''}>
+                        <div key={rid} className={idx !== 0 ? `border-t ${slotDivider(timeStatus)}` : ''}>
 
                           {/* Resident row */}
-                          <button
-                            onClick={() => hasMultiple ? toggleResident(time, rid) : null}
-                            className={`w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors ${
-                              hasMultiple ? 'active:bg-slate-50' : 'cursor-default'
-                            } ${singleDone && !hasMultiple ? 'bg-emerald-50/60' : ''}`}
+                          <div
+                            onClick={() => hasMultiple && toggleResident(time, rid)}
+                            className={`flex items-center gap-3 px-4 py-3.5 ${
+                              hasMultiple ? 'cursor-pointer active:bg-black/5' : ''
+                            } ${singleDone && !hasMultiple ? (timeStatus === 'all' ? 'bg-emerald-50/60' : 'bg-emerald-50/40') : ''}`}
                           >
                             <ResidentAvatar resident={resident} />
 
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
-                                <p className="font-semibold text-slate-800 text-sm truncate">{residentName(resident)}</p>
+                                <p className="font-semibold text-slate-800 text-sm truncate">
+                                  {residentName(resident)}
+                                </p>
                                 {resident.room_number && (
                                   <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded flex-shrink-0">
                                     Rm {resident.room_number}
@@ -412,18 +427,21 @@ export default function Dispense() {
                                 )}
                               </div>
 
-                              {/* Single med: show name inline */}
+                              {/* Single med name inline */}
                               {singleMed && (
                                 <p className="text-xs text-slate-500 mt-0.5 truncate">
                                   {singleMed.medication_name}{singleMed.dose ? ` · ${singleMed.dose}` : ''}
                                 </p>
                               )}
-                              {/* Multiple meds: show count */}
+
+                              {/* Multiple meds count */}
                               {hasMultiple && (
-                                <p className="text-xs text-slate-400 mt-0.5">{meds.length} medications</p>
+                                <p className="text-xs text-slate-400 mt-0.5">
+                                  {meds.length} medications
+                                </p>
                               )}
 
-                              {/* Given-by line for single med */}
+                              {/* Given-by for single med */}
                               {singleMed && singleDone && (
                                 <GivenByLine record={administered.get(singleKey)} staffMap={staffMap} />
                               )}
@@ -432,21 +450,21 @@ export default function Dispense() {
                             {/* Right side */}
                             {hasMultiple ? (
                               <div className="flex items-center gap-2 flex-shrink-0">
-                                <StatusDot status={resStatus} />
+                                <ResidentDot status={resStatus} />
                                 <ChevronIcon open={isResOpen} />
                               </div>
                             ) : (
-                              <CheckCircle
+                              <Checkbox
                                 done={singleDone}
                                 toggling={singleToggling}
                                 onToggle={() => handleToggle(singleMed, time)}
                               />
                             )}
-                          </button>
+                          </div>
 
-                          {/* Expanded med list for this resident */}
+                          {/* Expanded med list */}
                           {hasMultiple && isResOpen && (
-                            <div className="bg-slate-50 border-t border-slate-100">
+                            <div className={`border-t ${slotDivider(timeStatus)} bg-slate-50/80`}>
                               {meds.map((med, mIdx) => {
                                 const mKey = adminKey(med.id, time)
                                 const isDone = administered.has(mKey)
@@ -456,7 +474,7 @@ export default function Dispense() {
                                     key={med.id}
                                     className={`flex items-center gap-3 pl-16 pr-4 py-3 ${
                                       mIdx !== 0 ? 'border-t border-slate-100' : ''
-                                    } ${isDone ? 'bg-emerald-50/60' : ''}`}
+                                    } ${isDone ? 'bg-emerald-50/50' : ''}`}
                                   >
                                     <div className="flex-1 min-w-0">
                                       <p className={`text-sm font-medium truncate ${isDone ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
@@ -469,7 +487,7 @@ export default function Dispense() {
                                         <GivenByLine record={administered.get(mKey)} staffMap={staffMap} />
                                       )}
                                     </div>
-                                    <CheckCircle
+                                    <Checkbox
                                       done={isDone}
                                       toggling={isTogg}
                                       onToggle={() => handleToggle(med, time)}
