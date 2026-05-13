@@ -476,14 +476,21 @@ export default function Schedule() {
   // Load only staff who belong to this community
   useEffect(() => {
     if (!communityId) return
+    // Step 1: get user_ids for this community
     supabase
       .from('community_members')
-      .select('user_id, profiles!user_id(id, full_name, email)')
+      .select('user_id')
       .eq('community_id', communityId)
-      .then(({ data }) => {
-        const members = (data ?? []).map(m => m.profiles).filter(Boolean)
-        members.sort((a, b) => (a.full_name ?? '').localeCompare(b.full_name ?? ''))
-        setStaff(members)
+      .then(async ({ data: members }) => {
+        const userIds = (members ?? []).map(m => m.user_id)
+        if (!userIds.length) { setStaff([]); return }
+        // Step 2: fetch profiles for those user_ids only
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, full_name, email, user_id')
+          .in('user_id', userIds)
+          .order('full_name')
+        setStaff(profiles ?? [])
       })
   }, [communityId])
 
