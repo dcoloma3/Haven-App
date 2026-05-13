@@ -1,9 +1,16 @@
+import { useNavigate } from 'react-router-dom'
 import { useCommunity } from '../context/CommunityContext'
 import HavenLogo from '../components/layout/HavenLogo'
 import { supabase } from '../lib/supabase'
 
 export default function CommunityPicker() {
   const { memberships, setCommunityId } = useCommunity()
+  const navigate = useNavigate()
+
+  function handleSelect(id) {
+    setCommunityId(id)
+    navigate('/dashboard', { replace: true })
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
@@ -19,7 +26,7 @@ export default function CommunityPicker() {
           {memberships.map(m => (
             <button
               key={m.communities.id}
-              onClick={() => setCommunityId(m.communities.id)}
+              onClick={() => handleSelect(m.communities.id)}
               className="w-full text-left border border-slate-200 rounded-xl px-5 py-4 hover:border-[#185FA5] hover:bg-[#E6F1FB]/30 transition-all group"
             >
               <p className="font-medium text-slate-800 group-hover:text-[#185FA5]">{m.communities.name}</p>
