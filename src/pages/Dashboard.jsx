@@ -107,6 +107,7 @@ export default function Dashboard() {
   const [highSeverityCount, setHighSeverityCount] = useState(0)
   const [apptCount, setApptCount] = useState(0)
   const [prospectCount, setProspectCount] = useState(0)
+  const [expiringCertCount, setExpiringCertCount] = useState(0)
   const navigate = useNavigate()
   const location = useLocation()
   const unauthorized = location.state?.unauthorized
@@ -132,15 +133,21 @@ export default function Dashboard() {
   useEffect(() => {
     if (!communityId || showFormer) return
     async function fetchSummaryStats() {
-      const [{ data: incidents }, { data: appts }, { data: prospects }] = await Promise.all([
+      const in30Days = new Date()
+      in30Days.setDate(in30Days.getDate() + 30)
+      const in30Str = in30Days.toISOString().split('T')[0]
+
+      const [{ data: incidents }, { data: appts }, { data: prospects }, { data: certs }] = await Promise.all([
         supabase.from('incidents').select('id, severity').eq('community_id', communityId).eq('status', 'open'),
         supabase.from('calendar_events').select('id').eq('community_id', communityId).eq('start_date', todayStr),
         supabase.from('waitlist').select('id, status').eq('community_id', communityId),
+        supabase.from('staff_certifications').select('id, expiry_date').eq('community_id', communityId).lte('expiry_date', in30Str).gte('expiry_date', todayStr),
       ])
       setOpenIncidentCount((incidents ?? []).length)
       setHighSeverityCount((incidents ?? []).filter(i => i.severity === 'high').length)
       setApptCount((appts ?? []).length)
       setProspectCount((prospects ?? []).filter(p => p.status !== 'declined' && p.status !== 'accepted').length)
+      setExpiringCertCount((certs ?? []).length)
     }
     fetchSummaryStats()
   }, [communityId, showFormer, todayStr])
@@ -236,7 +243,7 @@ export default function Dashboard() {
           {/* Stats grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
             {/* Active Residents */}
-            <div className="bg-white border border-slate-200 rounded-2xl px-4 py-4 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-default">
+            <div className="bg-white border border-slate-200 rounded-2xl px-4 py-4 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer" onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}>
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
                   <svg className="w-4 h-4 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -259,7 +266,7 @@ export default function Dashboard() {
               }).length
               const isAmber = medsIncomplete > 0
               return (
-                <div className={`rounded-2xl px-4 py-4 border hover:shadow-md hover:-translate-y-0.5 transition-all cursor-default ${isAmber ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'}`}>
+                <div onClick={() => navigate('/dispense')} className={`rounded-2xl px-4 py-4 border hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer ${isAmber ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'}`}>
                   <div className="flex items-center gap-3">
                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${isAmber ? 'bg-amber-100' : 'bg-emerald-100'}`}>
                       <svg className={`w-4 h-4 ${isAmber ? 'text-amber-600' : 'text-emerald-600'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -279,7 +286,7 @@ export default function Dashboard() {
             {(() => {
               const isRed = openIncidentCount > 0
               return (
-                <div className={`rounded-2xl px-4 py-4 border hover:shadow-md hover:-translate-y-0.5 transition-all cursor-default ${isRed ? 'bg-red-50 border-red-200' : 'bg-white border-slate-200'}`}>
+                <div onClick={() => navigate('/incidents')} className={`rounded-2xl px-4 py-4 border hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer ${isRed ? 'bg-red-50 border-red-200' : 'bg-white border-slate-200'}`}>
                   <div className="flex items-center gap-3">
                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${isRed ? 'bg-red-100' : 'bg-slate-100'}`}>
                       <svg className={`w-4 h-4 ${isRed ? 'text-red-500' : 'text-slate-400'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -299,7 +306,7 @@ export default function Dashboard() {
             {(() => {
               const hasAppts = apptCount > 0
               return (
-                <div className={`rounded-2xl px-4 py-4 border hover:shadow-md hover:-translate-y-0.5 transition-all cursor-default ${hasAppts ? 'border-[#185FA5] bg-[#E6F1FB]' : 'bg-white border-slate-200'}`}>
+                <div onClick={() => navigate('/calendar')} className={`rounded-2xl px-4 py-4 border hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer ${hasAppts ? 'border-[#185FA5] bg-[#E6F1FB]' : 'bg-white border-slate-200'}`}>
                   <div className="flex items-center gap-3">
                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${hasAppts ? 'bg-[#185FA5]/20' : 'bg-slate-100'}`}>
                       <svg className={`w-4 h-4 ${hasAppts ? 'text-[#185FA5]' : 'text-slate-400'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -319,7 +326,7 @@ export default function Dashboard() {
             {(() => {
               const hasProspects = prospectCount > 0
               return (
-                <div className={`rounded-2xl px-4 py-4 border hover:shadow-md hover:-translate-y-0.5 transition-all cursor-default ${hasProspects ? 'bg-purple-50 border-purple-200' : 'bg-white border-slate-200'}`}>
+                <div onClick={() => navigate('/occupancy')} className={`rounded-2xl px-4 py-4 border hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer ${hasProspects ? 'bg-purple-50 border-purple-200' : 'bg-white border-slate-200'}`}>
                   <div className="flex items-center gap-3">
                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${hasProspects ? 'bg-purple-100' : 'bg-slate-100'}`}>
                       <svg className={`w-4 h-4 ${hasProspects ? 'text-purple-600' : 'text-slate-400'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -336,6 +343,73 @@ export default function Dashboard() {
               )
             })()}
           </div>
+
+          {/* ── Needs Attention panel ── */}
+          {(() => {
+            const medsIncomplete = residents.filter(r => {
+              const s = medStatusMap[r.id]
+              return s === 'none' || s === 'partial'
+            }).length
+            const items = []
+            if (medsIncomplete > 0) items.push({
+              key: 'meds',
+              icon: (
+                <svg className="w-4 h-4 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v11m0 0H5a2 2 0 0 1-2-2V9m6 5h4m0 0v-3m0 3v3"/>
+                </svg>
+              ),
+              iconBg: 'bg-amber-100',
+              label: `${medsIncomplete} resident${medsIncomplete !== 1 ? 's' : ''} with incomplete medications today`,
+              link: '/dispense',
+            })
+            if (highSeverityCount > 0) items.push({
+              key: 'incidents',
+              icon: (
+                <svg className="w-4 h-4 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+              ),
+              iconBg: 'bg-red-100',
+              label: `${highSeverityCount} high-severity incident${highSeverityCount !== 1 ? 's' : ''} open — review required`,
+              link: '/incidents',
+            })
+            if (expiringCertCount > 0) items.push({
+              key: 'certs',
+              icon: (
+                <svg className="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/>
+                </svg>
+              ),
+              iconBg: 'bg-orange-100',
+              label: `${expiringCertCount} staff certification${expiringCertCount !== 1 ? 's' : ''} expiring within 30 days`,
+              link: '/certifications',
+            })
+            if (items.length === 0) return null
+            return (
+              <div className="bg-white border border-amber-200 rounded-2xl overflow-hidden mt-3">
+                <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border-b border-amber-100">
+                  <svg className="w-4 h-4 text-amber-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                  </svg>
+                  <p className="text-sm font-semibold text-amber-800">Needs Attention</p>
+                  <span className="ml-auto text-xs font-medium text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">{items.length} item{items.length !== 1 ? 's' : ''}</span>
+                </div>
+                <div className="divide-y divide-slate-100">
+                  {items.map(item => (
+                    <button key={item.key} onClick={() => navigate(item.link)} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-left">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${item.iconBg}`}>
+                        {item.icon}
+                      </div>
+                      <p className="flex-1 text-sm text-slate-700">{item.label}</p>
+                      <svg className="w-4 h-4 text-slate-300 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )
+          })()}
         </div>
       )}
 

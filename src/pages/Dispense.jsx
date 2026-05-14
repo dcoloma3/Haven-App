@@ -653,6 +653,23 @@ export default function Dispense() {
         )}
       </div>
 
+      {/* ── All-done completion banner ── */}
+      {!loading && isToday && totalMeds > 0 && totalDone === totalMeds && (
+        <div className="flex items-center gap-4 bg-emerald-50 border border-emerald-200 rounded-2xl px-5 py-4 mb-5">
+          <div className="w-11 h-11 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <svg className="w-6 h-6 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-emerald-800">All medications given!</p>
+            <p className="text-sm text-emerald-700 mt-0.5">
+              All {totalMeds} scheduled medication{totalMeds !== 1 ? 's' : ''} have been administered for today.
+            </p>
+          </div>
+        </div>
+      )}
+
       {loading && <p className="text-slate-400 text-sm text-center py-12">Loading…</p>}
 
       {!loading && sortedTimes.length === 0 && (
