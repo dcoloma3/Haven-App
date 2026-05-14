@@ -22,7 +22,7 @@ create policy "community members can manage vitals" on vital_signs
 */
 
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useCommunity } from '../context/CommunityContext'
 import { useProfile } from '../context/ProfileContext'
@@ -218,10 +218,14 @@ function RecordVitalsModal({ resident, communityId, onClose, onSaved }) {
 export default function VitalSigns() {
   const { communityId } = useCommunity()
   const navigate = useNavigate()
+  const location = useLocation()
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
   const [recordingFor, setRecordingFor] = useState(null) // resident object
+  const [quickAddMode, setQuickAddMode] = useState(false)
+
+  useEffect(() => { if (location.state?.quickAdd) setQuickAddMode(true) }, [])
 
   async function load() {
     // Get all active residents
@@ -282,6 +286,13 @@ export default function VitalSigns() {
         <h1 className="text-2xl font-bold text-slate-800">Vital Signs</h1>
         <p className="text-sm text-slate-500 mt-1">Latest reading per resident</p>
       </div>
+
+      {quickAddMode && (
+        <div className="flex items-center justify-between bg-[#E6F1FB] border border-[#185FA5]/20 text-[#185FA5] rounded-xl px-4 py-3 mb-4 text-sm">
+          <span className="font-medium">Select a resident below to record vitals.</span>
+          <button onClick={() => setQuickAddMode(false)} className="text-[#185FA5]/60 hover:text-[#185FA5] ml-4 flex-shrink-0 text-lg leading-none">&times;</button>
+        </div>
+      )}
 
       {/* Filter */}
       <div className="flex gap-2 mb-5">

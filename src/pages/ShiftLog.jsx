@@ -17,7 +17,7 @@ create policy "community members can manage shift notes" on shift_notes
 */
 
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useCommunity } from '../context/CommunityContext'
 import { useProfile } from '../context/ProfileContext'
@@ -33,10 +33,13 @@ export default function ShiftLog() {
   const { communityId, isAdmin } = useCommunity()
   const { profile } = useProfile()
   const navigate = useNavigate()
+  const location = useLocation()
   const [notes, setNotes] = useState([])
   const [loading, setLoading] = useState(true)
   const [residents, setResidents] = useState([])
   const [showModal, setShowModal] = useState(false)
+
+  useEffect(() => { if (location.state?.quickAdd) setShowModal(true) }, [])
   const [saving, setSaving] = useState(false)
   const [filterShift, setFilterShift] = useState('All')
   const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0])

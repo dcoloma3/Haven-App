@@ -32,6 +32,7 @@ create policy "community members can manage attendance" on activity_attendance
 */
 
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useCommunity } from '../context/CommunityContext'
 import { useProfile } from '../context/ProfileContext'
@@ -158,13 +159,19 @@ export default function Activities() {
 
   return (
     <Layout>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Activities</h1>
-          <p className="text-sm text-slate-500 mt-1">Schedule activities and track attendance</p>
+          <p className="text-sm text-slate-500 mt-1">Log and track resident participation in daily activities</p>
+          <Link
+            to="/calendar"
+            className="inline-block mt-2 text-xs font-semibold text-[#185FA5] bg-[#E6F1FB] px-3 py-1.5 rounded-full hover:bg-[#cce3f6] transition-colors"
+          >
+            View Calendar →
+          </Link>
         </div>
         {isAdmin && (
-          <button onClick={openNew} className="bg-[#185FA5] hover:bg-[#0C447C] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2">
+          <button onClick={openNew} className="bg-[#185FA5] hover:bg-[#0C447C] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2 flex-shrink-0">
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
             </svg>

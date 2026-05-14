@@ -220,7 +220,7 @@ export default function ResidentForm({ onClose, onSaved }) {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="relative w-20 h-20 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center overflow-hidden transition-colors group"
+              className={`relative w-28 h-28 rounded-full flex items-center justify-center overflow-hidden transition-colors group ${photoPreview ? 'bg-slate-100 hover:bg-slate-200' : 'bg-slate-50 hover:bg-slate-100 border-2 border-dashed border-[#185FA5]/30'}`}
             >
               {photoPreview ? (
                 <>
@@ -230,9 +230,9 @@ export default function ResidentForm({ onClose, onSaved }) {
                   </div>
                 </>
               ) : (
-                <div className="flex flex-col items-center gap-1 text-slate-400">
+                <div className="flex flex-col items-center gap-1.5 text-slate-400">
                   <CameraIcon />
-                  <span className="text-[10px] font-medium text-slate-500">Add Photo</span>
+                  <span className="text-xs font-medium text-[#185FA5]">Add Photo</span>
                 </div>
               )}
             </button>

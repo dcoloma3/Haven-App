@@ -2,6 +2,7 @@ import { useLocation } from 'react-router-dom'
 import Navbar from './Navbar'
 import Sidebar from './Sidebar'
 import MobileNav from './MobileNav'
+import QuickAdd from './QuickAdd'
 import { useIsMobile } from '../../hooks/useIsMobile'
 
 export default function Layout({ children }) {
@@ -27,6 +28,9 @@ export default function Layout({ children }) {
 
       {/* Mobile bottom nav */}
       {isMobile && <MobileNav />}
+
+      {/* Mobile floating quick-add FAB */}
+      {isMobile && <QuickAdd />}
     </div>
   )
 }

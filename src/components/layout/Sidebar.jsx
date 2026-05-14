@@ -195,9 +195,11 @@ export default function Sidebar() {
           {({ isActive }) => (<><DispenseIcon active={isActive} /><span>Dispense</span></>)}
         </NavLink>
 
-        <NavLink to="/calendar" className={linkCls}>
-          {({ isActive }) => (<><CalendarIcon active={isActive} /><span>Calendar</span></>)}
-        </NavLink>
+        {isAdmin && (
+          <NavLink to="/calendar" className={linkCls}>
+            {({ isActive }) => (<><CalendarIcon active={isActive} /><span>Calendar</span></>)}
+          </NavLink>
+        )}
 
         <NavLink to="/incidents" className={linkCls}>
           {({ isActive }) => (<><IncidentsIcon active={isActive} /><span>Incidents</span></>)}
@@ -223,10 +225,12 @@ export default function Sidebar() {
           {({ isActive }) => (<><ActivitiesIcon active={isActive} /><span>Activities</span></>)}
         </NavLink>
 
-        {/* Staff — visible to everyone */}
-        <NavLink to="/staff" className={linkCls}>
-          {({ isActive }) => (<><StaffIcon active={isActive} /><span>Staff</span></>)}
-        </NavLink>
+        {/* Staff — admin only */}
+        {isAdmin && (
+          <NavLink to="/staff" className={linkCls}>
+            {({ isActive }) => (<><StaffIcon active={isActive} /><span>Staff</span></>)}
+          </NavLink>
+        )}
 
         {/* Manager-only section */}
         {isAdmin && (

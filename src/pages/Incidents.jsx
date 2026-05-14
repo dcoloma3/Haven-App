@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import Layout from '../components/layout/Layout'
 import IncidentForm from '../components/incidents/IncidentForm'
@@ -264,12 +264,15 @@ function getToday() {
 
 export default function Incidents() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { communityId, isAdmin, community } = useCommunity()
 
   const [incidents, setIncidents] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingIncident, setEditingIncident] = useState(null)
+
+  useEffect(() => { if (location.state?.quickAdd) setShowForm(true) }, [])
 
   // Filters
   const [statusFilter, setStatusFilter] = useState('all')

@@ -21,6 +21,7 @@ create policy "community members can manage work orders" on work_orders
 */
 
 import { useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useCommunity } from '../context/CommunityContext'
 import { useProfile } from '../context/ProfileContext'
@@ -51,10 +52,13 @@ const CATEGORIES = ['Plumbing', 'Electrical', 'HVAC', 'Carpentry', 'Cleaning', '
 export default function Maintenance() {
   const { communityId, isAdmin } = useCommunity()
   const { profile } = useProfile()
+  const location = useLocation()
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState({})
   const [showModal, setShowModal] = useState(false)
+
+  useEffect(() => { if (location.state?.quickAdd) setShowModal(true) }, [])
   const [saving, setSaving] = useState(false)
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterPriority, setFilterPriority] = useState('all')

@@ -62,6 +62,14 @@ function IncidentsIcon({ active }) {
   )
 }
 
+function ShiftLogIcon({ active }) {
+  return (
+    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  )
+}
+
 function ProfileIcon({ active }) {
   return active ? (
     <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
@@ -107,14 +115,25 @@ export default function MobileNav() {
         )}
       </NavLink>
 
-      <NavLink to="/calendar" className={tabCls}>
-        {({ isActive }) => (
-          <>
-            <CalendarIcon active={isActive} />
-            <span className="text-[10px] font-medium tracking-wide">Calendar</span>
-          </>
-        )}
-      </NavLink>
+      {isAdmin ? (
+        <NavLink to="/calendar" className={tabCls}>
+          {({ isActive }) => (
+            <>
+              <CalendarIcon active={isActive} />
+              <span className="text-[10px] font-medium tracking-wide">Calendar</span>
+            </>
+          )}
+        </NavLink>
+      ) : (
+        <NavLink to="/shift-log" className={tabCls}>
+          {({ isActive }) => (
+            <>
+              <ShiftLogIcon active={isActive} />
+              <span className="text-[10px] font-medium tracking-wide">Shift Log</span>
+            </>
+          )}
+        </NavLink>
+      )}
 
       <NavLink to="/incidents" className={tabCls}>
         {({ isActive }) => (

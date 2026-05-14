@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import Layout from '../components/layout/Layout'
 import EventForm from '../components/calendar/EventForm'
@@ -173,6 +174,20 @@ export default function Calendar() {
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <Layout>
+      {/* Page heading */}
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Calendar</h1>
+          <p className="text-sm text-slate-500 mt-1">Schedule appointments, activities, and facility events</p>
+        </div>
+        <Link
+          to="/activities"
+          className="flex-shrink-0 text-xs font-semibold text-[#185FA5] bg-[#E6F1FB] px-3 py-1.5 rounded-full hover:bg-[#cce3f6] transition-colors"
+        >
+          Track participation →
+        </Link>
+      </div>
+
       {/* Month navigation header */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
@@ -182,7 +197,7 @@ export default function Calendar() {
           >
             ‹
           </button>
-          <h1 className="text-lg font-bold text-[#042C53] w-44 text-center">{monthLabel}</h1>
+          <h2 className="text-lg font-bold text-[#042C53] w-44 text-center">{monthLabel}</h2>
           <button
             onClick={nextMonth}
             className="w-9 h-9 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 active:bg-slate-100 transition-colors text-xl"

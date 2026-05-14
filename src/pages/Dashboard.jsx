@@ -9,6 +9,17 @@ import { useIsMobile } from '../hooks/useIsMobile'
 import { adminKey, computeResidentStatus, ringBoxShadow, RING_COLOR } from '../lib/medStatus'
 import { StatCardSkeleton, ResidentCardSkeleton, ResidentRowSkeleton } from '../components/ui/Skeleton'
 
+function fmtUpdated(dateStr) {
+  if (!dateStr) return null
+  const d = new Date(dateStr)
+  const now = new Date()
+  const diffDays = Math.floor((now - d) / 86400000)
+  if (diffDays === 0) return 'Updated today'
+  if (diffDays === 1) return 'Updated yesterday'
+  if (diffDays < 7) return `Updated ${diffDays}d ago`
+  return `Updated ${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+}
+
 function getResidentFullName(r) {
   const parts = [r.first_name, r.middle_name, r.last_name].filter(Boolean)
   return parts.length ? parts.join(' ') : (r.full_name || '')
@@ -595,6 +606,9 @@ export default function Dashboard() {
                     )}
                     {showFormer && <StatusBadge reason={r.removal_reason} />}
                   </div>
+                  {!showFormer && r.updated_at && (
+                    <p className="text-[10px] text-slate-300 mt-0.5">{fmtUpdated(r.updated_at)}</p>
+                  )}
                 </div>
                 <ChevronRight />
               </button>
@@ -640,6 +654,9 @@ export default function Dashboard() {
                       : age !== null && <p className="text-xs text-slate-500 font-medium">{age} yrs</p>
                     }
                   </div>
+                  {!showFormer && r.updated_at && (
+                    <p className="text-[10px] text-slate-300 mt-1">{fmtUpdated(r.updated_at)}</p>
+                  )}
                 </div>
               </button>
             )
