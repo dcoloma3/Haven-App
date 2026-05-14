@@ -16,8 +16,8 @@ export default function Layout({ children }) {
       {/* Desktop sidebar */}
       {!isMobile && <Sidebar />}
 
-      {/* Main content — offset right on desktop */}
-      <main className={`w-full ${!isMobile ? 'pl-52' : ''}`}>
+      {/* Main content — offset down by fixed navbar height, right by sidebar on desktop */}
+      <main className={`w-full pt-[61px] ${!isMobile ? 'pl-52' : ''}`}>
         <div
           key={location.pathname}
           className={`max-w-5xl mx-auto px-4 py-5 sm:px-6 animate-page-in ${isMobile ? 'pb-28' : 'pb-8'}`}
