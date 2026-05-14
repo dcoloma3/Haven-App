@@ -231,7 +231,7 @@ export default function Navbar() {
   return (
     <>
       <nav
-        className="flex items-center gap-2 relative z-30 border-b w-full"
+        className="flex items-center gap-2 sticky top-0 z-30 border-b w-full"
         style={{
           backgroundColor: '#042C53',
           borderBottomColor: 'rgba(255,255,255,0.1)',
