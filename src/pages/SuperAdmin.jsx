@@ -122,15 +122,78 @@ function AddSuperAdminModal({ onClose, onAdded }) {
   )
 }
 
+function CommunityRow({ c, s, isMine, onEnter }) {
+  return (
+    <div className={`flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors ${isMine ? 'bg-amber-50/40' : ''}`}>
+      {/* Icon */}
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isMine ? 'bg-amber-100' : 'bg-[#E6F1FB]'}`}>
+        {isMine ? (
+          <svg className="w-5 h-5 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+          </svg>
+        ) : (
+          <svg className="w-5 h-5 text-[#185FA5]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
+          </svg>
+        )}
+      </div>
+
+      {/* Details */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className="font-semibold text-slate-800">{c.name}</p>
+          {isMine && (
+            <span className="text-xs font-semibold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">My Community</span>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
+          {!isMine && (
+            <span className="text-xs text-slate-500">Manager: <span className="text-slate-700 font-medium">{s?.adminName ?? '—'}</span></span>
+          )}
+          {!isMine && <span className="text-xs text-slate-400">·</span>}
+          <span className="text-xs text-slate-500"><span className="text-slate-700 font-medium">{s?.residentCount ?? 0}</span> resident{s?.residentCount !== 1 ? 's' : ''}</span>
+          <span className="text-xs text-slate-400">·</span>
+          <span className="text-xs text-slate-500"><span className="text-slate-700 font-medium">{s?.staffCount ?? 0}</span> staff</span>
+          {c.license_number && (
+            <>
+              <span className="text-xs text-slate-400">·</span>
+              <span className="text-xs text-slate-500">Lic: {c.license_number}</span>
+            </>
+          )}
+        </div>
+        {c.address && <p className="text-xs text-slate-400 mt-0.5 truncate">{c.address}</p>}
+      </div>
+
+      {/* Enter button */}
+      <button
+        onClick={() => onEnter(c.id)}
+        className={`flex-shrink-0 text-sm font-medium px-4 py-2 rounded-xl transition-colors flex items-center gap-1.5 ${
+          isMine
+            ? 'bg-amber-400 hover:bg-amber-500 text-[#042C53]'
+            : 'bg-[#185FA5] hover:bg-[#0C447C] text-white'
+        }`}
+      >
+        Enter
+        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+      </button>
+    </div>
+  )
+}
+
 export default function SuperAdmin() {
   const navigate = useNavigate()
-  const { allCommunities, isSuperAdmin, setCommunityId, reloadAllCommunities } = useCommunity()
+  const { allCommunities, memberships, isSuperAdmin, setCommunityId, reloadAllCommunities } = useCommunity()
   const { profile } = useProfile()
-  const [stats, setStats] = useState({}) // communityId → { residentCount, adminName }
+  const [stats, setStats] = useState({})
   const [superAdmins, setSuperAdmins] = useState([])
   const [showInvite, setShowInvite] = useState(false)
   const [showAddSA, setShowAddSA] = useState(false)
   const [search, setSearch] = useState('')
+
+  // Communities the owner is personally a member of
+  const myMembershipIds = new Set(memberships.map(m => m.communities?.id).filter(Boolean))
 
   useEffect(() => {
     if (!isSuperAdmin) { navigate('/dashboard', { replace: true }); return }
@@ -173,10 +236,16 @@ export default function SuperAdmin() {
     navigate('/dashboard')
   }
 
-  const filtered = allCommunities.filter(c =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    (stats[c.id]?.adminName ?? '').toLowerCase().includes(search.toLowerCase())
+  const searchLower = search.toLowerCase()
+  const filteredAll = allCommunities.filter(c =>
+    c.name.toLowerCase().includes(searchLower) ||
+    (stats[c.id]?.adminName ?? '').toLowerCase().includes(searchLower)
   )
+
+  const myCommunities = filteredAll.filter(c => myMembershipIds.has(c.id))
+  const customerCommunities = filteredAll.filter(c => !myMembershipIds.has(c.id))
+
+  const totalResidents = Object.values(stats).reduce((s, v) => s + v.residentCount, 0)
 
   return (
     <div className="min-h-screen bg-slate-50 pb-8">
@@ -207,71 +276,65 @@ export default function SuperAdmin() {
 
       <div className="max-w-5xl mx-auto px-4 py-6">
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
-          <StatCard label="Total Communities" value={allCommunities.length} />
-          <StatCard label="Total Residents" value={Object.values(stats).reduce((s, v) => s + v.residentCount, 0)} />
-          <StatCard label="Super Admins" value={superAdmins.length} />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+          <StatCard label="My Communities" value={myMembershipIds.size} />
+          <StatCard label="Customer Communities" value={allCommunities.length - myMembershipIds.size} />
+          <StatCard label="Total Residents" value={totalResidents} />
+          <StatCard label="Owner Accounts" value={superAdmins.length} />
         </div>
 
-        {/* Communities */}
+        {/* Search */}
+        <div className="relative mb-6">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            className="w-full border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent"
+            placeholder="Search communities or manager name…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+
+        {/* My Communities */}
+        {myCommunities.length > 0 && (
+          <div className="bg-white border border-amber-200 rounded-2xl overflow-hidden mb-6">
+            <div className="flex items-center gap-2 px-5 py-3.5 border-b border-amber-100 bg-amber-50">
+              <svg className="w-4 h-4 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+              <h2 className="font-semibold text-amber-800 text-sm">My Communities</h2>
+              <span className="ml-auto text-xs text-amber-600 font-medium">{myCommunities.length} communit{myCommunities.length !== 1 ? 'ies' : 'y'} you own &amp; manage</span>
+            </div>
+            <div className="divide-y divide-amber-100/60">
+              {myCommunities.map(c => (
+                <CommunityRow key={c.id} c={c} s={stats[c.id]} isMine onEnter={enterCommunity} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Customer Communities */}
         <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden mb-8">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-            <h2 className="font-semibold text-slate-800">All Communities</h2>
-            <input
-              className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent w-48"
-              placeholder="Search…"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
+          <div className="flex items-center gap-2 px-5 py-3.5 border-b border-slate-100">
+            <svg className="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+            <h2 className="font-semibold text-slate-700 text-sm">Customer Communities</h2>
+            <span className="ml-auto text-xs text-slate-400 font-medium">{customerCommunities.length} communit{customerCommunities.length !== 1 ? 'ies' : 'y'} signed up</span>
           </div>
 
-          {filtered.length === 0 ? (
-            <p className="text-sm text-slate-400 text-center py-12">No communities yet.</p>
+          {customerCommunities.length === 0 ? (
+            <div className="px-5 py-10 text-center">
+              <p className="text-sm text-slate-400">No customer communities yet.</p>
+              <p className="text-xs text-slate-400 mt-1">Use <strong>Invite Admin</strong> to onboard your first client.</p>
+            </div>
           ) : (
             <div className="divide-y divide-slate-100">
-              {filtered.map(c => {
-                const s = stats[c.id]
-                return (
-                  <div key={c.id} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors">
-                    {/* Community icon */}
-                    <div className="w-10 h-10 rounded-xl bg-[#E6F1FB] flex items-center justify-center flex-shrink-0">
-                      <svg className="w-5 h-5 text-[#185FA5]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
-                      </svg>
-                    </div>
-
-                    {/* Details */}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-slate-800">{c.name}</p>
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
-                        <span className="text-xs text-slate-500">Manager: <span className="text-slate-700 font-medium">{s?.adminName ?? '—'}</span></span>
-                        <span className="text-xs text-slate-400">·</span>
-                        <span className="text-xs text-slate-500"><span className="text-slate-700 font-medium">{s?.residentCount ?? 0}</span> resident{s?.residentCount !== 1 ? 's' : ''}</span>
-                        <span className="text-xs text-slate-400">·</span>
-                        <span className="text-xs text-slate-500"><span className="text-slate-700 font-medium">{s?.staffCount ?? 0}</span> staff</span>
-                        {c.license_number && (
-                          <>
-                            <span className="text-xs text-slate-400">·</span>
-                            <span className="text-xs text-slate-500">Lic: {c.license_number}</span>
-                          </>
-                        )}
-                      </div>
-                      {c.address && <p className="text-xs text-slate-400 mt-0.5 truncate">{c.address}</p>}
-                    </div>
-
-                    {/* Enter button */}
-                    <button
-                      onClick={() => enterCommunity(c.id)}
-                      className="flex-shrink-0 text-sm bg-[#185FA5] hover:bg-[#0C447C] text-white font-medium px-4 py-2 rounded-xl transition-colors flex items-center gap-1.5"
-                    >
-                      Enter
-                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="9 18 15 12 9 6" />
-                      </svg>
-                    </button>
-                  </div>
-                )
-              })}
+              {customerCommunities.map(c => (
+                <CommunityRow key={c.id} c={c} s={stats[c.id]} isMine={false} onEnter={enterCommunity} />
+              ))}
             </div>
           )}
         </div>
@@ -279,7 +342,7 @@ export default function SuperAdmin() {
         {/* Super admins */}
         <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-            <h2 className="font-semibold text-slate-800">Super Admins</h2>
+            <h2 className="font-semibold text-slate-800">Owner Accounts</h2>
             <button
               onClick={() => setShowAddSA(true)}
               className="text-sm text-[#185FA5] hover:text-[#0C447C] font-medium transition-colors"
