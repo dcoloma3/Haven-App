@@ -14,6 +14,7 @@ import { supabase } from '../../lib/supabase'
 import { RESIDENT_COLORS, getColor } from '../../lib/colors'
 import { useCommunity } from '../../context/CommunityContext'
 import EventForm from '../calendar/EventForm'
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges'
 
 function formatDate(dateStr) {
   if (!dateStr) return '—'
@@ -52,6 +53,9 @@ export default function ResidentProfile({ resident, onUpdate }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [showEventForm, setShowEventForm] = useState(false)
+
+  // Warn user if they try to navigate away with unsaved edits
+  useUnsavedChanges(editing && !saving)
 
   function startEdit() {
     setForm({ ...resident })

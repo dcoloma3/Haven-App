@@ -23,6 +23,8 @@ create policy "community members can manage vitals" on vital_signs
 
 import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import { supabase } from '../lib/supabase'
 import { useCommunity } from '../context/CommunityContext'
 import { useProfile } from '../context/ProfileContext'
@@ -271,6 +273,41 @@ export default function VitalSigns() {
     setRecordingFor(null)
   }
 
+  function exportPDF() {
+    const doc = new jsPDF({ orientation: 'landscape' })
+    doc.setFontSize(18)
+    doc.setTextColor(4, 44, 83)
+    doc.text('Vital Signs Report', 14, 20)
+
+    doc.setFontSize(10)
+    doc.setTextColor(100, 116, 139)
+    const filterLabel = filter === 'all' ? 'All residents' : filter === 'today' ? 'Recorded today' : 'This week'
+    doc.text(`Filter: ${filterLabel}  |  Generated: ${new Date().toLocaleString()}`, 14, 29)
+
+    autoTable(doc, {
+      startY: 36,
+      head: [['Resident', 'Room', 'BP (mmHg)', 'Pulse (bpm)', 'Temp (°F)', 'O2 Sat %', 'Glucose', 'Pain (0–10)', 'Recorded By', 'Date']],
+      body: filtered.map(({ resident, vital }) => [
+        `${resident.first_name} ${resident.last_name}`,
+        resident.room_number || '—',
+        vital?.systolic && vital?.diastolic ? `${vital.systolic}/${vital.diastolic}` : '—',
+        vital?.pulse != null ? String(vital.pulse) : '—',
+        vital?.temperature != null ? `${vital.temperature}°F` : '—',
+        vital?.oxygen_saturation != null ? `${vital.oxygen_saturation}%` : '—',
+        vital?.blood_glucose != null ? String(vital.blood_glucose) : '—',
+        vital?.pain_scale != null ? `${vital.pain_scale}/10` : '—',
+        vital?.recorded_by_name || '—',
+        vital ? new Date(vital.recorded_at).toLocaleDateString() : 'No data',
+      ]),
+      headStyles: { fillColor: [24, 95, 165], textColor: 255, fontStyle: 'bold', fontSize: 7 },
+      bodyStyles: { fontSize: 7, textColor: [30, 41, 59] },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      margin: { left: 14, right: 14 },
+    })
+
+    doc.save(`vital-signs-${new Date().toISOString().split('T')[0]}.pdf`)
+  }
+
   const today = new Date().toISOString().split('T')[0]
   const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString()
 
@@ -282,9 +319,26 @@ export default function VitalSigns() {
 
   return (
     <Layout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">Vital Signs</h1>
-        <p className="text-sm text-slate-500 mt-1">Latest reading per resident</p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Vital Signs</h1>
+          <p className="text-sm text-slate-500 mt-1">Latest reading per resident</p>
+        </div>
+        {!loading && filtered.length > 0 && (
+          <button
+            onClick={exportPDF}
+            className="border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors flex items-center gap-2"
+            title="Export to PDF"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="12" y1="18" x2="12" y2="12" />
+              <line x1="9" y1="15" x2="15" y2="15" />
+            </svg>
+            Export PDF
+          </button>
+        )}
       </div>
 
       {quickAddMode && (

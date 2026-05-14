@@ -5,6 +5,7 @@ import Layout from '../components/layout/Layout'
 import IncidentForm from '../components/incidents/IncidentForm'
 import { useCommunity } from '../context/CommunityContext'
 import { generateIncidentPDF } from '../lib/incidentPDF'
+import { useUnsavedChanges } from '../hooks/useUnsavedChanges'
 
 const TYPE_LABELS = {
   fall: 'Fall',
@@ -271,6 +272,9 @@ export default function Incidents() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingIncident, setEditingIncident] = useState(null)
+
+  // Warn before page unload when the incident form is open
+  useUnsavedChanges(showForm)
 
   useEffect(() => { if (location.state?.quickAdd) setShowForm(true) }, [])
 

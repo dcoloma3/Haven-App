@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import Layout from '../components/layout/Layout'
 import { useCommunity } from '../context/CommunityContext'
 import { RING_COLOR } from '../lib/medStatus'
+import { HelpIcon } from '../components/ui/Tooltip'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -629,9 +630,10 @@ export default function Dispense() {
         </button>
         <button
           onClick={() => setDispenseTab('prn')}
-          className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${dispenseTab === 'prn' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-1 ${dispenseTab === 'prn' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
         >
           PRN / As Needed
+          <HelpIcon tip='PRN (pro re nata) means "as needed." These medications are given only when a resident requests them or shows specific symptoms.' placement="top" />
         </button>
       </div>
 

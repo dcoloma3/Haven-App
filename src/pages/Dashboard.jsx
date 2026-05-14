@@ -5,9 +5,12 @@ import Layout from '../components/layout/Layout'
 import ResidentForm from '../components/residents/ResidentForm'
 import { useFacility } from '../context/FacilityContext'
 import { useCommunity } from '../context/CommunityContext'
+import { useProfile } from '../context/ProfileContext'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { adminKey, computeResidentStatus, ringBoxShadow, RING_COLOR } from '../lib/medStatus'
 import { StatCardSkeleton, ResidentCardSkeleton, ResidentRowSkeleton } from '../components/ui/Skeleton'
+import WelcomeModal from '../components/onboarding/WelcomeModal'
+import GettingStartedChecklist from '../components/onboarding/GettingStartedChecklist'
 
 function fmtUpdated(dateStr) {
   if (!dateStr) return null
@@ -119,13 +122,25 @@ export default function Dashboard() {
   const [apptCount, setApptCount] = useState(0)
   const [prospectCount, setProspectCount] = useState(0)
   const [expiringCertCount, setExpiringCertCount] = useState(0)
+  const [showWelcome, setShowWelcome] = useState(false)
+  const [welcomeChecked, setWelcomeChecked] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
   const unauthorized = location.state?.unauthorized
   const openAddResident = location.state?.openAddResident || new URLSearchParams(location.search).get('openAddResident')
   const { facility } = useFacility()
   const { communityId, community, isAdmin } = useCommunity()
+  const { profile } = useProfile()
   const isMobile = useIsMobile()
+
+  useEffect(() => {
+    if (!profile?.user_id || welcomeChecked) return
+    setWelcomeChecked(true)
+    const key = `haven_welcome_done_${profile.user_id}`
+    if (!localStorage.getItem(key)) {
+      setShowWelcome(true)
+    }
+  }, [profile?.user_id, welcomeChecked])
 
   useEffect(() => {
     if (openAddResident) setShowForm(true)
@@ -232,12 +247,23 @@ export default function Dashboard() {
         </div>
       )}
 
+      {showWelcome && profile?.user_id && (
+        <WelcomeModal
+          userId={profile.user_id}
+          onDone={() => setShowWelcome(false)}
+        />
+      )}
+
       {/* Welcome */}
       {community?.name && !showFormer && (
         <div className="mb-6">
           <p className="text-sm font-medium text-slate-400 uppercase tracking-widest mb-1">Welcome to</p>
           <h1 className="text-3xl font-bold text-slate-800 leading-tight">{community.name}</h1>
         </div>
+      )}
+
+      {!showFormer && communityId && (
+        <GettingStartedChecklist communityId={communityId} />
       )}
 
       {/* Summary stats bar — active residents only */}

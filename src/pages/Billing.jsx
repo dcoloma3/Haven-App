@@ -40,6 +40,7 @@ const STATUS_COLORS = {
   draft: 'bg-slate-100 text-slate-600',
   sent: 'bg-blue-100 text-blue-700',
   paid: 'bg-emerald-100 text-emerald-700',
+  overdue: 'bg-red-100 text-red-700',
 }
 
 export default function Billing() {
@@ -52,6 +53,7 @@ export default function Billing() {
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7))
   const [generating, setGenerating] = useState(null)
   const [bulkGenerating, setBulkGenerating] = useState(false)
+  const [updatingStatus, setUpdatingStatus] = useState(null)
 
   async function load() {
     const [{ data: res }, { data: bills }] = await Promise.all([
@@ -111,15 +113,22 @@ export default function Billing() {
     await load()
   }
 
-  // Corrected totals: only sent+paid count as billed; outstanding = sent only
+  async function updateStatus(billId, status) {
+    setUpdatingStatus(billId)
+    await supabase.from('billing_records').update({ status }).eq('id', billId)
+    setUpdatingStatus(null)
+    await load()
+  }
+
+  // Totals: sent + paid + overdue count as billed; outstanding = sent + overdue
   const totalBilled = Object.values(billingMap)
-    .filter(b => b.status === 'sent' || b.status === 'paid')
+    .filter(b => b.status === 'sent' || b.status === 'paid' || b.status === 'overdue')
     .reduce((sum, b) => sum + Number(b.total_amount), 0)
   const totalPaid = Object.values(billingMap)
     .filter(b => b.status === 'paid')
     .reduce((sum, b) => sum + Number(b.total_amount), 0)
   const totalOutstanding = Object.values(billingMap)
-    .filter(b => b.status === 'sent')
+    .filter(b => b.status === 'sent' || b.status === 'overdue')
     .reduce((sum, b) => sum + Number(b.total_amount), 0)
   const draftCount = Object.values(billingMap).filter(b => b.status === 'draft').length
 
@@ -215,9 +224,50 @@ export default function Billing() {
                           {generating === r.id ? 'Generating…' : 'Generate'}
                         </button>
                       ) : (
-                        <button onClick={() => navigate(`/residents/${r.id}`, { state: { openTab: 'Billing' } })} className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
-                          View Detail
-                        </button>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {bill.status === 'draft' && (
+                            <button
+                              onClick={() => updateStatus(bill.id, 'sent')}
+                              disabled={updatingStatus === bill.id}
+                              className="text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 font-medium px-2.5 py-1 rounded-lg transition-colors disabled:opacity-50"
+                            >
+                              Mark Sent
+                            </button>
+                          )}
+                          {bill.status === 'sent' && (
+                            <>
+                              <button
+                                onClick={() => updateStatus(bill.id, 'paid')}
+                                disabled={updatingStatus === bill.id}
+                                className="text-xs bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-medium px-2.5 py-1 rounded-lg transition-colors disabled:opacity-50"
+                              >
+                                Mark Paid
+                              </button>
+                              <button
+                                onClick={() => updateStatus(bill.id, 'overdue')}
+                                disabled={updatingStatus === bill.id}
+                                className="text-xs bg-red-50 text-red-600 hover:bg-red-100 font-medium px-2.5 py-1 rounded-lg transition-colors disabled:opacity-50"
+                              >
+                                Overdue
+                              </button>
+                            </>
+                          )}
+                          {bill.status === 'overdue' && (
+                            <button
+                              onClick={() => updateStatus(bill.id, 'paid')}
+                              disabled={updatingStatus === bill.id}
+                              className="text-xs bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-medium px-2.5 py-1 rounded-lg transition-colors disabled:opacity-50"
+                            >
+                              Mark Paid
+                            </button>
+                          )}
+                          {bill.status === 'paid' && (
+                            <span className="text-xs text-emerald-600 font-medium">✓ Paid</span>
+                          )}
+                          <button onClick={() => navigate(`/residents/${r.id}`, { state: { openTab: 'Billing' } })} className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
+                            Detail
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -232,6 +282,17 @@ export default function Billing() {
           </table>
           </div>
         </div>
+      )}
+
+      {/* Status legend — outside overflow container so it's always visible */}
+      {!loading && (
+        <p className="text-xs text-slate-400 mt-3">
+          <span className="font-medium text-slate-500">Status:</span>{' '}
+          <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full text-[10px] font-semibold">Draft</span> = created, not sent &nbsp;·&nbsp;
+          <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full text-[10px] font-semibold">Sent</span> = invoice delivered &nbsp;·&nbsp;
+          <span className="bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full text-[10px] font-semibold">Paid</span> = payment received &nbsp;·&nbsp;
+          <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full text-[10px] font-semibold">Overdue</span> = payment past due
+        </p>
       )}
     </Layout>
   )

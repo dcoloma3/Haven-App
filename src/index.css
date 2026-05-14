@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Enable class-based dark mode (.dark on <html>) */
+@variant dark (&:where(.dark, .dark *));
+
 @theme {
   --animate-page-in: pageIn 220ms ease-out;
 }
@@ -74,6 +77,60 @@ body {
   max-width: 100vw;
 }
 
+/* ─── Dark Mode Global Overrides ────────────────────────────────────────────
+   These apply when the <html> element has the "dark" class (set by useDarkMode).
+   They ensure the entire app gets dark-themed without editing every component.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+.dark {
+  color-scheme: dark;
+}
+
+/* Page backgrounds */
+.dark body,
+.dark #root { background-color: #0f172a; }
+
+/* Cards / panels */
+.dark .bg-white { background-color: #1e293b !important; }
+.dark .bg-slate-50 { background-color: #0f172a !important; }
+.dark .bg-slate-100 { background-color: #334155 !important; }
+.dark .bg-slate-200 { background-color: #475569 !important; }
+
+/* Borders */
+.dark .border-slate-200 { border-color: #334155 !important; }
+.dark .border-slate-100 { border-color: #1e293b !important; }
+.dark .border-slate-300 { border-color: #475569 !important; }
+
+/* Text */
+.dark .text-slate-800 { color: #f1f5f9 !important; }
+.dark .text-slate-700 { color: #e2e8f0 !important; }
+.dark .text-slate-600 { color: #cbd5e1 !important; }
+.dark .text-slate-500 { color: #94a3b8 !important; }
+.dark .text-slate-400 { color: #64748b !important; }
+.dark .text-slate-300 { color: #475569 !important; }
+
+/* Table hover rows */
+.dark .hover\:bg-slate-50:hover { background-color: #334155 !important; }
+.dark .hover\:bg-slate-100:hover { background-color: #475569 !important; }
+
+/* Table dividers */
+.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]) { border-color: #1e293b !important; }
+
+/* Form inputs — scoped to <main> so the Login page glassmorphism isn't affected */
+.dark main input:not([type="checkbox"]):not([type="radio"]),
+.dark main textarea,
+.dark main select {
+  background-color: #1e293b;
+  border-color: #475569;
+  color: #f1f5f9;
+}
+.dark main input::placeholder,
+.dark main textarea::placeholder { color: #64748b; }
+
+/* Table headers — slightly lighter than page bg so they're still visible */
+.dark thead tr { background-color: #1e293b !important; }
+
+/* ─── Hide scrollbars on tab strips */
 /* Hide scrollbars on tab strips */
 .scrollbar-none {
   scrollbar-width: none;

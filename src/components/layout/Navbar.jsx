@@ -5,8 +5,40 @@ import { useFacility } from '../../context/FacilityContext'
 import { useProfile } from '../../context/ProfileContext'
 import { useCommunity } from '../../context/CommunityContext'
 import { useIsMobile } from '../../hooks/useIsMobile'
+import { useDarkMode } from '../../hooks/useDarkMode'
 import HavenLogo from './HavenLogo'
 import GlobalSearch from './GlobalSearch'
+
+function DarkModeToggle() {
+  const { isDark, toggle } = useDarkMode()
+  return (
+    <button
+      onClick={toggle}
+      title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors hover:bg-white/10 text-white/60 hover:text-white flex-shrink-0"
+    >
+      {isDark ? (
+        // Sun icon
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="5" />
+          <line x1="12" y1="1" x2="12" y2="3" />
+          <line x1="12" y1="21" x2="12" y2="23" />
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+          <line x1="1" y1="12" x2="3" y2="12" />
+          <line x1="21" y1="12" x2="23" y2="12" />
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+        </svg>
+      ) : (
+        // Moon icon
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+        </svg>
+      )}
+    </button>
+  )
+}
 
 const navLinkCls = ({ isActive }) =>
   `text-sm font-medium transition-colors ${isActive ? 'text-white' : 'text-white/70 hover:text-white'}`
@@ -315,20 +347,23 @@ export default function Navbar() {
           </div>
         )}
 
-        {/* Desktop: owner pill + community switcher + user menu */}
+        {/* Desktop: owner pill + community switcher + dark mode toggle + user menu */}
         {!isMobile && (
           <div className="flex items-center gap-3 flex-shrink-0 ml-auto">
             {ownerPill}
             <CommunityDropdown community={community} memberships={memberships} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} onSwitch={setCommunityId} onNew={() => setShowNewCommunity(true)} />
             <div className="w-px h-4 bg-white/20" />
+            <DarkModeToggle />
+            <div className="w-px h-4 bg-white/20" />
             <UserMenu profile={profile} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} />
           </div>
         )}
 
-        {/* Mobile: owner pill + community + user */}
+        {/* Mobile: owner pill + community + dark mode toggle + user */}
         {isMobile && (
           <div className="flex items-center gap-2 ml-auto flex-shrink-0">
             {ownerPill}
+            <DarkModeToggle />
             <CommunityDropdown community={community} memberships={memberships} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} onSwitch={setCommunityId} onNew={() => setShowNewCommunity(true)} />
             <UserMenu profile={profile} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} />
           </div>

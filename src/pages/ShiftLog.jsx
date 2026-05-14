@@ -18,6 +18,8 @@ create policy "community members can manage shift notes" on shift_notes
 
 import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import { supabase } from '../lib/supabase'
 import { useCommunity } from '../context/CommunityContext'
 import { useProfile } from '../context/ProfileContext'
@@ -102,7 +104,46 @@ export default function ShiftLog() {
     await fetchNotes()
   }
 
-  const authorId = profile?.user_id
+  function exportPDF() {
+    const doc = new jsPDF()
+    doc.setFontSize(18)
+    doc.setTextColor(4, 44, 83) // #042C53
+    doc.text('Shift Log Report', 14, 20)
+
+    doc.setFontSize(10)
+    doc.setTextColor(100, 116, 139)
+    const dateLabel = filterDate || 'All dates'
+    const shiftLabel = filterShift === 'All' ? 'All shifts' : filterShift
+    doc.text(`Date: ${dateLabel}  |  Shift: ${shiftLabel}`, 14, 29)
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 35)
+
+    autoTable(doc, {
+      startY: 42,
+      head: [['Shift', 'Author', 'Resident', 'Note', 'Time']],
+      body: notes.map(n => [
+        n.shift,
+        n.author_name || 'Staff',
+        n.residents ? `${n.residents.first_name} ${n.residents.last_name} (Rm ${n.residents.room_number})` : '—',
+        n.content,
+        new Date(n.created_at).toLocaleString(),
+      ]),
+      headStyles: { fillColor: [24, 95, 165], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+      bodyStyles: { fontSize: 8, textColor: [30, 41, 59] },
+      // Columns total 182mm — exact fit for A4 with 14mm margins each side
+      columnStyles: {
+        0: { cellWidth: 20 },  // Shift
+        1: { cellWidth: 26 },  // Author
+        2: { cellWidth: 36 },  // Resident
+        3: { cellWidth: 70 },  // Note (largest, wraps naturally)
+        4: { cellWidth: 30 },  // Time
+      },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      margin: { left: 14, right: 14 },
+    })
+
+    const filename = `shift-log-${dateLabel.replace(/\//g, '-')}.pdf`
+    doc.save(filename)
+  }
 
   const filteredResidents = residents.filter(r =>
     residentSearch === '' ||
@@ -116,15 +157,32 @@ export default function ShiftLog() {
           <h1 className="text-2xl font-bold text-slate-800">Shift Log</h1>
           <p className="text-sm text-slate-500 mt-1">Team communications and handoff notes</p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="bg-[#185FA5] hover:bg-[#0C447C] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2"
-        >
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          New Note
-        </button>
+        <div className="flex items-center gap-2">
+          {notes.length > 0 && (
+            <button
+              onClick={exportPDF}
+              className="border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors flex items-center gap-2"
+              title="Export to PDF"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="12" y1="18" x2="12" y2="12" />
+                <line x1="9" y1="15" x2="15" y2="15" />
+              </svg>
+              Export PDF
+            </button>
+          )}
+          <button
+            onClick={() => setShowModal(true)}
+            className="bg-[#185FA5] hover:bg-[#0C447C] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            New Note
+          </button>
+        </div>
       </div>
 
       {/* Filter Bar */}
