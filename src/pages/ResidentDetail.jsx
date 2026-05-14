@@ -248,8 +248,9 @@ export default function ResidentDetail() {
         const moreTabs = TABS.slice(PRIMARY_COUNT)
         const activeIsInMore = moreTabs.includes(activeTab)
         return (
-          <div className="border-b border-slate-200 mb-5 -mx-4 px-4">
-            <div ref={tabsRef} className="flex gap-0 overflow-x-auto scrollbar-none relative" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          <div className="border-b border-slate-200 mb-5 -mx-4 px-4 flex items-end">
+            {/* Scrollable primary tabs */}
+            <div ref={tabsRef} className="flex gap-0 overflow-x-auto scrollbar-none flex-1 min-w-0" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
               {primaryTabs.map(tab => (
                 <button
                   key={tab}
@@ -262,42 +263,43 @@ export default function ResidentDetail() {
                   {tab}
                 </button>
               ))}
-
-              {moreTabs.length > 0 && (
-                <div className="relative flex-shrink-0">
-                  <button
-                    onClick={() => setShowMoreTabs(o => !o)}
-                    className={`px-3.5 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-colors flex items-center gap-1 ${
-                      activeIsInMore ? 'border-[#185FA5] text-[#185FA5]' : 'border-transparent text-slate-400 hover:text-slate-700'
-                    }`}
-                  >
-                    {activeIsInMore ? activeTab : 'More'}
-                    <svg className={`w-3 h-3 flex-shrink-0 transition-transform ${showMoreTabs ? 'rotate-180' : ''}`} viewBox="0 0 12 12" fill="currentColor">
-                      <path d="M6 8L1 3h10z" />
-                    </svg>
-                  </button>
-
-                  {showMoreTabs && (
-                    <>
-                      <div className="fixed inset-0 z-30" onClick={() => setShowMoreTabs(false)} />
-                      <div className="absolute right-0 top-full mt-1 z-40 bg-white rounded-xl shadow-lg border border-slate-200 w-44 overflow-hidden">
-                        {moreTabs.map(tab => (
-                          <button
-                            key={tab}
-                            onClick={() => { handleTabClick(tab); setShowMoreTabs(false) }}
-                            className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
-                              activeTab === tab ? 'bg-[#E6F1FB] text-[#185FA5] font-medium' : 'text-slate-700 hover:bg-slate-50'
-                            }`}
-                          >
-                            {tab}
-                          </button>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
             </div>
+
+            {/* More button — outside the scroll container so the dropdown isn't clipped */}
+            {moreTabs.length > 0 && (
+              <div className="relative flex-shrink-0">
+                <button
+                  onClick={() => setShowMoreTabs(o => !o)}
+                  className={`px-3.5 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-colors flex items-center gap-1 ${
+                    activeIsInMore ? 'border-[#185FA5] text-[#185FA5]' : 'border-transparent text-slate-400 hover:text-slate-700'
+                  }`}
+                >
+                  {activeIsInMore ? activeTab : 'More'}
+                  <svg className={`w-3 h-3 flex-shrink-0 transition-transform ${showMoreTabs ? 'rotate-180' : ''}`} viewBox="0 0 12 12" fill="currentColor">
+                    <path d="M6 8L1 3h10z" />
+                  </svg>
+                </button>
+
+                {showMoreTabs && (
+                  <>
+                    <div className="fixed inset-0 z-30" onClick={() => setShowMoreTabs(false)} />
+                    <div className="absolute right-0 top-full mt-1 z-40 bg-white rounded-xl shadow-lg border border-slate-200 w-44 overflow-hidden">
+                      {moreTabs.map(tab => (
+                        <button
+                          key={tab}
+                          onClick={() => { handleTabClick(tab); setShowMoreTabs(false) }}
+                          className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                            activeTab === tab ? 'bg-[#E6F1FB] text-[#185FA5] font-medium' : 'text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          {tab}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         )
       })()}
