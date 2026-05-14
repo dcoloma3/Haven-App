@@ -7,6 +7,7 @@ import { useFacility } from '../context/FacilityContext'
 import { useCommunity } from '../context/CommunityContext'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { adminKey, computeResidentStatus, ringBoxShadow, RING_COLOR } from '../lib/medStatus'
+import { StatCardSkeleton, ResidentCardSkeleton, ResidentRowSkeleton } from '../components/ui/Skeleton'
 
 function getResidentFullName(r) {
   const parts = [r.first_name, r.middle_name, r.last_name].filter(Boolean)
@@ -219,9 +220,19 @@ export default function Dashboard() {
           {/* Stats grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {/* Active Residents */}
-            <div className="bg-white border border-slate-200 rounded-2xl px-4 py-3 text-center">
-              <p className="text-2xl font-bold text-slate-800">{residents.length}</p>
-              <p className="text-xs text-slate-500 mt-0.5">Active Residents</p>
+            <div className="bg-white border border-slate-200 rounded-2xl px-4 py-4 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-default">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-4 h-4 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-slate-800 leading-none">{residents.length}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Active Residents</p>
+                </div>
+              </div>
             </div>
 
             {/* Meds Incomplete */}
@@ -232,9 +243,18 @@ export default function Dashboard() {
               }).length
               const isAmber = medsIncomplete > 0
               return (
-                <div className={`rounded-2xl px-4 py-3 text-center border ${isAmber ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'}`}>
-                  <p className={`text-2xl font-bold ${isAmber ? 'text-amber-700' : 'text-emerald-700'}`}>{medsIncomplete}</p>
-                  <p className={`text-xs mt-0.5 ${isAmber ? 'text-amber-600' : 'text-emerald-600'}`}>Meds Incomplete</p>
+                <div className={`rounded-2xl px-4 py-4 border hover:shadow-md hover:-translate-y-0.5 transition-all cursor-default ${isAmber ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'}`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${isAmber ? 'bg-amber-100' : 'bg-emerald-100'}`}>
+                      <svg className={`w-4 h-4 ${isAmber ? 'text-amber-600' : 'text-emerald-600'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v11m0 0H5a2 2 0 0 1-2-2V9m6 5h4m0 0v-3m0 3v3"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <p className={`text-2xl font-bold leading-none ${isAmber ? 'text-amber-700' : 'text-emerald-700'}`}>{medsIncomplete}</p>
+                      <p className={`text-xs mt-0.5 ${isAmber ? 'text-amber-600' : 'text-emerald-600'}`}>Meds Incomplete</p>
+                    </div>
+                  </div>
                 </div>
               )
             })()}
@@ -243,9 +263,18 @@ export default function Dashboard() {
             {(() => {
               const isRed = openIncidentCount > 0
               return (
-                <div className={`rounded-2xl px-4 py-3 text-center border ${isRed ? 'bg-red-50 border-red-200' : 'bg-white border-slate-200'}`}>
-                  <p className={`text-2xl font-bold ${isRed ? 'text-red-700' : 'text-slate-800'}`}>{openIncidentCount}</p>
-                  <p className={`text-xs mt-0.5 ${isRed ? 'text-red-600' : 'text-slate-500'}`}>Open Incidents</p>
+                <div className={`rounded-2xl px-4 py-4 border hover:shadow-md hover:-translate-y-0.5 transition-all cursor-default ${isRed ? 'bg-red-50 border-red-200' : 'bg-white border-slate-200'}`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${isRed ? 'bg-red-100' : 'bg-slate-100'}`}>
+                      <svg className={`w-4 h-4 ${isRed ? 'text-red-500' : 'text-slate-400'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <p className={`text-2xl font-bold leading-none ${isRed ? 'text-red-700' : 'text-slate-800'}`}>{openIncidentCount}</p>
+                      <p className={`text-xs mt-0.5 ${isRed ? 'text-red-600' : 'text-slate-500'}`}>Open Incidents</p>
+                    </div>
+                  </div>
                 </div>
               )
             })()}
@@ -254,9 +283,18 @@ export default function Dashboard() {
             {(() => {
               const hasAppts = apptCount > 0
               return (
-                <div className={`rounded-2xl px-4 py-3 text-center border ${hasAppts ? 'border-[#185FA5] bg-[#E6F1FB]' : 'bg-white border-slate-200'}`}>
-                  <p className={`text-2xl font-bold ${hasAppts ? 'text-[#185FA5]' : 'text-slate-800'}`}>{apptCount}</p>
-                  <p className={`text-xs mt-0.5 ${hasAppts ? 'text-[#185FA5]' : 'text-slate-500'}`}>Appts Today</p>
+                <div className={`rounded-2xl px-4 py-4 border hover:shadow-md hover:-translate-y-0.5 transition-all cursor-default ${hasAppts ? 'border-[#185FA5] bg-[#E6F1FB]' : 'bg-white border-slate-200'}`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${hasAppts ? 'bg-[#185FA5]/20' : 'bg-slate-100'}`}>
+                      <svg className={`w-4 h-4 ${hasAppts ? 'text-[#185FA5]' : 'text-slate-400'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <p className={`text-2xl font-bold leading-none ${hasAppts ? 'text-[#185FA5]' : 'text-slate-800'}`}>{apptCount}</p>
+                      <p className={`text-xs mt-0.5 ${hasAppts ? 'text-[#185FA5]' : 'text-slate-500'}`}>Appts Today</p>
+                    </div>
+                  </div>
                 </div>
               )
             })()}
@@ -290,7 +328,8 @@ export default function Dashboard() {
           {!showFormer && (
             <button
               onClick={() => setShowForm(true)}
-              className="bg-[#185FA5] hover:bg-[#0C447C] text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
+              className="text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all active:scale-95"
+              style={{ background: 'linear-gradient(135deg, #185FA5 0%, #2d8fe8 100%)', boxShadow: '0 2px 12px rgba(24,95,165,0.4)' }}
             >
               + Add
             </button>
@@ -312,7 +351,23 @@ export default function Dashboard() {
         />
       </div>
 
-      {loading && <p className="text-slate-400 text-sm text-center py-8">Loading…</p>}
+      {loading && (
+        <div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+            <StatCardSkeleton /><StatCardSkeleton /><StatCardSkeleton /><StatCardSkeleton />
+          </div>
+          <div className="h-6 w-24 bg-slate-200 rounded-lg mb-4" style={{ animation: 'skeletonPulse 1.5s ease-in-out infinite' }} />
+          {isMobile ? (
+            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+              <ResidentRowSkeleton /><ResidentRowSkeleton /><ResidentRowSkeleton />
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              <ResidentCardSkeleton /><ResidentCardSkeleton /><ResidentCardSkeleton /><ResidentCardSkeleton />
+            </div>
+          )}
+        </div>
+      )}
 
       {!loading && residents.length === 0 && showFormer && (
         <div className="text-center py-16 text-slate-400">
@@ -423,7 +478,7 @@ export default function Dashboard() {
               <button
                 key={r.id}
                 onClick={() => navigate(`/residents/${r.id}`)}
-                className="text-left bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-md hover:border-[#378ADD] transition-all"
+                className="text-left bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-lg hover:border-[#378ADD] hover:-translate-y-1 transition-all duration-200"
               >
                 <div className="aspect-[3/4] w-full relative">
                   <CardPhoto resident={r} />
