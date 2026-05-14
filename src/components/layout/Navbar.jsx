@@ -168,7 +168,6 @@ function UserMenu({ profile, isAdmin, isSuperAdmin }) {
 
   function exitToOwnerPanel() {
     setOpen(false)
-    setCommunityId(null)
     navigate('/superadmin')
   }
 
@@ -280,7 +279,7 @@ export default function Navbar() {
   // Owner pill — visible whenever super admin is viewing a community
   const ownerPill = isSuperAdmin && communityId ? (
     <button
-      onClick={() => { setCommunityId(null); navigate('/superadmin') }}
+      onClick={() => { navigate('/superadmin'); setTimeout(() => setCommunityId(null), 50) }}
       className="flex items-center gap-1.5 bg-amber-400 hover:bg-amber-300 text-[#042C53] text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wide transition-colors flex-shrink-0"
       title="You are in Owner Mode — click to return to Owner Panel"
     >
