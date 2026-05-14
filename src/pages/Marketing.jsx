@@ -116,7 +116,7 @@ function MarketingNav({ scrollTo }) {
   return (
     <div className="sticky top-0 z-50">
       <nav
-        className="grid items-center px-6 py-4"
+        className="flex justify-between md:grid items-center px-6 py-4"
         style={{
           gridTemplateColumns: '1fr auto 1fr',
           backgroundColor: 'rgba(4,44,83,0.97)',
