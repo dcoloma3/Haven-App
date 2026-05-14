@@ -148,7 +148,7 @@ const NAV = [
 
 function DemoSidebar({ active, onNav }) {
   return (
-    <div className="flex flex-col flex-shrink-0" style={{ width: 180, backgroundColor: C.sidebar, borderRight: '1px solid rgba(255,255,255,0.06)' }}>
+    <div className="hidden sm:flex flex-col flex-shrink-0" style={{ width: 180, backgroundColor: C.sidebar, borderRight: '1px solid rgba(255,255,255,0.06)' }}>
       {/* Logo */}
       <div className="px-4 py-3.5 flex items-center gap-2 border-b" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
         <svg width="15" height="19" viewBox="0 0 24 30" fill="none" aria-hidden="true">
@@ -242,7 +242,7 @@ function ResidentsView({ meds }) {
       <div className="flex-1 overflow-y-auto" style={{ backgroundColor: C.bg }}>
         <div className="p-5">
           {/* Stats — dynamic */}
-          <div className="grid grid-cols-4 gap-3 mb-5">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-4 sm:mb-5">
             {[
               { label: 'Total Residents', val: RESIDENTS.length, color: C.primary },
               { label: 'Meds Due Today',  val: medsIncomplete,   color: medsIncomplete > 0 ? '#f59e0b' : '#22c55e' },
@@ -569,10 +569,11 @@ function ScheduleView() {
           </div>
         </div>
 
-        {/* Grid */}
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+        {/* Grid — horizontally scrollable on mobile */}
+        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden overflow-x-auto">
+          <div style={{ minWidth: 480 }}>
           {/* Header */}
-          <div className="grid px-4 py-2.5 border-b border-slate-100" style={{ gridTemplateColumns: '160px repeat(5, 1fr)', backgroundColor: '#f8fafc' }}>
+          <div className="grid px-4 py-2.5 border-b border-slate-100" style={{ gridTemplateColumns: '120px repeat(5, 1fr)', backgroundColor: '#f8fafc' }}>
             <span className="font-semibold text-slate-400 uppercase tracking-wide" style={{ fontSize: 10 }}>Staff</span>
             {days.map(d => {
               const isToday = weekOffset === 0 && d.dateStr === TODAY_STR
@@ -588,7 +589,7 @@ function ScheduleView() {
             <div
               key={s.id}
               className="grid items-center px-4 py-3"
-              style={{ gridTemplateColumns: '160px repeat(5, 1fr)', borderBottom: i < STAFF.length - 1 ? '1px solid #f1f5f9' : 'none' }}
+              style={{ gridTemplateColumns: '120px repeat(5, 1fr)', borderBottom: i < STAFF.length - 1 ? '1px solid #f1f5f9' : 'none' }}
             >
               <div className="flex items-center gap-2.5">
                 <Avatar initials={s.initials} color={s.color} size={30} />
@@ -619,6 +620,7 @@ function ScheduleView() {
               })}
             </div>
           ))}
+          </div>{/* end minWidth wrapper */}
         </div>
 
         {/* Legend */}
@@ -735,9 +737,9 @@ export default function LiveDemo() {
   const toggleMed = id => setMeds(prev => prev.map(m => m.id === id ? { ...m, given: !m.given } : m))
 
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ boxShadow: '0 40px 100px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.08)', height: 580 }}>
-      {/* macOS chrome bar */}
-      <div className="flex items-center gap-3 px-4 py-2.5 flex-shrink-0" style={{ backgroundColor: '#141e2d', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+    <div className="rounded-2xl overflow-hidden h-[500px] sm:h-[580px]" style={{ boxShadow: '0 40px 100px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.08)' }}>
+      {/* macOS chrome bar — desktop only */}
+      <div className="hidden sm:flex items-center gap-3 px-4 py-2.5 flex-shrink-0" style={{ backgroundColor: '#141e2d', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
         <div className="flex gap-1.5" aria-hidden="true">
           <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#ff5f57' }} />
           <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#ffbd2e' }} />
@@ -751,8 +753,40 @@ export default function LiveDemo() {
         </div>
       </div>
 
-      {/* App shell */}
-      <div className="flex" style={{ height: 'calc(580px - 37px)' }}>
+      {/* Mobile top bar — logo + tab navigation */}
+      <div className="sm:hidden flex items-stretch flex-shrink-0" style={{ backgroundColor: C.sidebar, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        {/* Logo */}
+        <div className="flex items-center gap-1.5 px-3 flex-shrink-0" style={{ borderRight: '1px solid rgba(255,255,255,0.07)' }}>
+          <svg width="12" height="15" viewBox="0 0 24 30" fill="none" aria-hidden="true">
+            <path d="M2,28 L2,15 L12,6 L22,15 L22,28 Z" stroke="white" strokeWidth="1.5" strokeLinejoin="round" fill="none"/>
+            <rect x="4" y="20" width="5" height="8" fill="white" rx="0.5"/>
+            <rect x="13" y="18" width="5" height="5" stroke="white" strokeWidth="1.5" fill="none" rx="0.5"/>
+            <circle cx="12" cy="1.5" r="1.5" fill="#85B7EB"/>
+          </svg>
+          <span className="text-white font-semibold" style={{ fontSize: 12, letterSpacing: '-0.3px' }}>haven</span>
+        </div>
+        {/* Tabs */}
+        {NAV.map(item => (
+          <button
+            key={item.key}
+            type="button"
+            onClick={() => setView(item.key)}
+            className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors"
+            style={{
+              color: view === item.key ? 'white' : 'rgba(255,255,255,0.4)',
+              backgroundColor: view === item.key ? 'rgba(255,255,255,0.1)' : 'transparent',
+              borderBottom: view === item.key ? `2px solid #378ADD` : '2px solid transparent',
+            }}
+            aria-pressed={view === item.key}
+          >
+            {item.icon}
+            <span style={{ fontSize: 9, fontWeight: view === item.key ? 600 : 400 }}>{item.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* App shell — fills remaining height after chrome bar (desktop) or mobile tab bar */}
+      <div className="flex flex-1 min-h-0 overflow-hidden" style={{ height: 'calc(100% - 37px)' }}>
         <DemoSidebar active={view} onNav={setView} />
         <div className="flex flex-col flex-1 min-w-0">
           <DemoNavbar view={view} />

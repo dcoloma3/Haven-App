@@ -231,32 +231,32 @@ function MarketingNav({ scrollTo }) {
 
 function HeroSection({ scrollTo }) {
   return (
-    <section className="relative flex flex-col items-center justify-center text-center px-6 py-24 md:py-32">
+    <section className="relative flex flex-col items-center justify-center text-center px-6 py-14 md:py-32">
       <div className="relative z-10 max-w-3xl mx-auto w-full">
         {/* Large centered logo mark */}
-        <div className="flex flex-col items-center mb-10">
-          <svg width="72" height="90" viewBox="0 0 24 30" fill="none" aria-hidden="true" className="mb-4">
+        <div className="flex flex-col items-center mb-6 md:mb-10">
+          <svg className="w-12 h-[60px] sm:w-[72px] sm:h-[90px] mb-3 md:mb-4" viewBox="0 0 24 30" fill="none" aria-hidden="true">
             <path d="M2,28 L2,15 L12,6 L22,15 L22,28 Z" stroke="white" strokeWidth="1.2" strokeLinejoin="round" fill="none" />
             <rect x="4" y="20" width="5" height="8" fill="white" rx="0.5" />
             <rect x="13" y="18" width="5" height="5" stroke="white" strokeWidth="1.2" fill="none" rx="0.5" />
             <line x1="12" y1="3" x2="12" y2="6" stroke="white" strokeWidth="1.2" strokeLinecap="round" />
             <circle cx="12" cy="1.5" r="1.5" fill={C.accent} />
           </svg>
-          <span style={{ fontSize: 'clamp(2.8rem, 7vw, 4rem)', fontWeight: 600, letterSpacing: '-2px', color: 'white', lineHeight: 1, fontFamily: 'inherit' }}>
+          <span style={{ fontSize: 'clamp(2rem, 7vw, 4rem)', fontWeight: 600, letterSpacing: '-2px', color: 'white', lineHeight: 1, fontFamily: 'inherit' }}>
             haven
           </span>
         </div>
 
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium mb-8"
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium mb-6 md:mb-8"
           style={{ backgroundColor: 'rgba(55,138,221,0.12)', color: C.light, border: '1px solid rgba(133,183,235,0.2)' }}>
           <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: C.accent }} aria-hidden="true" />
           Run your home with confidence
         </div>
 
-        <h1 className="font-bold tracking-tight mb-6 leading-tight" style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)', color: 'white' }}>
+        <h1 className="font-bold tracking-tight mb-5 md:mb-6 leading-tight" style={{ fontSize: 'clamp(1.75rem, 5vw, 3.5rem)', color: 'white' }}>
           Resident management<br /><span style={{ color: C.light }}>made simple</span>
         </h1>
-        <p className="text-lg md:text-xl mb-10 max-w-lg mx-auto leading-relaxed" style={{ color: 'rgba(255,255,255,0.55)' }}>
+        <p className="text-base md:text-xl mb-8 md:mb-10 max-w-lg mx-auto leading-relaxed" style={{ color: 'rgba(255,255,255,0.55)' }}>
           Everything you need to run a great care home, finally in one place.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
@@ -291,16 +291,16 @@ function StatsBar() {
     { value: '14 days', label: 'free trial, no commitment' },
   ]
   return (
-    <div className="py-10 px-6" style={{ backgroundColor: C.statsBg, borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-      <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-0">
+    <div className="py-5 md:py-10 px-4" style={{ backgroundColor: C.statsBg, borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+      <div className="max-w-4xl mx-auto grid grid-cols-3">
         {stats.map((s, i) => (
           <div
             key={i}
-            className="flex flex-col items-center text-center px-6 py-2"
-            style={i < 2 ? { borderRight: 'none' } : {}}
+            className="flex flex-col items-center text-center px-3 py-1"
+            style={i < 2 ? { borderRight: '1px solid rgba(255,255,255,0.08)' } : {}}
           >
-            <span className="font-bold text-white text-lg md:text-xl">{s.value}</span>
-            <span className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.45)' }}>{s.label}</span>
+            <span className="font-bold text-white text-base md:text-xl">{s.value}</span>
+            <span className="text-xs md:text-sm mt-0.5" style={{ color: 'rgba(255,255,255,0.45)' }}>{s.label}</span>
           </div>
         ))}
       </div>
@@ -312,9 +312,9 @@ function StatsBar() {
 
 function LiveDemoSection() {
   return (
-    <section id="demo" className="py-24 px-6 overflow-hidden">
+    <section id="demo" className="py-12 md:py-24 px-4 sm:px-6 overflow-hidden">
       <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-12">
+        <div className="text-center mb-8 md:mb-12">
           <SectionLabel>Interactive Demo</SectionLabel>
           <h2 className="text-3xl md:text-4xl font-bold text-white mt-4 mb-4">Try it yourself</h2>
           <p className="text-lg max-w-lg mx-auto" style={{ color: 'rgba(255,255,255,0.5)' }}>
@@ -349,9 +349,9 @@ const STEPS = [
 
 function HowItWorks() {
   return (
-    <section id="how-it-works" className="py-24 px-6">
+    <section id="how-it-works" className="py-12 md:py-24 px-6">
       <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-16">
+        <div className="text-center mb-10 md:mb-16">
           <SectionLabel>How it works</SectionLabel>
           <h2 className="text-3xl md:text-4xl font-bold text-white mt-4 mb-4">Up and running in an afternoon</h2>
           <p className="text-lg max-w-md mx-auto" style={{ color: 'rgba(255,255,255,0.5)' }}>
@@ -428,9 +428,9 @@ const FEATURES = [
 
 function FeaturesSection() {
   return (
-    <section id="features" className="py-24 px-6">
+    <section id="features" className="py-12 md:py-24 px-6">
       <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-16">
+        <div className="text-center mb-10 md:mb-16">
           <SectionLabel>Features</SectionLabel>
           <h2 className="text-3xl md:text-4xl font-bold text-white mt-4 mb-4">Everything in one place</h2>
           <p className="text-lg max-w-md mx-auto" style={{ color: 'rgba(255,255,255,0.5)' }}>
@@ -461,7 +461,7 @@ function FeaturesSection() {
 
 function Testimonial() {
   return (
-    <section className="py-20 px-6">
+    <section className="py-12 md:py-20 px-6">
       <div className="max-w-3xl mx-auto text-center">
         <div className="inline-flex gap-0.5 mb-6" aria-label="5 out of 5 stars" role="img">
           {[...Array(5)].map((_, i) => (
@@ -597,9 +597,9 @@ function PricingCard({ plan, annual, scrollTo }) {
 function PricingSection({ scrollTo }) {
   const [annual, setAnnual] = useState(false)
   return (
-    <section id="pricing" className="py-24 px-6">
+    <section id="pricing" className="py-12 md:py-24 px-6">
       <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-12">
+        <div className="text-center mb-8 md:mb-12">
           <SectionLabel>Pricing</SectionLabel>
           <h2 className="text-3xl md:text-4xl font-bold text-white mt-4 mb-3">Simple, transparent pricing</h2>
           <p className="text-lg" style={{ color: 'rgba(255,255,255,0.5)' }}>Start free. Scale as you grow. Cancel anytime.</p>
@@ -718,9 +718,9 @@ function FAQItem({ q, a }) {
 
 function FAQSection() {
   return (
-    <section id="faq" className="py-24 px-6">
+    <section id="faq" className="py-12 md:py-24 px-6">
       <div className="max-w-2xl mx-auto">
-        <div className="text-center mb-12">
+        <div className="text-center mb-8 md:mb-12">
           <SectionLabel>FAQ</SectionLabel>
           <h2 className="text-3xl md:text-4xl font-bold text-white mt-4 mb-3">Common questions</h2>
           <p className="text-lg" style={{ color: 'rgba(255,255,255,0.5)' }}>Everything you need to feel confident before signing up.</p>
@@ -771,7 +771,7 @@ function ContactSection() {
   }
 
   return (
-    <section id="contact" className="py-24 px-6">
+    <section id="contact" className="py-12 md:py-24 px-6">
       <div className="max-w-xl mx-auto">
         <div
           className="rounded-3xl p-8 md:p-12"
@@ -807,7 +807,7 @@ function ContactSection() {
                 </p>
               </div>
               <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="firstName" className="block text-xs font-semibold mb-1.5" style={{ color: C.bg }}>First name</label>
                     <input
