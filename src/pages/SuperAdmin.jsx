@@ -248,7 +248,7 @@ export default function SuperAdmin() {
   const totalResidents = Object.values(stats).reduce((s, v) => s + v.residentCount, 0)
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-8">
+    <div className="min-h-screen bg-slate-50 pb-8 animate-page-in">
       {/* Header */}
       <div style={{ backgroundColor: '#042C53' }} className="px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
