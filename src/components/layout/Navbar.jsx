@@ -266,7 +266,7 @@ function UserMenu({ profile, isAdmin, isSuperAdmin }) {
 
 export default function Navbar() {
   const { profile } = useProfile()
-  const { isAdmin, isSuperAdmin, community, memberships, setCommunityId } = useCommunity()
+  const { isAdmin, isSuperAdmin, community, communityId, memberships, setCommunityId } = useCommunity()
   const [showNewCommunity, setShowNewCommunity] = useState(false)
   const navigate = useNavigate()
   const isMobile = useIsMobile()
@@ -276,6 +276,20 @@ export default function Navbar() {
     setShowNewCommunity(false)
     navigate('/dashboard')
   }
+
+  // Owner pill — visible whenever super admin is viewing a community
+  const ownerPill = isSuperAdmin && communityId ? (
+    <button
+      onClick={() => { setCommunityId(null); navigate('/superadmin') }}
+      className="flex items-center gap-1.5 bg-amber-400 hover:bg-amber-300 text-[#042C53] text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wide transition-colors flex-shrink-0"
+      title="You are in Owner Mode — click to return to Owner Panel"
+    >
+      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+      </svg>
+      Owner
+    </button>
+  ) : null
 
   return (
     <>
@@ -290,7 +304,7 @@ export default function Navbar() {
           paddingBottom: '12px',
         }}
       >
-        {/* Logo — slightly bigger */}
+        {/* Logo */}
         <Link to="/dashboard" className="flex-shrink-0 hover:opacity-80 transition-opacity">
           <HavenLogo variant="white" markHeight={32} textSize={24} />
         </Link>
@@ -302,18 +316,20 @@ export default function Navbar() {
           </div>
         )}
 
-        {/* Desktop: community switcher + user menu only (nav moved to sidebar) */}
+        {/* Desktop: owner pill + community switcher + user menu */}
         {!isMobile && (
           <div className="flex items-center gap-3 flex-shrink-0 ml-auto">
+            {ownerPill}
             <CommunityDropdown community={community} memberships={memberships} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} onSwitch={setCommunityId} onNew={() => setShowNewCommunity(true)} />
             <div className="w-px h-4 bg-white/20" />
             <UserMenu profile={profile} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} />
           </div>
         )}
 
-        {/* Mobile: community + user on right */}
+        {/* Mobile: owner pill + community + user */}
         {isMobile && (
           <div className="flex items-center gap-2 ml-auto flex-shrink-0">
+            {ownerPill}
             <CommunityDropdown community={community} memberships={memberships} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} onSwitch={setCommunityId} onNew={() => setShowNewCommunity(true)} />
             <UserMenu profile={profile} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} />
           </div>

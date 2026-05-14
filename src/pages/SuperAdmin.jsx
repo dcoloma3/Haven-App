@@ -142,26 +142,21 @@ export default function SuperAdmin() {
     if (!allCommunities.length) return
     const ids = allCommunities.map(c => c.id)
 
-    // Resident counts
-    const { data: residents } = await supabase
-      .from('residents')
-      .select('community_id')
-      .in('community_id', ids)
-
-    // Admin names per community
-    const { data: members } = await supabase
-      .from('community_members')
-      .select('community_id, role, profiles!user_id(full_name, email)')
-      .in('community_id', ids)
-      .eq('role', 'admin')
+    const [{ data: residents }, { data: members }] = await Promise.all([
+      supabase.from('residents').select('community_id').in('community_id', ids).eq('status', 'active'),
+      supabase.from('community_members').select('community_id, role, profiles!user_id(full_name, email)').in('community_id', ids),
+    ])
 
     const newStats = {}
     ids.forEach(id => {
-      const count = (residents ?? []).filter(r => r.community_id === id).length
-      const admin = (members ?? []).find(m => m.community_id === id)
+      const residentCount = (residents ?? []).filter(r => r.community_id === id).length
+      const communityMembers = (members ?? []).filter(m => m.community_id === id)
+      const admin = communityMembers.find(m => m.role === 'admin')
       const adminProfile = admin?.profiles
+      const staffCount = communityMembers.length
       newStats[id] = {
-        residentCount: count,
+        residentCount,
+        staffCount,
         adminName: adminProfile?.full_name || adminProfile?.email || '—',
       }
     })
@@ -191,7 +186,7 @@ export default function SuperAdmin() {
           <HavenLogo variant="white" />
           <div className="w-px h-5 bg-white/20" />
           <span className="bg-amber-400 text-[#042C53] text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wide">
-            Super Admin
+            Owner Panel
           </span>
         </div>
         <div className="flex items-center gap-3">
@@ -234,23 +229,49 @@ export default function SuperAdmin() {
             <p className="text-sm text-slate-400 text-center py-12">No communities yet.</p>
           ) : (
             <div className="divide-y divide-slate-100">
-              {filtered.map(c => (
-                <div key={c.id} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-slate-800">{c.name}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      Manager: {stats[c.id]?.adminName ?? '—'} · {stats[c.id]?.residentCount ?? 0} resident{stats[c.id]?.residentCount !== 1 ? 's' : ''}
-                      {c.address ? ` · ${c.address}` : ''}
-                    </p>
+              {filtered.map(c => {
+                const s = stats[c.id]
+                return (
+                  <div key={c.id} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors">
+                    {/* Community icon */}
+                    <div className="w-10 h-10 rounded-xl bg-[#E6F1FB] flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-[#185FA5]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
+                      </svg>
+                    </div>
+
+                    {/* Details */}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-slate-800">{c.name}</p>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
+                        <span className="text-xs text-slate-500">Manager: <span className="text-slate-700 font-medium">{s?.adminName ?? '—'}</span></span>
+                        <span className="text-xs text-slate-400">·</span>
+                        <span className="text-xs text-slate-500"><span className="text-slate-700 font-medium">{s?.residentCount ?? 0}</span> resident{s?.residentCount !== 1 ? 's' : ''}</span>
+                        <span className="text-xs text-slate-400">·</span>
+                        <span className="text-xs text-slate-500"><span className="text-slate-700 font-medium">{s?.staffCount ?? 0}</span> staff</span>
+                        {c.license_number && (
+                          <>
+                            <span className="text-xs text-slate-400">·</span>
+                            <span className="text-xs text-slate-500">Lic: {c.license_number}</span>
+                          </>
+                        )}
+                      </div>
+                      {c.address && <p className="text-xs text-slate-400 mt-0.5 truncate">{c.address}</p>}
+                    </div>
+
+                    {/* Enter button */}
+                    <button
+                      onClick={() => enterCommunity(c.id)}
+                      className="flex-shrink-0 text-sm bg-[#185FA5] hover:bg-[#0C447C] text-white font-medium px-4 py-2 rounded-xl transition-colors flex items-center gap-1.5"
+                    >
+                      Enter
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
+                    </button>
                   </div>
-                  <button
-                    onClick={() => enterCommunity(c.id)}
-                    className="flex-shrink-0 text-sm bg-[#185FA5] hover:bg-[#0C447C] text-white font-medium px-4 py-1.5 rounded-lg transition-colors"
-                  >
-                    Enter →
-                  </button>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
