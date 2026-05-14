@@ -31,9 +31,33 @@ import Activities from './pages/Activities'
 import FamilyView from './pages/FamilyView'
 import MedicationHistory from './pages/MedicationHistory'
 
+function NoMembershipScreen() {
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm max-w-md w-full p-8 text-center">
+        <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg className="w-8 h-8 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
+          </svg>
+        </div>
+        <h2 className="text-xl font-bold text-slate-800 mb-2">No Community Access</h2>
+        <p className="text-sm text-slate-500 mb-6">
+          Your account isn't linked to a community yet. Please contact your facility administrator to be added to your community.
+        </p>
+        <button
+          onClick={() => supabase.auth.signOut()}
+          className="w-full border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm font-medium hover:bg-slate-50 transition-colors"
+        >
+          Sign Out
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function ProtectedRoute({ children }) {
   const { profile, loading: profileLoading } = useProfile()
-  const { memberships, communityId, loading: communityLoading } = useCommunity()
+  const { memberships, communityId, loading: communityLoading, isSuperAdmin } = useCommunity()
 
   if (profileLoading || communityLoading) return null
 
@@ -48,6 +72,11 @@ function ProtectedRoute({ children }) {
   // Needs profile completion (new users only — existing users have null, not false)
   if (profile !== null && profile?.profile_completed === false) {
     return <Navigate to="/complete-profile" replace />
+  }
+
+  // No community memberships — show helpful screen (super admins are exempt)
+  if (!isSuperAdmin && memberships.length === 0) {
+    return <NoMembershipScreen />
   }
 
   // Multiple communities, none selected yet

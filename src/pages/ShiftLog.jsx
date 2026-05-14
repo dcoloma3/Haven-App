@@ -137,12 +137,31 @@ export default function ShiftLog() {
             </button>
           ))}
         </div>
-        <input
-          type="date"
-          value={filterDate}
-          onChange={e => setFilterDate(e.target.value)}
-          className="border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#185FA5]"
-        />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setFilterDate(new Date().toISOString().split('T')[0])}
+            className={`px-3 py-2 text-xs font-medium rounded-xl border transition-colors ${filterDate === new Date().toISOString().split('T')[0] ? 'bg-[#185FA5] text-white border-[#185FA5]' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+          >
+            Today
+          </button>
+          <button
+            onClick={() => { const d = new Date(); d.setDate(d.getDate() - 1); setFilterDate(d.toISOString().split('T')[0]) }}
+            className="px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+          >
+            Yesterday
+          </button>
+          <input
+            type="date"
+            value={filterDate}
+            onChange={e => setFilterDate(e.target.value)}
+            className="border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#185FA5]"
+          />
+          {filterDate && (
+            <button onClick={() => setFilterDate('')} className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
+              All dates
+            </button>
+          )}
+        </div>
       </div>
 
       {loading ? (

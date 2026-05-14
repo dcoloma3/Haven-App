@@ -52,13 +52,17 @@ export default function Occupancy() {
 
   const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
 
+  const [totalBeds, setTotalBeds] = useState(null)
+
   async function load() {
-    const [{ data: res }, { data: wl }] = await Promise.all([
+    const [{ data: res }, { data: wl }, { data: comm }] = await Promise.all([
       supabase.from('residents').select('id, first_name, last_name, room_number, status').eq('community_id', communityId).order('room_number'),
       supabase.from('waitlist').select('*').eq('community_id', communityId).order('priority').order('created_at'),
+      supabase.from('communities').select('total_beds').eq('id', communityId).single(),
     ])
     setResidents(res || [])
     setWaitlist(wl || [])
+    setTotalBeds(comm?.total_beds ?? null)
     setLoading(false)
   }
 
@@ -116,15 +120,28 @@ export default function Occupancy() {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-semibold text-slate-700">Occupancy Overview</h2>
-              <div className="flex gap-3">
+              <div className="flex gap-4 items-center">
                 <div className="text-center">
                   <p className="text-xl font-bold text-[#185FA5]">{occupiedRooms.length}</p>
                   <p className="text-xs text-slate-500">Occupied</p>
                 </div>
-                <div className="text-center">
-                  <p className="text-xl font-bold text-slate-400">{activeResidents.length}</p>
-                  <p className="text-xs text-slate-500">Residents</p>
-                </div>
+                {totalBeds != null && (
+                  <>
+                    <div className="text-center">
+                      <p className="text-xl font-bold text-slate-400">{totalBeds - occupiedRooms.length}</p>
+                      <p className="text-xs text-slate-500">Available</p>
+                    </div>
+                    <div className={`text-center px-3 py-1 rounded-xl ${occupiedRooms.length / totalBeds >= 0.9 ? 'bg-emerald-50' : occupiedRooms.length / totalBeds >= 0.7 ? 'bg-amber-50' : 'bg-red-50'}`}>
+                      <p className={`text-xl font-bold ${occupiedRooms.length / totalBeds >= 0.9 ? 'text-emerald-600' : occupiedRooms.length / totalBeds >= 0.7 ? 'text-amber-600' : 'text-red-600'}`}>
+                        {Math.round((occupiedRooms.length / totalBeds) * 100)}%
+                      </p>
+                      <p className="text-xs text-slate-500">Occupancy</p>
+                    </div>
+                  </>
+                )}
+                {totalBeds == null && (
+                  <p className="text-xs text-slate-400 italic">Set total beds in <a href="/settings" className="text-[#185FA5] hover:underline">Settings</a> to see occupancy %</p>
+                )}
               </div>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">

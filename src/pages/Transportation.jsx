@@ -36,6 +36,14 @@ const STATUS_COLORS = {
   cancelled: 'bg-slate-100 text-slate-500',
 }
 
+function fmt12(timeStr) {
+  if (!timeStr) return '—'
+  const [h, m] = timeStr.split(':').map(Number)
+  const ampm = h >= 12 ? 'PM' : 'AM'
+  const hour = h % 12 || 12
+  return `${hour}:${String(m).padStart(2, '0')} ${ampm}`
+}
+
 export default function Transportation() {
   const { communityId } = useCommunity()
   const { profile } = useProfile()
@@ -208,7 +216,7 @@ export default function Transportation() {
                     ) : <span className="text-slate-400">—</span>}
                   </td>
                   <td className="px-4 py-3 text-slate-700 text-xs">{new Date(t.trip_date + 'T00:00:00').toLocaleDateString()}</td>
-                  <td className="px-4 py-3 text-slate-500 text-xs">{t.departure_time || '—'}</td>
+                  <td className="px-4 py-3 text-slate-500 text-xs">{fmt12(t.departure_time)}</td>
                   <td className="px-4 py-3 text-slate-700 text-sm font-medium">{t.destination}</td>
                   <td className="px-4 py-3 text-slate-500 text-xs">{t.driver_name || '—'}</td>
                   <td className="px-4 py-3">

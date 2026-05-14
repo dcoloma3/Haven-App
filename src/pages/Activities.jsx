@@ -51,6 +51,7 @@ export default function Activities() {
   const [savingAttendance, setSavingAttendance] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
 
+  const [editActivity, setEditActivity] = useState(null)
   const [form, setForm] = useState({ activity_date: new Date().toISOString().split('T')[0], activity_time: '', title: '', description: '', location: '', capacity: '' })
 
   const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
@@ -75,11 +76,30 @@ export default function Activities() {
     return true
   })
 
-  async function handleCreate() {
+  function openNew() {
+    setEditActivity(null)
+    setForm({ activity_date: today, activity_time: '', title: '', description: '', location: '', capacity: '' })
+    setShowNewModal(true)
+  }
+
+  function openEdit(a) {
+    setEditActivity(a)
+    setForm({
+      activity_date: a.activity_date || today,
+      activity_time: a.activity_time?.slice(0, 5) || '',
+      title: a.title || '',
+      description: a.description || '',
+      location: a.location || '',
+      capacity: a.capacity != null ? String(a.capacity) : '',
+    })
+    setShowNewModal(true)
+  }
+
+  async function handleSave() {
     if (!form.title.trim() || !form.activity_date) return
     setSaving(true)
     const authorName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Staff'
-    await supabase.from('activities').insert({
+    const payload = {
       community_id: communityId,
       created_by_name: authorName,
       activity_date: form.activity_date,
@@ -88,9 +108,15 @@ export default function Activities() {
       description: form.description.trim() || null,
       location: form.location.trim() || null,
       capacity: form.capacity ? parseInt(form.capacity) : null,
-    })
+    }
+    if (editActivity) {
+      await supabase.from('activities').update(payload).eq('id', editActivity.id)
+    } else {
+      await supabase.from('activities').insert(payload)
+    }
     setSaving(false)
     setShowNewModal(false)
+    setEditActivity(null)
     setForm({ activity_date: today, activity_time: '', title: '', description: '', location: '', capacity: '' })
     await load()
   }
@@ -138,7 +164,7 @@ export default function Activities() {
           <p className="text-sm text-slate-500 mt-1">Schedule activities and track attendance</p>
         </div>
         {isAdmin && (
-          <button onClick={() => setShowNewModal(true)} className="bg-[#185FA5] hover:bg-[#0C447C] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2">
+          <button onClick={openNew} className="bg-[#185FA5] hover:bg-[#0C447C] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2">
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
             </svg>
@@ -203,6 +229,9 @@ export default function Activities() {
                       Take Attendance
                     </button>
                     {isAdmin && (
+                      <button onClick={() => openEdit(a)} className="text-xs text-[#185FA5] font-medium hover:text-[#0C447C] transition-colors text-center">Edit</button>
+                    )}
+                    {isAdmin && (
                       <button onClick={() => setDeleteConfirm(a)} className="text-xs text-red-400 font-medium hover:text-red-600 transition-colors text-center">Delete</button>
                     )}
                   </div>
@@ -213,13 +242,13 @@ export default function Activities() {
         </div>
       )}
 
-      {/* New Activity Modal */}
+      {/* New / Edit Activity Modal */}
       {showNewModal && (
         <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
           <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-2xl max-h-[92vh] flex flex-col">
             <div className="sticky top-0 bg-white border-b border-slate-200 px-5 py-4 flex items-center justify-between rounded-t-2xl">
-              <h2 className="font-bold text-slate-800 text-lg">New Activity</h2>
-              <button onClick={() => setShowNewModal(false)} className="text-slate-400 hover:text-slate-600">
+              <h2 className="font-bold text-slate-800 text-lg">{editActivity ? 'Edit Activity' : 'New Activity'}</h2>
+              <button onClick={() => { setShowNewModal(false); setEditActivity(null) }} className="text-slate-400 hover:text-slate-600">
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
@@ -256,9 +285,9 @@ export default function Activities() {
               </div>
             </div>
             <div className="sticky bottom-0 bg-white border-t border-slate-200 px-5 py-4 flex gap-3">
-              <button onClick={() => setShowNewModal(false)} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
-              <button onClick={handleCreate} disabled={!form.title.trim() || !form.activity_date || saving} className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
-                {saving ? 'Creating…' : 'Create Activity'}
+              <button onClick={() => { setShowNewModal(false); setEditActivity(null) }} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
+              <button onClick={handleSave} disabled={!form.title.trim() || !form.activity_date || saving} className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
+                {saving ? 'Saving…' : editActivity ? 'Save Changes' : 'Create Activity'}
               </button>
             </div>
           </div>

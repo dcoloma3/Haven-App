@@ -32,7 +32,9 @@ const STATUS_COLORS = {
 
 function isPastDue(dateStr) {
   if (!dateStr) return false
-  return new Date(dateStr) < new Date()
+  // Compare calendar dates in local time (not UTC) to avoid off-by-one at midnight
+  const today = new Date().toISOString().split('T')[0]
+  return dateStr < today
 }
 
 export default function CarePlanList({ residentId, resident }) {
@@ -128,14 +130,12 @@ export default function CarePlanList({ residentId, resident }) {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-slate-700">Care Plan Goals</h3>
-        {isAdmin && (
-          <button onClick={openAdd} className="bg-[#185FA5] hover:bg-[#0C447C] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2">
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            Add Goal
-          </button>
-        )}
+        <button onClick={openAdd} className="bg-[#185FA5] hover:bg-[#0C447C] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2">
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          Add Goal
+        </button>
       </div>
 
       {plans.length === 0 ? (

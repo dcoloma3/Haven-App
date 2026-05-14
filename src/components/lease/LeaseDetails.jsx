@@ -56,6 +56,10 @@ export default function LeaseDetails({ residentId }) {
   function set(field, value) { setForm(f => ({ ...f, [field]: value })) }
 
   async function handleSave() {
+    if (form.start_date && form.end_date && form.end_date < form.start_date) {
+      setError('End date must be on or after start date.')
+      return
+    }
     setSaving(true)
     setError('')
     const payload = {

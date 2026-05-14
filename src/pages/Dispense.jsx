@@ -227,12 +227,19 @@ function PRNTab({ communityId }) {
   }, [communityId])
 
   useEffect(() => {
-    supabase.from('profiles').select('user_id, full_name, email').then(({ data }) => {
-      const map = {}
-      ;(data ?? []).forEach(p => { map[p.user_id] = p.full_name || p.email || 'Staff' })
-      setPrnStaffMap(map)
-    })
-  }, [])
+    if (!communityId) return
+    supabase.from('community_members').select('user_id').eq('community_id', communityId)
+      .then(({ data: members }) => {
+        const userIds = (members ?? []).map(m => m.user_id)
+        if (!userIds.length) return
+        supabase.from('profiles').select('user_id, full_name, email').in('user_id', userIds)
+          .then(({ data }) => {
+            const map = {}
+            ;(data ?? []).forEach(p => { map[p.user_id] = p.full_name || p.email || 'Staff' })
+            setPrnStaffMap(map)
+          })
+      })
+  }, [communityId])
 
   async function loadPrnHistory(resident) {
     const { data } = await supabase
@@ -457,19 +464,30 @@ export default function Dispense() {
   const [toggling, setToggling] = useState(new Set())
   const [expandedTimes, setExpandedTimes] = useState(new Set())
   const [expandedResidents, setExpandedResidents] = useState(new Set())
+  const [confirmUndo, setConfirmUndo] = useState(null) // { med, time, record }
   const { communityId } = useCommunity()
   const [dispenseTab, setDispenseTab] = useState('routine')
+  // Medication IDs scoped to this community (for scoping administration queries)
+  const [communityMedIds, setCommunityMedIds] = useState([])
 
   const dateStr = toDateStr(date)
   const isToday = toDateStr(today) === dateStr
 
+  // Load staff map scoped to this community's members only
   useEffect(() => {
-    supabase.from('profiles').select('user_id, full_name, email').then(({ data }) => {
-      const map = {}
-      ;(data ?? []).forEach(p => { map[p.user_id] = p.full_name || p.email || 'Staff' })
-      setStaffMap(map)
-    })
-  }, [])
+    if (!communityId) return
+    supabase.from('community_members').select('user_id').eq('community_id', communityId)
+      .then(({ data: members }) => {
+        const userIds = (members ?? []).map(m => m.user_id)
+        if (!userIds.length) return
+        supabase.from('profiles').select('user_id, full_name, email').in('user_id', userIds)
+          .then(({ data }) => {
+            const map = {}
+            ;(data ?? []).forEach(p => { map[p.user_id] = p.full_name || p.email || 'Staff' })
+            setStaffMap(map)
+          })
+      })
+  }, [communityId])
 
   useEffect(() => {
     if (!communityId) return
@@ -478,24 +496,32 @@ export default function Dispense() {
         if (error) {
           supabase.from('medications').select(`*, residents!resident_id(${RESIDENT_COLS_SAFE})`).eq('community_id', communityId)
             .then(({ data: fallback }) => {
-              setMedications((fallback ?? []).filter(m => m.scheduled_times?.length > 0 && m.residents?.status !== 'inactive'))
+              const filtered = (fallback ?? []).filter(m => m.scheduled_times?.length > 0 && m.residents?.status !== 'inactive')
+              setMedications(filtered)
+              setCommunityMedIds(filtered.map(m => m.id))
               setLoading(false)
             })
           return
         }
-        setMedications((data ?? []).filter(m => m.scheduled_times?.length > 0 && m.residents?.status !== 'inactive'))
+        const filtered = (data ?? []).filter(m => m.scheduled_times?.length > 0 && m.residents?.status !== 'inactive')
+        setMedications(filtered)
+        setCommunityMedIds(filtered.map(m => m.id))
         setLoading(false)
       })
   }, [communityId])
 
+  // Scope administration query to this community's medication IDs only
   useEffect(() => {
-    supabase.from('medication_administrations').select('*').eq('administered_date', dateStr)
+    if (!communityMedIds.length) { setAdministered(new Map()); return }
+    supabase.from('medication_administrations').select('*')
+      .eq('administered_date', dateStr)
+      .in('medication_id', communityMedIds)
       .then(({ data }) => {
         const map = new Map()
         ;(data ?? []).forEach(r => map.set(adminKey(r.medication_id, r.scheduled_time), r))
         setAdministered(map)
       })
-  }, [dateStr])
+  }, [dateStr, communityMedIds])
 
   // Group: time → residentId → { resident, meds[] }
   const timeGroups = useMemo(() => {
@@ -540,15 +566,28 @@ export default function Dispense() {
     })
   }
 
+  // Called after the user confirms undoing a dose
+  async function confirmUndoDose() {
+    if (!confirmUndo) return
+    const { med, time, record } = confirmUndo
+    const key = adminKey(med.id, time)
+    setConfirmUndo(null)
+    setToggling(prev => new Set(prev).add(key))
+    setAdministered(prev => { const n = new Map(prev); n.delete(key); return n })
+    await supabase.from('medication_administrations').delete().eq('id', record.id)
+    setToggling(prev => { const n = new Set(prev); n.delete(key); return n })
+  }
+
   async function handleToggle(med, time) {
     const key = adminKey(med.id, time)
     if (toggling.has(key)) return
-    setToggling(prev => new Set(prev).add(key))
     if (administered.has(key)) {
+      // Require confirmation before removing a documented dose
       const record = administered.get(key)
-      setAdministered(prev => { const n = new Map(prev); n.delete(key); return n })
-      await supabase.from('medication_administrations').delete().eq('id', record.id)
+      setConfirmUndo({ med, time, record })
+      return
     } else {
+      setToggling(prev => new Set(prev).add(key))
       const { data: { session } } = await supabase.auth.getSession()
       const payload = {
         medication_id: med.id,
@@ -560,8 +599,8 @@ export default function Dispense() {
       setAdministered(prev => { const n = new Map(prev); n.set(key, { ...payload, id: 'temp' }); return n })
       const { data } = await supabase.from('medication_administrations').insert([payload]).select().single()
       if (data) setAdministered(prev => { const n = new Map(prev); n.set(key, data); return n })
+      setToggling(prev => { const n = new Set(prev); n.delete(key); return n })
     }
-    setToggling(prev => { const n = new Set(prev); n.delete(key); return n })
   }
 
   function prevDay() { setDate(d => { const n = new Date(d); n.setDate(n.getDate() - 1); return n }) }
@@ -791,6 +830,36 @@ export default function Dispense() {
         </div>
       )}
       </>)}
+
+      {/* Undo dose confirmation — protects against accidental uncheck */}
+      {confirmUndo && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+              </div>
+              <div>
+                <p className="font-semibold text-slate-800">Remove dose record?</p>
+                <p className="text-sm text-slate-500">{confirmUndo.med.medication_name} · {fmt12(confirmUndo.time)}</p>
+              </div>
+            </div>
+            <p className="text-sm text-slate-600 mb-5">
+              This will permanently delete the administration record. Only remove it if this dose was logged in error.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmUndo(null)} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">
+                Cancel
+              </button>
+              <button onClick={confirmUndoDose} className="flex-1 bg-red-500 hover:bg-red-600 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
+                Remove Record
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   )
 }

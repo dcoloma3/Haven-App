@@ -135,6 +135,10 @@ function ShiftModal({ shift, defaultDate, staff, communityId, onClose, onSaved, 
       setError('Staff member, date, start time, and end time are required.')
       return
     }
+    if (form.end_time <= form.start_time) {
+      setError('End time must be after start time.')
+      return
+    }
     setSaving(true)
     setError('')
     const payload = {

@@ -254,8 +254,13 @@ function IncidentRow({ incident, isAdmin, onEdit, onStatusChange, onDelete, onRe
   )
 }
 
-const THIS_MONTH_START = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
-const TODAY = new Date().toISOString().split('T')[0]
+function getThisMonthStart() {
+  const d = new Date()
+  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0]
+}
+function getToday() {
+  return new Date().toISOString().split('T')[0]
+}
 
 export default function Incidents() {
   const navigate = useNavigate()
@@ -269,8 +274,8 @@ export default function Incidents() {
   // Filters
   const [statusFilter, setStatusFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
-  const [dateFrom, setDateFrom] = useState(THIS_MONTH_START)
-  const [dateTo, setDateTo] = useState(TODAY)
+  const [dateFrom, setDateFrom] = useState(getThisMonthStart)
+  const [dateTo, setDateTo] = useState(getToday)
   const [residentSearch, setResidentSearch] = useState('')
 
   const loadIncidents = useCallback(async () => {
@@ -324,10 +329,10 @@ export default function Incidents() {
     setShowForm(true)
   }
 
-  // Stats
+  // Stats — all counts reflect the currently loaded (filtered) dataset
   const openCount = incidents.filter(i => i.status === 'open').length
   const highCount = incidents.filter(i => i.severity === 'high').length
-  const thisMonthCount = incidents.filter(i => i.incident_date >= THIS_MONTH_START).length
+  const inRangeCount = incidents.length
 
   // Search filter (client-side for resident name)
   const filtered = residentSearch.trim()
@@ -356,8 +361,8 @@ export default function Incidents() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3 mb-6">
         <div className="bg-white border border-slate-200 rounded-2xl px-4 py-3 text-center">
-          <p className="text-2xl font-bold text-slate-800">{thisMonthCount}</p>
-          <p className="text-xs text-slate-400 mt-0.5">This Month</p>
+          <p className="text-2xl font-bold text-slate-800">{inRangeCount}</p>
+          <p className="text-xs text-slate-400 mt-0.5">In Range</p>
         </div>
         <div className={`border rounded-2xl px-4 py-3 text-center ${openCount > 0 ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-200'}`}>
           <p className={`text-2xl font-bold ${openCount > 0 ? 'text-blue-700' : 'text-slate-800'}`}>{openCount}</p>

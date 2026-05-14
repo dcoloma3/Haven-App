@@ -4,7 +4,7 @@ import { adminKey, isMedDueOnDate } from '../../lib/medStatus'
 
 const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
 
-const TODAY_STR = new Date().toISOString().split('T')[0]
+function getTodayStr() { return new Date().toISOString().split('T')[0] }
 
 function fmt12(t) {
   const [h, m] = t.split(':').map(Number)
@@ -72,7 +72,7 @@ function MedicationModal({ residentId, medication, onClose, onSaved }) {
     setForm(f => ({
       ...f,
       frequency_type: type,
-      start_date: type === 'one_time' && !f.start_date ? TODAY_STR : f.start_date,
+      start_date: type === 'one_time' && !f.start_date ? getTodayStr() : f.start_date,
     }))
   }
 
@@ -258,13 +258,8 @@ function MedicationModal({ residentId, medication, onClose, onSaved }) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Additional Notes</label>
-            <input className={inputCls} value={form.frequency ?? ''} onChange={e => set('frequency', e.target.value)} placeholder="e.g. Take with food, avoid grapefruit…" />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Notes</label>
-            <textarea className={`${inputCls} resize-none`} rows={2} value={form.notes ?? ''} onChange={e => set('notes', e.target.value)} placeholder="Special instructions, allergies, interactions…" />
+            <label className="block text-sm font-medium text-slate-700 mb-1">Special Instructions</label>
+            <textarea className={`${inputCls} resize-none`} rows={2} value={form.notes ?? ''} onChange={e => set('notes', e.target.value)} placeholder="e.g. Take with food, avoid grapefruit, monitor BP…" />
           </div>
 
           {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
@@ -449,8 +444,17 @@ function TodayMedications({ residentId, medications, onStatusChange }) {
   const [administered, setAdministered] = useState(new Map())
   const [toggling, setToggling] = useState(new Set())
   const [loadingAdmins, setLoadingAdmins] = useState(true)
+  // Live date — updates at midnight so overnight staff always see the correct day
+  const [todayStr, setTodayStr] = useState(getTodayStr)
+  useEffect(() => {
+    const id = setInterval(() => {
+      const d = getTodayStr()
+      setTodayStr(prev => prev !== d ? d : prev)
+    }, 60000)
+    return () => clearInterval(id)
+  }, [])
 
-  const todayMeds = medications.filter(m => isMedDueOnDate(m, TODAY_STR))
+  const todayMeds = medications.filter(m => isMedDueOnDate(m, todayStr))
 
   useEffect(() => {
     if (todayMeds.length === 0) { setLoadingAdmins(false); return }
@@ -458,7 +462,7 @@ function TodayMedications({ residentId, medications, onStatusChange }) {
       .from('medication_administrations')
       .select('*')
       .eq('resident_id', residentId)
-      .eq('administered_date', TODAY_STR)
+      .eq('administered_date', todayStr)
       .then(({ data }) => {
         const map = new Map()
         ;(data ?? []).forEach(r => map.set(adminKey(r.medication_id, r.scheduled_time), r))
@@ -487,7 +491,7 @@ function TodayMedications({ residentId, medications, onStatusChange }) {
         medication_id: med.id,
         resident_id: residentId,
         scheduled_time: time,
-        administered_date: TODAY_STR,
+        administered_date: todayStr,
         administered_by: session?.user?.id ?? null,
         admin_status: newStatus,
         admin_notes: note ?? null,

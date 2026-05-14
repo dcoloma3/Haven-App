@@ -126,10 +126,22 @@ export default function NotificationLog() {
 
   return (
     <Layout>
+      {/* Banner: automated notifications not yet active */}
+      <div className="mb-5 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
+        <svg className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+          <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+        <div>
+          <p className="text-sm font-semibold text-amber-800">Automated notifications are not active</p>
+          <p className="text-xs text-amber-700 mt-0.5">This log is for manually recording communications only. Automated email/SMS is a planned feature and not yet enabled.</p>
+        </div>
+      </div>
+
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Notification Log</h1>
-          <p className="text-sm text-slate-500 mt-1">Communication records and settings</p>
+          <p className="text-sm text-slate-500 mt-1">Manual communication records</p>
         </div>
         <button onClick={() => setShowManualModal(true)} className="bg-[#185FA5] hover:bg-[#0C447C] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2">
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
