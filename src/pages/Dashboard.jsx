@@ -100,7 +100,7 @@ export default function Dashboard() {
   const unauthorized = location.state?.unauthorized
   const openAddResident = location.state?.openAddResident || new URLSearchParams(location.search).get('openAddResident')
   const { facility } = useFacility()
-  const { communityId, community } = useCommunity()
+  const { communityId, community, isAdmin } = useCommunity()
   const isMobile = useIsMobile()
 
   useEffect(() => {
@@ -314,16 +314,70 @@ export default function Dashboard() {
 
       {loading && <p className="text-slate-400 text-sm text-center py-8">Loading…</p>}
 
-      {!loading && residents.length === 0 && (
+      {!loading && residents.length === 0 && showFormer && (
         <div className="text-center py-16 text-slate-400">
-          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
+          <p className="font-medium text-slate-500">No former residents on file</p>
+        </div>
+      )}
+
+      {!loading && residents.length === 0 && !showFormer && (
+        <div className="space-y-4 py-4">
+          {/* Welcome banner */}
+          <div className="bg-gradient-to-br from-[#042C53] to-[#185FA5] rounded-2xl px-6 py-6 text-white">
+            <h2 className="text-lg font-bold mb-1">You're all set! 🎉</h2>
+            <p className="text-sm text-white/80">Your community is ready. Here's how to get started:</p>
           </div>
-          <p className="font-medium text-slate-500">{showFormer ? 'No former residents on file' : 'No residents yet'}</p>
-          {!showFormer && <p className="text-sm mt-1">Tap "+ Add" to add your first resident.</p>}
+
+          {/* Getting Started steps */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Step 1 — Add resident */}
+            <button
+              onClick={() => setShowForm(true)}
+              className="text-left bg-white border-2 border-[#185FA5] rounded-2xl p-4 hover:bg-[#E6F1FB] transition-colors group"
+            >
+              <div className="w-10 h-10 bg-[#E6F1FB] rounded-xl flex items-center justify-center mb-3 group-hover:bg-white transition-colors">
+                <svg className="w-5 h-5 text-[#185FA5]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="8.5" cy="7" r="4" /><line x1="20" y1="8" x2="20" y2="14" /><line x1="23" y1="11" x2="17" y2="11" />
+                </svg>
+              </div>
+              <p className="font-semibold text-slate-800 text-sm">Add your first resident</p>
+              <p className="text-xs text-slate-500 mt-0.5">Create a resident profile to get started</p>
+              <span className="inline-block mt-2 text-xs font-semibold text-[#185FA5]">Start here →</span>
+            </button>
+
+            {/* Step 2 — Invite staff */}
+            <button
+              onClick={() => navigate('/staff')}
+              className="text-left bg-white border border-slate-200 rounded-2xl p-4 hover:border-slate-300 hover:shadow-sm transition-all group"
+            >
+              <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center mb-3">
+                <svg className="w-5 h-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+              </div>
+              <p className="font-semibold text-slate-800 text-sm">Invite your staff</p>
+              <p className="text-xs text-slate-500 mt-0.5">Add caregivers and team members</p>
+              <span className="inline-block mt-2 text-xs font-semibold text-slate-400">Go to Staff →</span>
+            </button>
+
+            {/* Step 3 — Settings (admin only) */}
+            {isAdmin && (
+              <button
+                onClick={() => navigate('/settings')}
+                className="text-left bg-white border border-slate-200 rounded-2xl p-4 hover:border-slate-300 hover:shadow-sm transition-all group"
+              >
+                <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center mb-3">
+                  <svg className="w-5 h-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="3" />
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                  </svg>
+                </div>
+                <p className="font-semibold text-slate-800 text-sm">Configure settings</p>
+                <p className="text-xs text-slate-500 mt-0.5">Set capacity, rates, and facility info</p>
+                <span className="inline-block mt-2 text-xs font-semibold text-slate-400">Go to Settings →</span>
+              </button>
+            )}
+          </div>
         </div>
       )}
 

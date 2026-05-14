@@ -52,6 +52,11 @@ export default function Onboarding() {
       setUserId(session.user.id)
       setUserEmail(session.user.email ?? '')
 
+      // Pre-populate name from signup metadata so the user doesn't retype it
+      const meta = session.user.user_metadata ?? {}
+      const prefilled = meta.full_name || [meta.first_name, meta.last_name].filter(Boolean).join(' ')
+      if (prefilled) setPersonal(p => ({ ...p, full_name: prefilled }))
+
       // Check for pending invites for this email (could be multiple communities)
       const { data: invites } = await supabase
         .from('community_invites')
@@ -132,6 +137,7 @@ export default function Onboarding() {
         emergency_contact_phone: personal.emergency_contact_phone || null,
         hire_date: personal.hire_date || null,
         onboarding_complete: true,
+        profile_completed: true,
       }
       await supabase.from('profiles').upsert(profilePayload, { onConflict: 'user_id' })
 

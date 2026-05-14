@@ -6,21 +6,14 @@ import CertInput from '../components/ui/CertInput'
 
 const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
 
-function formatDate(dateStr) {
-  if (!dateStr) return '—'
-  const [y, m, d] = dateStr.split('-')
-  return new Date(Number(y), Number(m) - 1, Number(d)).toLocaleDateString('en-US', {
-    month: 'long', day: 'numeric', year: 'numeric',
-  })
-}
-
 export default function MyProfile() {
   const { profile, isAdmin } = useProfile()
 
   const [form, setForm] = useState({
     full_name: profile?.full_name ?? '',
     phone: profile?.phone ?? '',
-    emergency_contact: profile?.emergency_contact ?? '',
+    emergency_contact_name: profile?.emergency_contact_name ?? '',
+    emergency_contact_phone: profile?.emergency_contact_phone ?? '',
     hire_date: profile?.hire_date ?? '',
     certifications: profile?.certifications ?? [],
     role: profile?.role ?? 'staff',
@@ -40,10 +33,10 @@ export default function MyProfile() {
     const payload = {
       full_name: form.full_name || null,
       phone: form.phone || null,
-      emergency_contact: form.emergency_contact || null,
+      emergency_contact_name: form.emergency_contact_name || null,
+      emergency_contact_phone: form.emergency_contact_phone || null,
       hire_date: form.hire_date || null,
       certifications: form.certifications,
-      // admins can update their own role too; staff role field is hidden so this stays unchanged
       ...(isAdmin ? { role: form.role } : {}),
       updated_at: new Date().toISOString(),
     }
@@ -85,71 +78,77 @@ export default function MyProfile() {
             <div>
               <p className="text-sm text-slate-500">{profile.email}</p>
               <span className={`inline-flex items-center mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                profile.role === 'admin'
-                  ? 'bg-[#E6F1FB] text-[#185FA5]'
-                  : 'bg-slate-100 text-slate-600'
+                profile.role === 'admin' ? 'bg-[#E6F1FB] text-[#185FA5]' : 'bg-slate-100 text-slate-600'
               }`}>
                 {profile.role === 'admin' ? 'Manager' : 'Staff'}
               </span>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
-              <input
-                className={inputCls}
-                value={form.full_name}
-                onChange={e => set('full_name', e.target.value)}
-                placeholder="Your full name"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
-              <input
-                type="tel"
-                className={inputCls}
-                value={form.phone}
-                onChange={e => set('phone', e.target.value)}
-                placeholder="(555) 000-0000"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Hire Date</label>
-              <input
-                type="date"
-                className={inputCls}
-                value={form.hire_date}
-                onChange={e => set('hire_date', e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Emergency Contact</label>
-              <input
-                className={inputCls}
-                value={form.emergency_contact}
-                onChange={e => set('emergency_contact', e.target.value)}
-                placeholder="Name · phone"
-              />
-            </div>
-          </div>
-
-          {/* Role — editable only for admins */}
-          {isAdmin && (
-            <div className="sm:w-1/2 sm:pr-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
-              <select className={inputCls} value={form.role} onChange={e => set('role', e.target.value)}>
-                <option value="staff">Staff</option>
-                <option value="admin">Manager</option>
-              </select>
-            </div>
-          )}
-
+          {/* Personal */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Certifications</label>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Personal Info</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
+                <input className={inputCls} value={form.full_name} onChange={e => set('full_name', e.target.value)} placeholder="Your full name" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+                <input type="tel" className={inputCls} value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="(555) 000-0000" />
+              </div>
+            </div>
+          </div>
+
+          {/* Work info */}
+          <div>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Work Info</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Hire Date</label>
+                <input type="date" className={inputCls} value={form.hire_date} onChange={e => set('hire_date', e.target.value)} />
+              </div>
+              {isAdmin && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
+                  <select className={inputCls} value={form.role} onChange={e => set('role', e.target.value)}>
+                    <option value="staff">Staff</option>
+                    <option value="admin">Manager</option>
+                  </select>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Emergency contact */}
+          <div>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Emergency Contact</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Contact Name</label>
+                <input
+                  className={inputCls}
+                  value={form.emergency_contact_name}
+                  onChange={e => set('emergency_contact_name', e.target.value)}
+                  placeholder="Jane Doe"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Contact Phone</label>
+                <input
+                  type="tel"
+                  className={inputCls}
+                  value={form.emergency_contact_phone}
+                  onChange={e => set('emergency_contact_phone', e.target.value)}
+                  placeholder="(555) 000-0000"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Certifications */}
+          <div>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Certifications</p>
             <CertInput value={form.certifications} onChange={certs => set('certifications', certs)} />
           </div>
 
@@ -165,7 +164,7 @@ export default function MyProfile() {
             >
               {saving ? 'Saving…' : 'Save Changes'}
             </button>
-            {saved && <p className="text-sm text-green-600">Profile saved.</p>}
+            {saved && <p className="text-sm text-emerald-600 font-medium">✓ Profile saved</p>}
           </div>
         </form>
       </div>
