@@ -153,11 +153,24 @@ function CommunityDropdown({ community, memberships, isAdmin, isSuperAdmin, onSw
 function UserMenu({ profile, isAdmin, isSuperAdmin }) {
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
+  const { community, communityId, allCommunities, setCommunityId } = useCommunity()
 
   const displayName = profile?.full_name || profile?.email?.split('@')[0] || 'Account'
   const avatarInitials = profile?.full_name
     ? profile.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
     : (profile?.email?.[0] ?? '?').toUpperCase()
+
+  function switchCommunity(id) {
+    setCommunityId(id)
+    setOpen(false)
+    navigate('/dashboard')
+  }
+
+  function exitToOwnerPanel() {
+    setOpen(false)
+    setCommunityId(null)
+    navigate('/superadmin')
+  }
 
   return (
     <div className="relative">
@@ -171,23 +184,59 @@ function UserMenu({ profile, isAdmin, isSuperAdmin }) {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-2 z-50 bg-white rounded-xl shadow-lg border border-slate-200 w-48 sm:w-52 overflow-hidden">
+          <div className="absolute right-0 top-full mt-2 z-50 bg-white rounded-xl shadow-lg border border-slate-200 w-56 sm:w-60 overflow-hidden">
+
+            {/* Identity header */}
             <div className="px-4 py-3 border-b border-slate-100">
               <p className="text-sm font-medium text-slate-800 truncate">{displayName}</p>
               <span className={`inline-flex items-center mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${
                 isSuperAdmin ? 'bg-amber-100 text-amber-700' : isAdmin ? 'bg-[#E6F1FB] text-[#185FA5]' : 'bg-slate-100 text-slate-600'
               }`}>
-                {isSuperAdmin ? 'Super Admin' : isAdmin ? 'Manager' : 'Staff'}
+                {isSuperAdmin ? 'Owner' : isAdmin ? 'Manager' : 'Staff'}
               </span>
             </div>
 
-            {isSuperAdmin && (
-              <button
-                onClick={() => { setOpen(false); navigate('/superadmin') }}
-                className="w-full text-left px-4 py-2.5 text-sm text-amber-700 hover:bg-amber-50 transition-colors font-medium"
-              >
-                Super Admin Panel
-              </button>
+            {/* Owner: community switcher */}
+            {isSuperAdmin && allCommunities?.length > 0 && (
+              <>
+                <div className="px-3 pt-2.5 pb-1">
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Switch Community</p>
+                </div>
+                <div className="max-h-44 overflow-y-auto">
+                  {allCommunities.map(c => (
+                    <button
+                      key={c.id}
+                      onClick={() => switchCommunity(c.id)}
+                      className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between gap-2 transition-colors ${
+                        c.id === communityId
+                          ? 'bg-[#E6F1FB] text-[#185FA5] font-medium'
+                          : 'text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      <span className="truncate">{c.name}</span>
+                      {c.id === communityId && (
+                        <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Owner Panel link */}
+                <div className="border-t border-slate-100">
+                  <button
+                    onClick={exitToOwnerPanel}
+                    className="w-full text-left px-4 py-2.5 text-sm text-amber-700 hover:bg-amber-50 transition-colors font-medium flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
+                    </svg>
+                    Owner Panel
+                  </button>
+                </div>
+                <div className="border-t border-slate-100" />
+              </>
             )}
 
             <Link to="/profile" onClick={() => setOpen(false)} className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
