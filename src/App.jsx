@@ -16,8 +16,19 @@ import StaffDirectory from './pages/StaffDirectory'
 import MyProfile from './pages/MyProfile'
 import Schedule from './pages/Schedule'
 import Dispense from './pages/Dispense'
+import Incidents from './pages/Incidents'
 import SuperAdmin from './pages/SuperAdmin'
 import ProfileCompletion from './pages/ProfileCompletion'
+import VitalSigns from './pages/VitalSigns'
+import ShiftLog from './pages/ShiftLog'
+import Billing from './pages/Billing'
+import Occupancy from './pages/Occupancy'
+import Certifications from './pages/Certifications'
+import NotificationLog from './pages/NotificationLog'
+import Maintenance from './pages/Maintenance'
+import Transportation from './pages/Transportation'
+import Activities from './pages/Activities'
+import FamilyView from './pages/FamilyView'
 
 function ProtectedRoute({ children }) {
   const { profile, loading: profileLoading } = useProfile()
@@ -71,20 +82,42 @@ export default function App() {
               <Route path="/community" element={session ? <CommunityPicker /> : <Navigate to="/login" replace />} />
               <Route path="/complete-profile" element={session ? <ProfileCompletion /> : <Navigate to="/login" replace />} />
 
+              {/* Public route — no auth required */}
+              <Route path="/family/:token" element={<FamilyView />} />
+
               <Route path="/dashboard" element={session ? <ProtectedRoute><Dashboard /></ProtectedRoute> : <Navigate to="/login" replace />} />
               <Route path="/residents/:id" element={session ? <ProtectedRoute><ResidentDetail /></ProtectedRoute> : <Navigate to="/login" replace />} />
               <Route path="/calendar" element={session ? <ProtectedRoute><Calendar /></ProtectedRoute> : <Navigate to="/login" replace />} />
               <Route path="/dispense" element={session ? <ProtectedRoute><Dispense /></ProtectedRoute> : <Navigate to="/login" replace />} />
+              <Route path="/incidents" element={session ? <ProtectedRoute><Incidents /></ProtectedRoute> : <Navigate to="/login" replace />} />
               <Route path="/profile" element={session ? <ProtectedRoute><MyProfile /></ProtectedRoute> : <Navigate to="/login" replace />} />
+              <Route path="/vitals" element={session ? <ProtectedRoute><VitalSigns /></ProtectedRoute> : <Navigate to="/login" replace />} />
+              <Route path="/shift-log" element={session ? <ProtectedRoute><ShiftLog /></ProtectedRoute> : <Navigate to="/login" replace />} />
+              <Route path="/maintenance" element={session ? <ProtectedRoute><Maintenance /></ProtectedRoute> : <Navigate to="/login" replace />} />
+              <Route path="/transportation" element={session ? <ProtectedRoute><Transportation /></ProtectedRoute> : <Navigate to="/login" replace />} />
+              <Route path="/activities" element={session ? <ProtectedRoute><Activities /></ProtectedRoute> : <Navigate to="/login" replace />} />
+
+              <Route path="/staff" element={
+                session ? <ProtectedRoute><StaffDirectory /></ProtectedRoute> : <Navigate to="/login" replace />
+              } />
 
               <Route path="/settings" element={
                 session ? <ProtectedRoute><RequireAdmin><FacilitySettings /></RequireAdmin></ProtectedRoute> : <Navigate to="/login" replace />
               } />
-              <Route path="/staff" element={
-                session ? <ProtectedRoute><StaffDirectory /></ProtectedRoute> : <Navigate to="/login" replace />
-              } />
               <Route path="/schedule" element={
                 session ? <ProtectedRoute><RequireAdmin><Schedule /></RequireAdmin></ProtectedRoute> : <Navigate to="/login" replace />
+              } />
+              <Route path="/billing" element={
+                session ? <ProtectedRoute><RequireAdmin><Billing /></RequireAdmin></ProtectedRoute> : <Navigate to="/login" replace />
+              } />
+              <Route path="/occupancy" element={
+                session ? <ProtectedRoute><RequireAdmin><Occupancy /></RequireAdmin></ProtectedRoute> : <Navigate to="/login" replace />
+              } />
+              <Route path="/certifications" element={
+                session ? <ProtectedRoute><RequireAdmin><Certifications /></RequireAdmin></ProtectedRoute> : <Navigate to="/login" replace />
+              } />
+              <Route path="/notifications" element={
+                session ? <ProtectedRoute><RequireAdmin><NotificationLog /></RequireAdmin></ProtectedRoute> : <Navigate to="/login" replace />
               } />
 
               <Route path="/superadmin" element={session ? <SuperAdmin /> : <Navigate to="/login" replace />} />

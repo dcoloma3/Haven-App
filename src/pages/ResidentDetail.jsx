@@ -12,11 +12,21 @@ import HealthCare from '../components/health/HealthCare'
 import PhotoGallery from '../components/photos/PhotoGallery'
 import ResidentMedHistory from '../components/residents/ResidentMedHistory'
 import ResidentAppointments from '../components/appointments/ResidentAppointments'
+import ResidentIncidents from '../components/incidents/ResidentIncidents'
+import DocumentVault from '../components/documents/DocumentVault'
+import VitalsLog from '../components/vitals/VitalsLog'
+import CarePlanList from '../components/careplans/CarePlanList'
+import ADLTracker from '../components/adl/ADLTracker'
+import DietaryProfile from '../components/dietary/DietaryProfile'
+import FamilyAccess from '../components/family/FamilyAccess'
+import BillingHistory from '../components/billing/BillingHistory'
+import MoveChecklist from '../components/moveinout/MoveChecklist'
+import ResidentTransportation from '../components/transportation/ResidentTransportation'
 import { useCommunity } from '../context/CommunityContext'
 import { useIsMobile } from '../hooks/useIsMobile'
 
-const ALL_TABS = ['Profile', 'Medications', 'Contacts', 'Health & Care', 'Lease', 'Photos', 'Appointments', 'Med History']
-const STAFF_TABS = ['Profile', 'Medications', 'Contacts', 'Health & Care', 'Photos', 'Appointments', 'Med History']
+const ALL_TABS = ['Profile', 'Medications', 'Contacts', 'Health & Care', 'Lease', 'Photos', 'Appointments', 'Med History', 'Incidents', 'Documents', 'Vitals', 'Care Plan', 'ADLs', 'Dietary', 'Family', 'Billing', 'Checklist', 'Transport']
+const STAFF_TABS = ['Profile', 'Medications', 'Contacts', 'Health & Care', 'Photos', 'Appointments', 'Med History', 'Incidents', 'Documents', 'Vitals', 'Care Plan', 'ADLs', 'Dietary', 'Checklist', 'Transport']
 
 const REMOVAL_REASONS = [
   'Moved Out',
@@ -247,6 +257,16 @@ export default function ResidentDetail() {
       {activeTab === 'Photos' && <PhotoGallery residentId={id} />}
       {activeTab === 'Appointments' && <ResidentAppointments residentId={id} communityId={communityId} />}
       {activeTab === 'Med History' && <ResidentMedHistory residentId={id} resident={resident} />}
+      {activeTab === 'Incidents' && <ResidentIncidents residentId={id} resident={resident} />}
+      {activeTab === 'Documents' && <DocumentVault residentId={id} resident={resident} />}
+      {activeTab === 'Vitals' && <VitalsLog residentId={id} resident={resident} />}
+      {activeTab === 'Care Plan' && <CarePlanList residentId={id} resident={resident} />}
+      {activeTab === 'ADLs' && <ADLTracker residentId={id} resident={resident} />}
+      {activeTab === 'Dietary' && <DietaryProfile residentId={id} resident={resident} />}
+      {activeTab === 'Family' && <FamilyAccess residentId={id} resident={resident} />}
+      {activeTab === 'Billing' && <BillingHistory residentId={id} resident={resident} />}
+      {activeTab === 'Checklist' && <MoveChecklist residentId={id} resident={resident} />}
+      {activeTab === 'Transport' && <ResidentTransportation residentId={id} resident={resident} />}
 
       {/* Remove Resident — admin only, active residents only */}
       {isAdmin && !isInactive && (

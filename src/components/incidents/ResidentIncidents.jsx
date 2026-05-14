@@ -1,0 +1,403 @@
+import { useCallback, useEffect, useState } from 'react'
+import { supabase } from '../../lib/supabase'
+import { useCommunity } from '../../context/CommunityContext'
+import { generateIncidentPDF } from '../../lib/incidentPDF'
+import IncidentForm from './IncidentForm'
+
+const TYPE_LABELS = {
+  fall: 'Fall',
+  injury: 'Injury',
+  medication_error: 'Medication Error',
+  behavioral: 'Behavioral',
+  elopement: 'Elopement',
+  property_damage: 'Property Damage',
+  other: 'Other',
+}
+
+const TYPE_COLORS = {
+  fall: 'bg-orange-100 text-orange-700',
+  injury: 'bg-red-100 text-red-700',
+  medication_error: 'bg-purple-100 text-purple-700',
+  behavioral: 'bg-amber-100 text-amber-700',
+  elopement: 'bg-pink-100 text-pink-700',
+  property_damage: 'bg-slate-100 text-slate-600',
+  other: 'bg-gray-100 text-gray-600',
+}
+
+const SEVERITY_COLORS = {
+  low: 'bg-emerald-100 text-emerald-700',
+  medium: 'bg-amber-100 text-amber-700',
+  high: 'bg-red-100 text-red-700',
+}
+
+const STATUS_COLORS = {
+  open: 'bg-blue-100 text-blue-700',
+  reviewed: 'bg-violet-100 text-violet-700',
+  closed: 'bg-slate-100 text-slate-500',
+}
+
+function fmtDate(str) {
+  if (!str) return '—'
+  const [y, m, d] = str.split('-')
+  return `${m}/${d}/${y}`
+}
+
+function fmtTime(t) {
+  if (!t) return ''
+  const [h, mi] = t.split(':')
+  const hour = parseInt(h)
+  return `${hour % 12 || 12}:${mi} ${hour >= 12 ? 'PM' : 'AM'}`
+}
+
+function Badge({ cls, children }) {
+  return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${cls}`}>{children}</span>
+}
+
+function IncidentCard({ incident, residentName, roomNumber, facilityName, isAdmin, onEdit, onStatusChange, onDelete }) {
+  const [expanded, setExpanded] = useState(false)
+  const [updatingStatus, setUpdatingStatus] = useState(false)
+
+  async function changeStatus(newStatus) {
+    setUpdatingStatus(true)
+    const extra = newStatus === 'reviewed' ? { reviewed_at: new Date().toISOString() } : {}
+    const { data } = await supabase
+      .from('incidents')
+      .update({ status: newStatus, ...extra })
+      .eq('id', incident.id)
+      .select()
+      .single()
+    setUpdatingStatus(false)
+    if (data) onStatusChange(data)
+  }
+
+  async function handleDelete() {
+    if (!confirm('Are you sure you want to delete this incident report? This cannot be undone.')) return
+    await supabase.from('incidents').delete().eq('id', incident.id)
+    onDelete(incident.id)
+  }
+
+  function handlePDF() {
+    generateIncidentPDF({ incident, residentName, facilityName, roomNumber })
+  }
+
+  const sev = incident.severity ?? 'low'
+  const status = incident.status ?? 'open'
+
+  return (
+    <div className={`bg-white border rounded-2xl overflow-hidden transition-shadow ${sev === 'high' ? 'border-red-200' : 'border-slate-200'} ${expanded ? 'shadow-md' : 'hover:shadow-sm'}`}>
+      {/* Card header — always visible */}
+      <button
+        onClick={() => setExpanded(p => !p)}
+        className="w-full text-left px-4 py-4 flex items-start gap-3"
+      >
+        {/* Severity indicator */}
+        <div className={`w-1 rounded-full flex-shrink-0 self-stretch min-h-[40px] ${sev === 'high' ? 'bg-red-500' : sev === 'medium' ? 'bg-amber-400' : 'bg-emerald-400'}`} />
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-semibold text-slate-800 text-sm">
+              {fmtDate(incident.incident_date)}
+              {incident.incident_time && <span className="font-normal text-slate-400"> · {fmtTime(incident.incident_time)}</span>}
+            </span>
+            <Badge cls={TYPE_COLORS[incident.incident_type] ?? TYPE_COLORS.other}>
+              {TYPE_LABELS[incident.incident_type] ?? incident.incident_type}
+            </Badge>
+            <Badge cls={STATUS_COLORS[status]}>
+              {status.charAt(0).toUpperCase() + status.slice(1)}
+            </Badge>
+          </div>
+          {incident.location && (
+            <p className="text-xs text-slate-400 mt-1">📍 {incident.location}</p>
+          )}
+          <p className="text-sm text-slate-600 mt-1.5 line-clamp-2">{incident.description}</p>
+          {incident.reported_by_name && (
+            <p className="text-xs text-slate-400 mt-1">Reported by {incident.reported_by_name}</p>
+          )}
+        </div>
+
+        <svg
+          className={`w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5 transition-transform ${expanded ? 'rotate-180' : ''}`}
+          viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+
+      {/* Expanded detail */}
+      {expanded && (
+        <div className="px-4 pb-4 border-t border-slate-100 pt-4 space-y-4">
+
+          {/* Full description */}
+          <div>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Description</p>
+            <p className="text-sm text-slate-700 whitespace-pre-wrap">{incident.description}</p>
+          </div>
+
+          {incident.witnesses && (
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Witnesses</p>
+              <p className="text-sm text-slate-700">{incident.witnesses}</p>
+            </div>
+          )}
+
+          {incident.immediate_action && (
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Immediate Action Taken</p>
+              <p className="text-sm text-slate-700 whitespace-pre-wrap">{incident.immediate_action}</p>
+            </div>
+          )}
+
+          {/* Notifications */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className={`rounded-xl px-3 py-2.5 ${incident.physician_notified ? 'bg-emerald-50' : 'bg-slate-50'}`}>
+              <p className="text-xs font-semibold text-slate-500 mb-0.5">Physician Notified</p>
+              <p className={`text-sm font-medium ${incident.physician_notified ? 'text-emerald-700' : 'text-slate-400'}`}>
+                {incident.physician_notified ? '✓ Yes' : '✗ No'}
+              </p>
+              {incident.physician_notified && incident.physician_notified_time && (
+                <p className="text-xs text-emerald-600 mt-0.5">
+                  {new Date(incident.physician_notified_time).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </p>
+              )}
+            </div>
+            <div className={`rounded-xl px-3 py-2.5 ${incident.family_notified ? 'bg-emerald-50' : 'bg-slate-50'}`}>
+              <p className="text-xs font-semibold text-slate-500 mb-0.5">Family Notified</p>
+              <p className={`text-sm font-medium ${incident.family_notified ? 'text-emerald-700' : 'text-slate-400'}`}>
+                {incident.family_notified ? '✓ Yes' : '✗ No'}
+              </p>
+              {incident.family_notified && incident.family_notified_time && (
+                <p className="text-xs text-emerald-600 mt-0.5">
+                  {new Date(incident.family_notified_time).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Follow-up */}
+          {incident.follow_up_required && (
+            <div className="bg-amber-50 rounded-xl px-3 py-2.5">
+              <p className="text-xs font-semibold text-amber-600 mb-0.5">⚠ Follow-Up Required</p>
+              {incident.follow_up_notes && (
+                <p className="text-sm text-amber-800">{incident.follow_up_notes}</p>
+              )}
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex flex-wrap gap-2 pt-1">
+            <button
+              onClick={handlePDF}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="12" y1="18" x2="12" y2="12" /><line x1="9" y1="15" x2="15" y2="15" />
+              </svg>
+              Export PDF
+            </button>
+
+            {isAdmin && (
+              <button
+                onClick={() => onEdit(incident)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+                Edit
+              </button>
+            )}
+
+            {isAdmin && status === 'open' && (
+              <button
+                onClick={() => changeStatus('reviewed')}
+                disabled={updatingStatus}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-100 hover:bg-violet-200 text-violet-700 text-xs font-medium transition-colors disabled:opacity-50"
+              >
+                Mark as Reviewed
+              </button>
+            )}
+
+            {isAdmin && status === 'reviewed' && (
+              <button
+                onClick={() => changeStatus('closed')}
+                disabled={updatingStatus}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-medium transition-colors disabled:opacity-50"
+              >
+                Close Report
+              </button>
+            )}
+
+            {isAdmin && (
+              <button
+                onClick={handleDelete}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-medium transition-colors ml-auto"
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                  <path d="M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                </svg>
+                Delete
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default function ResidentIncidents({ residentId, resident }) {
+  const { isAdmin, community } = useCommunity()
+  const [incidents, setIncidents] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [showForm, setShowForm] = useState(false)
+  const [editingIncident, setEditingIncident] = useState(null)
+  const [statusFilter, setStatusFilter] = useState('all')
+
+  const residentName = resident
+    ? [resident.first_name, resident.last_name].filter(Boolean).join(' ') || resident.full_name || 'Resident'
+    : 'Resident'
+
+  const loadIncidents = useCallback(async () => {
+    setLoading(true)
+    const { data } = await supabase
+      .from('incidents')
+      .select('*')
+      .eq('resident_id', residentId)
+      .order('incident_date', { ascending: false })
+      .order('created_at', { ascending: false })
+    setIncidents(data ?? [])
+    setLoading(false)
+  }, [residentId])
+
+  useEffect(() => { loadIncidents() }, [loadIncidents])
+
+  function handleSaved(saved) {
+    setIncidents(prev => {
+      const idx = prev.findIndex(i => i.id === saved.id)
+      if (idx >= 0) {
+        const next = [...prev]
+        next[idx] = saved
+        return next
+      }
+      return [saved, ...prev]
+    })
+    setShowForm(false)
+    setEditingIncident(null)
+  }
+
+  function handleStatusChange(updated) {
+    setIncidents(prev => prev.map(i => i.id === updated.id ? updated : i))
+  }
+
+  function handleDelete(id) {
+    setIncidents(prev => prev.filter(i => i.id !== id))
+  }
+
+  function handleEdit(inc) {
+    setEditingIncident(inc)
+    setShowForm(true)
+  }
+
+  const filtered = statusFilter === 'all' ? incidents : incidents.filter(i => i.status === statusFilter)
+
+  // Stats
+  const openCount = incidents.filter(i => i.status === 'open').length
+  const highCount = incidents.filter(i => i.severity === 'high').length
+
+  return (
+    <div className="space-y-5">
+      {/* Stats bar */}
+      {incidents.length > 0 && (
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-white border border-slate-200 rounded-2xl px-4 py-3 text-center">
+            <p className="text-2xl font-bold text-slate-800">{incidents.length}</p>
+            <p className="text-xs text-slate-400 mt-0.5">Total</p>
+          </div>
+          <div className={`border rounded-2xl px-4 py-3 text-center ${openCount > 0 ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-200'}`}>
+            <p className={`text-2xl font-bold ${openCount > 0 ? 'text-blue-700' : 'text-slate-800'}`}>{openCount}</p>
+            <p className={`text-xs mt-0.5 ${openCount > 0 ? 'text-blue-500' : 'text-slate-400'}`}>Open</p>
+          </div>
+          <div className={`border rounded-2xl px-4 py-3 text-center ${highCount > 0 ? 'bg-red-50 border-red-200' : 'bg-white border-slate-200'}`}>
+            <p className={`text-2xl font-bold ${highCount > 0 ? 'text-red-600' : 'text-slate-800'}`}>{highCount}</p>
+            <p className={`text-xs mt-0.5 ${highCount > 0 ? 'text-red-400' : 'text-slate-400'}`}>High Severity</p>
+          </div>
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
+          {['all', 'open', 'reviewed', 'closed'].map(s => (
+            <button
+              key={s}
+              onClick={() => setStatusFilter(s)}
+              className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors capitalize ${statusFilter === s ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={() => { setEditingIncident(null); setShowForm(true) }}
+          className="flex items-center gap-1.5 bg-[#185FA5] hover:bg-[#0C447C] text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors flex-shrink-0"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          Log Incident
+        </button>
+      </div>
+
+      {/* List */}
+      {loading && <p className="text-slate-400 text-sm text-center py-8">Loading…</p>}
+
+      {!loading && incidents.length === 0 && (
+        <div className="text-center py-14 text-slate-400">
+          <div className="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <svg className="w-7 h-7 text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+          </div>
+          <p className="font-medium text-slate-500">No incident reports on file</p>
+          <p className="text-sm mt-1">Tap "Log Incident" to create one.</p>
+        </div>
+      )}
+
+      {!loading && filtered.length === 0 && incidents.length > 0 && (
+        <p className="text-center text-slate-400 text-sm py-8">No {statusFilter} incidents.</p>
+      )}
+
+      <div className="space-y-3">
+        {filtered.map(inc => (
+          <IncidentCard
+            key={inc.id}
+            incident={inc}
+            residentName={residentName}
+            roomNumber={resident?.room_number}
+            facilityName={community?.name}
+            isAdmin={isAdmin}
+            onEdit={handleEdit}
+            onStatusChange={handleStatusChange}
+            onDelete={handleDelete}
+          />
+        ))}
+      </div>
+
+      {(showForm) && (
+        <IncidentForm
+          residentId={residentId}
+          residentName={residentName}
+          roomNumber={resident?.room_number}
+          incident={editingIncident}
+          onClose={() => { setShowForm(false); setEditingIncident(null) }}
+          onSaved={handleSaved}
+        />
+      )}
+    </div>
+  )
+}
