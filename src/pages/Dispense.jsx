@@ -106,6 +106,90 @@ function dividerCls(status) {
   return 'border-slate-100'
 }
 
+/*
+── Run in Supabase SQL editor to enable Not Given tracking ──────────────────
+
+create table medication_not_given (
+  id uuid primary key default gen_random_uuid(),
+  medication_id uuid references medications(id) on delete cascade,
+  resident_id uuid references residents(id) on delete cascade,
+  community_id uuid references communities(id),
+  scheduled_time text not null,
+  administered_date date not null,
+  reason text not null,
+  notes text,
+  recorded_by uuid,
+  recorded_at timestamptz default now()
+);
+create index on medication_not_given(medication_id, administered_date);
+alter table medication_not_given enable row level security;
+create policy "community members can manage not given" on medication_not_given
+  for all using (community_id in (
+    select community_id from community_members where user_id = auth.uid()
+  ));
+*/
+
+const NOT_GIVEN_REASONS = [
+  { value: 'refused', label: 'Refused by resident' },
+  { value: 'held', label: 'Held — physician order' },
+  { value: 'absent', label: 'Resident absent / unavailable' },
+  { value: 'out_of_stock', label: 'Medication out of stock' },
+  { value: 'side_effects', label: 'Side effects / reaction concern' },
+  { value: 'other', label: 'Other (see notes)' },
+]
+
+function NotGivenModal({ med, time, onClose, onSave, saving }) {
+  const [reason, setReason] = useState('')
+  const [notes, setNotes] = useState('')
+  const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent'
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 px-4 pb-4 sm:pb-0">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+            <svg className="w-5 h-5 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" />
+            </svg>
+          </div>
+          <div>
+            <p className="font-semibold text-slate-800 text-sm">Dose Not Given</p>
+            <p className="text-xs text-slate-400">{med.medication_name}{med.dose ? ` · ${med.dose}` : ''} · {fmt12(time)}</p>
+          </div>
+        </div>
+        <div className="space-y-3 mb-5">
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Reason <span className="text-red-500">*</span></label>
+            <select value={reason} onChange={e => setReason(e.target.value)} className={inputCls}>
+              <option value="">Select a reason…</option>
+              {NOT_GIVEN_REASONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Notes <span className="text-slate-400 font-normal">(optional)</span></label>
+            <textarea
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              rows={2}
+              placeholder="Additional context…"
+              className={inputCls + ' resize-none'}
+            />
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <button onClick={onClose} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
+          <button
+            onClick={() => onSave(reason, notes.trim())}
+            disabled={!reason || saving}
+            className="flex-1 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors"
+          >
+            {saving ? 'Saving…' : 'Record'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function ResidentAvatar({ resident, size = 'md' }) {
@@ -466,6 +550,9 @@ export default function Dispense() {
   const [expandedTimes, setExpandedTimes] = useState(new Set())
   const [expandedResidents, setExpandedResidents] = useState(new Set())
   const [confirmUndo, setConfirmUndo] = useState(null) // { med, time, record }
+  const [notGiven, setNotGiven] = useState(new Map())   // adminKey → not_given record
+  const [notGivenModal, setNotGivenModal] = useState(null) // { med, time }
+  const [savingNotGiven, setSavingNotGiven] = useState(false)
   const { communityId } = useCommunity()
   const [dispenseTab, setDispenseTab] = useState('routine')
   // Medication IDs scoped to this community (for scoping administration queries)
@@ -513,7 +600,8 @@ export default function Dispense() {
 
   // Scope administration query to this community's medication IDs only
   useEffect(() => {
-    if (!communityMedIds.length) { setAdministered(new Map()); return }
+    if (!communityMedIds.length) { setAdministered(new Map()); setNotGiven(new Map()); return }
+    // Load given records
     supabase.from('medication_administrations').select('*')
       .eq('administered_date', dateStr)
       .in('medication_id', communityMedIds)
@@ -521,6 +609,16 @@ export default function Dispense() {
         const map = new Map()
         ;(data ?? []).forEach(r => map.set(adminKey(r.medication_id, r.scheduled_time), r))
         setAdministered(map)
+      })
+    // Load not-given records
+    supabase.from('medication_not_given').select('*')
+      .eq('administered_date', dateStr)
+      .in('medication_id', communityMedIds)
+      .then(({ data }) => {
+        if (!data) return
+        const map = new Map()
+        ;(data ?? []).forEach(r => map.set(adminKey(r.medication_id, r.scheduled_time), r))
+        setNotGiven(map)
       })
   }, [dateStr, communityMedIds])
 
@@ -602,6 +700,35 @@ export default function Dispense() {
       if (data) setAdministered(prev => { const n = new Map(prev); n.set(key, data); return n })
       setToggling(prev => { const n = new Set(prev); n.delete(key); return n })
     }
+  }
+
+  async function handleNotGiven(reason, notes) {
+    if (!notGivenModal || !reason) return
+    const { med, time } = notGivenModal
+    const key = adminKey(med.id, time)
+    setSavingNotGiven(true)
+    const { data: { session } } = await supabase.auth.getSession()
+    const { data } = await supabase.from('medication_not_given').insert([{
+      medication_id: med.id,
+      resident_id: med.resident_id,
+      community_id: communityId,
+      scheduled_time: time,
+      administered_date: dateStr,
+      reason,
+      notes: notes || null,
+      recorded_by: session?.user?.id ?? null,
+    }]).select().single()
+    if (data) setNotGiven(prev => { const n = new Map(prev); n.set(key, data); return n })
+    setSavingNotGiven(false)
+    setNotGivenModal(null)
+  }
+
+  async function handleUndoNotGiven(med, time) {
+    const key = adminKey(med.id, time)
+    const record = notGiven.get(key)
+    if (!record) return
+    await supabase.from('medication_not_given').delete().eq('id', record.id)
+    setNotGiven(prev => { const n = new Map(prev); n.delete(key); return n })
   }
 
   function prevDay() { setDate(d => { const n = new Date(d); n.setDate(n.getDate() - 1); return n }) }
@@ -829,6 +956,15 @@ export default function Dispense() {
                                   {singleMed && singleDone && (
                                     <GivenByLine record={administered.get(singleKey)} staffMap={staffMap} />
                                   )}
+                                  {singleMed && !singleDone && notGiven.has(singleKey) && (() => {
+                                    const ng = notGiven.get(singleKey)
+                                    const label = NOT_GIVEN_REASONS.find(r => r.value === ng.reason)?.label ?? ng.reason
+                                    return (
+                                      <p className="text-xs text-amber-600 mt-0.5 font-medium">
+                                        Not given · {label}
+                                      </p>
+                                    )
+                                  })()}
                                 </div>
 
                                 {hasMultiple ? (
@@ -836,8 +972,31 @@ export default function Dispense() {
                                     <span className={`w-2.5 h-2.5 rounded-full ${residentDotCls(resStatus)}`} />
                                     <ChevronIcon open={isResOpen} />
                                   </div>
+                                ) : notGiven.has(singleKey) ? (
+                                  <button
+                                    onClick={e => { e.stopPropagation(); handleUndoNotGiven(singleMed, time) }}
+                                    title="Undo Not Given"
+                                    className="flex-shrink-0 w-7 h-7 rounded-full border-2 border-amber-300 bg-amber-50 flex items-center justify-center text-amber-500 hover:bg-amber-100 transition-colors"
+                                  >
+                                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                                    </svg>
+                                  </button>
                                 ) : (
-                                  <Checkbox done={singleDone} toggling={singleToggling} onToggle={() => handleToggle(singleMed, time)} />
+                                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                                    {!singleDone && (
+                                      <button
+                                        onClick={e => { e.stopPropagation(); setNotGivenModal({ med: singleMed, time }) }}
+                                        title="Record as Not Given"
+                                        className="w-6 h-6 rounded-full flex items-center justify-center text-slate-300 hover:text-amber-500 hover:bg-amber-50 transition-colors"
+                                      >
+                                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                          <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                                        </svg>
+                                      </button>
+                                    )}
+                                    <Checkbox done={singleDone} toggling={singleToggling} onToggle={() => handleToggle(singleMed, time)} />
+                                  </div>
                                 )}
                               </div>
 
@@ -848,16 +1007,45 @@ export default function Dispense() {
                                     const mKey = adminKey(med.id, time)
                                     const isDone = administered.has(mKey)
                                     const isTogg = toggling.has(mKey)
+                                    const isNotGiven = notGiven.has(mKey)
+                                    const ngRecord = isNotGiven ? notGiven.get(mKey) : null
+                                    const ngLabel = ngRecord ? (NOT_GIVEN_REASONS.find(r => r.value === ngRecord.reason)?.label ?? ngRecord.reason) : ''
                                     return (
-                                      <div key={med.id} className={`flex items-center gap-3 pl-16 pr-4 py-3 ${mIdx !== 0 ? 'border-t border-slate-100' : ''} ${isDone ? 'bg-emerald-50/50' : ''}`}>
+                                      <div key={med.id} className={`flex items-center gap-3 pl-16 pr-4 py-3 ${mIdx !== 0 ? 'border-t border-slate-100' : ''} ${isDone ? 'bg-emerald-50/50' : isNotGiven ? 'bg-amber-50/40' : ''}`}>
                                         <div className="flex-1 min-w-0">
                                           <p className={`text-sm font-medium truncate ${isDone ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
                                             {med.medication_name}
                                           </p>
                                           {med.dose && <p className="text-xs text-slate-400 mt-0.5">{med.dose}</p>}
                                           {isDone && <GivenByLine record={administered.get(mKey)} staffMap={staffMap} />}
+                                          {isNotGiven && <p className="text-xs text-amber-600 mt-0.5 font-medium">Not given · {ngLabel}</p>}
                                         </div>
-                                        <Checkbox done={isDone} toggling={isTogg} onToggle={() => handleToggle(med, time)} />
+                                        {isNotGiven ? (
+                                          <button
+                                            onClick={() => handleUndoNotGiven(med, time)}
+                                            title="Undo Not Given"
+                                            className="flex-shrink-0 w-7 h-7 rounded-full border-2 border-amber-300 bg-amber-50 flex items-center justify-center text-amber-500 hover:bg-amber-100 transition-colors"
+                                          >
+                                            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                                            </svg>
+                                          </button>
+                                        ) : (
+                                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                                            {!isDone && (
+                                              <button
+                                                onClick={() => setNotGivenModal({ med, time })}
+                                                title="Record as Not Given"
+                                                className="w-6 h-6 rounded-full flex items-center justify-center text-slate-300 hover:text-amber-500 hover:bg-amber-50 transition-colors"
+                                              >
+                                                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                                                </svg>
+                                              </button>
+                                            )}
+                                            <Checkbox done={isDone} toggling={isTogg} onToggle={() => handleToggle(med, time)} />
+                                          </div>
+                                        )}
                                       </div>
                                     )
                                   })}
@@ -876,6 +1064,17 @@ export default function Dispense() {
         </div>
       )}
       </>)}
+
+      {/* Not Given modal */}
+      {notGivenModal && (
+        <NotGivenModal
+          med={notGivenModal.med}
+          time={notGivenModal.time}
+          onClose={() => setNotGivenModal(null)}
+          onSave={handleNotGiven}
+          saving={savingNotGiven}
+        />
+      )}
 
       {/* Undo dose confirmation — protects against accidental uncheck */}
       {confirmUndo && (

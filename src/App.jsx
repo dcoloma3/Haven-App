@@ -31,6 +31,8 @@ import Transportation from './pages/Transportation'
 import Activities from './pages/Activities'
 import FamilyView from './pages/FamilyView'
 import MedicationHistory from './pages/MedicationHistory'
+import PrivacyPolicy from './pages/PrivacyPolicy'
+import TermsOfService from './pages/TermsOfService'
 
 function NoMembershipScreen() {
   return (
@@ -113,7 +115,9 @@ export default function App() {
               <Route path="/community" element={session ? <CommunityPicker /> : <Navigate to="/login" replace />} />
               <Route path="/complete-profile" element={session ? <ProfileCompletion /> : <Navigate to="/login" replace />} />
 
-              {/* Public route — no auth required */}
+              {/* Public routes — no auth required */}
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/terms" element={<TermsOfService />} />
               <Route path="/family/:token" element={<FamilyView />} />
 
               <Route path="/dashboard" element={session ? <ProtectedRoute><Dashboard /></ProtectedRoute> : <Navigate to="/login" replace />} />

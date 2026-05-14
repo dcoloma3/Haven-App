@@ -957,6 +957,24 @@ function Footer({ scrollTo }) {
             Contact
           </button>
           <Link
+            to="/privacy"
+            className="text-xs transition-colors"
+            style={{ color: 'rgba(255,255,255,0.4)' }}
+            onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.8)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.4)'}
+          >
+            Privacy
+          </Link>
+          <Link
+            to="/terms"
+            className="text-xs transition-colors"
+            style={{ color: 'rgba(255,255,255,0.4)' }}
+            onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.8)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.4)'}
+          >
+            Terms
+          </Link>
+          <Link
             to="/login"
             className="text-xs transition-colors"
             style={{ color: 'rgba(255,255,255,0.4)' }}
