@@ -75,10 +75,17 @@ export default function NotificationLog() {
   async function saveSettings() {
     setSavingSettings(true)
     const payload = { community_id: communityId, ...settingsForm, updated_at: new Date().toISOString() }
+    let error
     if (settings) {
-      await supabase.from('notification_settings').update(payload).eq('id', settings.id)
+      ;({ error } = await supabase.from('notification_settings').update(payload).eq('id', settings.id))
     } else {
-      await supabase.from('notification_settings').insert(payload)
+      ;({ error } = await supabase.from('notification_settings').insert(payload))
+    }
+    if (error) {
+      console.error(error)
+      alert('Something went wrong. Please try again.')
+      setSavingSettings(false)
+      return
     }
     setSavingSettings(false)
     await load()
@@ -88,7 +95,7 @@ export default function NotificationLog() {
     if (!manualForm.recipient_name.trim()) return
     setSavingLog(true)
     const authorName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Staff'
-    await supabase.from('notification_log').insert({
+    const { error } = await supabase.from('notification_log').insert({
       community_id: communityId,
       notification_type: manualForm.notification_type,
       recipient_name: manualForm.recipient_name.trim(),
@@ -97,6 +104,12 @@ export default function NotificationLog() {
       status: manualForm.status,
       sent_at: manualForm.status === 'sent' ? new Date().toISOString() : null,
     })
+    if (error) {
+      console.error(error)
+      alert('Something went wrong. Please try again.')
+      setSavingLog(false)
+      return
+    }
     setSavingLog(false)
     setShowManualModal(false)
     setManualForm({ notification_type: 'Call', recipient_name: '', recipient_contact: '', message: '', status: 'sent' })

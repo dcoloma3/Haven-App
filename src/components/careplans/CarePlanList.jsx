@@ -94,10 +94,17 @@ export default function CarePlanList({ residentId, resident }) {
       status: form.status,
       updated_at: new Date().toISOString(),
     }
+    let error
     if (editPlan) {
-      await supabase.from('care_plans').update(payload).eq('id', editPlan.id)
+      ;({ error } = await supabase.from('care_plans').update(payload).eq('id', editPlan.id))
     } else {
-      await supabase.from('care_plans').insert(payload)
+      ;({ error } = await supabase.from('care_plans').insert(payload))
+    }
+    if (error) {
+      console.error(error)
+      alert('Something went wrong. Please try again.')
+      setSaving(false)
+      return
     }
     setSaving(false)
     setShowModal(false)
@@ -105,7 +112,12 @@ export default function CarePlanList({ residentId, resident }) {
   }
 
   async function handleDelete(id) {
-    await supabase.from('care_plans').delete().eq('id', id)
+    const { error } = await supabase.from('care_plans').delete().eq('id', id)
+    if (error) {
+      console.error(error)
+      alert('Something went wrong. Please try again.')
+      return
+    }
     setDeleteConfirm(null)
     await fetchPlans()
   }

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { RESIDENT_COLORS, getColor } from '../../lib/colors'
+import { useCommunity } from '../../context/CommunityContext'
 import EventForm from '../calendar/EventForm'
 
 function formatDate(dateStr) {
@@ -23,6 +24,7 @@ function Field({ label, value, wide }) {
 const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
 
 export default function ResidentProfile({ resident, onUpdate }) {
+  const { communityId } = useCommunity()
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState({})
   const [saving, setSaving] = useState(false)
@@ -100,6 +102,8 @@ export default function ResidentProfile({ resident, onUpdate }) {
 
         {showEventForm && (
           <EventForm
+            residents={[resident]}
+            communityId={communityId}
             defaultResidentId={resident.id}
             defaultEventType="Resident Appointment"
             onClose={() => setShowEventForm(false)}

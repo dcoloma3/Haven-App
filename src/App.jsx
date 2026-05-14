@@ -29,6 +29,7 @@ import Maintenance from './pages/Maintenance'
 import Transportation from './pages/Transportation'
 import Activities from './pages/Activities'
 import FamilyView from './pages/FamilyView'
+import MedicationHistory from './pages/MedicationHistory'
 
 function ProtectedRoute({ children }) {
   const { profile, loading: profileLoading } = useProfile()
@@ -96,6 +97,7 @@ export default function App() {
               <Route path="/maintenance" element={session ? <ProtectedRoute><Maintenance /></ProtectedRoute> : <Navigate to="/login" replace />} />
               <Route path="/transportation" element={session ? <ProtectedRoute><Transportation /></ProtectedRoute> : <Navigate to="/login" replace />} />
               <Route path="/activities" element={session ? <ProtectedRoute><Activities /></ProtectedRoute> : <Navigate to="/login" replace />} />
+              <Route path="/medication-history" element={session ? <ProtectedRoute><MedicationHistory /></ProtectedRoute> : <Navigate to="/login" replace />} />
 
               <Route path="/staff" element={
                 session ? <ProtectedRoute><StaffDirectory /></ProtectedRoute> : <Navigate to="/login" replace />

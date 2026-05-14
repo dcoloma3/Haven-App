@@ -220,7 +220,13 @@ function StaffModal({ member, communityId, currentUserId, onClose, onSaved, onDe
 
   async function handleDelete() {
     setDeleting(true)
-    await supabase.from('community_members').delete().eq('id', memberId)
+    const { error } = await supabase.from('community_members').delete().eq('id', memberId)
+    if (error) {
+      console.error(error)
+      setError(error.message || 'Something went wrong. Please try again.')
+      setDeleting(false)
+      return
+    }
     onDeleted(memberId)
   }
 

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState, useCallback } from 'react'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { adminKey, isMedDueOnDate, computeResidentStatus } from '../lib/medStatus'
 import Layout from '../components/layout/Layout'
@@ -108,6 +108,7 @@ function RemovalModal({ onClose, onConfirm }) {
 export default function ResidentDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const { isAdmin, communityId } = useCommunity()
   const isMobile = useIsMobile()
   const [resident, setResident] = useState(null)
@@ -132,17 +133,23 @@ export default function ResidentDetail() {
       .then(({ data }) => { setResident(data); setLoading(false) })
   }, [id])
 
+  useEffect(() => {
+    if (location.state?.openTab) {
+      setActiveTab(location.state.openTab)
+    }
+  }, []) // eslint-disable-line
+
   // Fetch today's med status for the ring indicator
-  async function refreshMedStatus() {
+  const refreshMedStatus = useCallback(async () => {
     const [{ data: meds }, { data: admins }] = await Promise.all([
       supabase.from('medications').select('id, scheduled_times, frequency_type, frequency_days, frequency_interval, start_date, end_date').eq('resident_id', id),
       supabase.from('medication_administrations').select('medication_id, scheduled_time').eq('resident_id', id).eq('administered_date', todayStr),
     ])
     const administeredSet = new Set((admins ?? []).map(a => adminKey(a.medication_id, a.scheduled_time)))
     setMedStatus(computeResidentStatus(meds ?? [], administeredSet, todayStr))
-  }
+  }, [id, todayStr]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { refreshMedStatus() }, [id, todayStr]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { refreshMedStatus() }, [refreshMedStatus])
 
   function handleTabClick(tab) {
     setActiveTab(tab)

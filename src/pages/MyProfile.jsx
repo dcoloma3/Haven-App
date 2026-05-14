@@ -51,7 +51,7 @@ export default function MyProfile() {
     const { error } = await supabase
       .from('profiles')
       .update(payload)
-      .eq('id', profile.id)
+      .eq('user_id', profile.user_id)
 
     setSaving(false)
     if (error) { setError(error.message); return }

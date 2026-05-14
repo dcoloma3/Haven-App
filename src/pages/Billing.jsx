@@ -159,7 +159,7 @@ export default function Billing() {
                           {generating === r.id ? 'Generating…' : 'Generate'}
                         </button>
                       ) : (
-                        <button onClick={() => navigate(`/residents/${r.id}`)} className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
+                        <button onClick={() => navigate(`/residents/${r.id}`, { state: { openTab: 'Billing' } })} className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
                           View Detail
                         </button>
                       )}

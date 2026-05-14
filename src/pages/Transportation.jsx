@@ -46,6 +46,8 @@ export default function Transportation() {
   const [view, setView] = useState('upcoming')
   const [filterDate, setFilterDate] = useState('')
   const [showModal, setShowModal] = useState(false)
+  const [editTrip, setEditTrip] = useState(null)
+  const [cancelConfirm, setCancelConfirm] = useState(null)
   const [saving, setSaving] = useState(false)
   const [residentSearch, setResidentSearch] = useState('')
   const [form, setForm] = useState({ resident_id: '', trip_date: new Date().toISOString().split('T')[0], departure_time: '', return_time: '', destination: '', purpose: '', driver_name: '', vehicle: '', notes: '', status: 'scheduled' })
@@ -77,11 +79,36 @@ export default function Transportation() {
     `${r.first_name} ${r.last_name}`.toLowerCase().includes(residentSearch.toLowerCase())
   )
 
+  function openAdd() {
+    setEditTrip(null)
+    setForm({ resident_id: '', trip_date: today, departure_time: '', return_time: '', destination: '', purpose: '', driver_name: '', vehicle: '', notes: '', status: 'scheduled' })
+    setResidentSearch('')
+    setShowModal(true)
+  }
+
+  function openEdit(t) {
+    setEditTrip(t)
+    setForm({
+      resident_id: t.resident_id || '',
+      trip_date: t.trip_date || today,
+      departure_time: t.departure_time || '',
+      return_time: t.return_time || '',
+      destination: t.destination || '',
+      purpose: t.purpose || '',
+      driver_name: t.driver_name || '',
+      vehicle: t.vehicle || '',
+      notes: t.notes || '',
+      status: t.status || 'scheduled',
+    })
+    setResidentSearch(t.residents ? `${t.residents.first_name} ${t.residents.last_name}` : '')
+    setShowModal(true)
+  }
+
   async function handleSave() {
     if (!form.destination.trim() || !form.trip_date || !form.resident_id) return
     setSaving(true)
     const authorName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Staff'
-    await supabase.from('transportation_log').insert({
+    const payload = {
       community_id: communityId,
       resident_id: form.resident_id,
       created_by_name: authorName,
@@ -94,9 +121,15 @@ export default function Transportation() {
       vehicle: form.vehicle.trim() || null,
       notes: form.notes.trim() || null,
       status: form.status,
-    })
+    }
+    if (editTrip) {
+      await supabase.from('transportation_log').update(payload).eq('id', editTrip.id)
+    } else {
+      await supabase.from('transportation_log').insert(payload)
+    }
     setSaving(false)
     setShowModal(false)
+    setEditTrip(null)
     setForm({ resident_id: '', trip_date: today, departure_time: '', return_time: '', destination: '', purpose: '', driver_name: '', vehicle: '', notes: '', status: 'scheduled' })
     setResidentSearch('')
     await load()
@@ -107,6 +140,12 @@ export default function Transportation() {
     await load()
   }
 
+  async function handleCancelTrip(trip) {
+    await supabase.from('transportation_log').update({ status: 'cancelled' }).eq('id', trip.id)
+    setCancelConfirm(null)
+    await load()
+  }
+
   return (
     <Layout>
       <div className="flex items-center justify-between mb-6">
@@ -114,7 +153,7 @@ export default function Transportation() {
           <h1 className="text-2xl font-bold text-slate-800">Transportation</h1>
           <p className="text-sm text-slate-500 mt-1">Resident trip scheduling</p>
         </div>
-        <button onClick={() => setShowModal(true)} className="bg-[#185FA5] hover:bg-[#0C447C] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2">
+        <button onClick={openAdd} className="bg-[#185FA5] hover:bg-[#0C447C] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2">
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
           </svg>
@@ -155,7 +194,7 @@ export default function Transportation() {
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Destination</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Driver</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Action</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -176,9 +215,15 @@ export default function Transportation() {
                     <span className={`text-xs font-semibold px-2.5 py-1 rounded-full capitalize ${STATUS_COLORS[t.status] || STATUS_COLORS.scheduled}`}>{t.status}</span>
                   </td>
                   <td className="px-4 py-3">
-                    {t.status === 'scheduled' && (
-                      <button onClick={() => updateStatus(t.id, 'completed')} className="text-xs text-emerald-600 font-medium hover:text-emerald-700 transition-colors">Complete</button>
-                    )}
+                    <div className="flex items-center gap-3">
+                      {t.status === 'scheduled' && (
+                        <>
+                          <button onClick={() => updateStatus(t.id, 'completed')} className="text-xs text-emerald-600 font-medium hover:text-emerald-700 transition-colors">Complete</button>
+                          <button onClick={() => setCancelConfirm(t)} className="text-xs text-slate-400 font-medium hover:text-slate-600 transition-colors">Cancel</button>
+                        </>
+                      )}
+                      <button onClick={() => openEdit(t)} className="text-xs text-[#185FA5] font-medium hover:text-[#0C447C] transition-colors">Edit</button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -192,8 +237,8 @@ export default function Transportation() {
         <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
           <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-2xl max-h-[92vh] flex flex-col">
             <div className="sticky top-0 bg-white border-b border-slate-200 px-5 py-4 flex items-center justify-between rounded-t-2xl">
-              <h2 className="font-bold text-slate-800 text-lg">Schedule Trip</h2>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">
+              <h2 className="font-bold text-slate-800 text-lg">{editTrip ? 'Edit Trip' : 'Schedule Trip'}</h2>
+              <button onClick={() => { setShowModal(false); setEditTrip(null) }} className="text-slate-400 hover:text-slate-600">
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
@@ -260,10 +305,24 @@ export default function Transportation() {
               </div>
             </div>
             <div className="sticky bottom-0 bg-white border-t border-slate-200 px-5 py-4 flex gap-3">
-              <button onClick={() => setShowModal(false)} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
+              <button onClick={() => { setShowModal(false); setEditTrip(null) }} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
               <button onClick={handleSave} disabled={!form.destination.trim() || !form.trip_date || !form.resident_id || saving} className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
-                {saving ? 'Saving…' : 'Schedule Trip'}
+                {saving ? 'Saving…' : editTrip ? 'Save Changes' : 'Schedule Trip'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {cancelConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <h3 className="font-bold text-slate-800 mb-2">Cancel Trip</h3>
+            <p className="text-sm text-slate-500 mb-5">
+              Cancel the trip to <strong>{cancelConfirm.destination}</strong>? This will mark the trip as cancelled.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setCancelConfirm(null)} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Keep</button>
+              <button onClick={() => handleCancelTrip(cancelConfirm)} className="flex-1 bg-red-500 hover:bg-red-600 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">Cancel Trip</button>
             </div>
           </div>
         </div>

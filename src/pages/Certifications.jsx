@@ -116,10 +116,17 @@ export default function Certifications() {
       cert_number: form.cert_number.trim() || null,
       notes: form.notes.trim() || null,
     }
+    let error
     if (editCert) {
-      await supabase.from('staff_certifications').update(payload).eq('id', editCert.id)
+      ;({ error } = await supabase.from('staff_certifications').update(payload).eq('id', editCert.id))
     } else {
-      await supabase.from('staff_certifications').insert(payload)
+      ;({ error } = await supabase.from('staff_certifications').insert(payload))
+    }
+    if (error) {
+      console.error(error)
+      alert('Something went wrong. Please try again.')
+      setSaving(false)
+      return
     }
     setSaving(false)
     setShowModal(false)
@@ -127,7 +134,12 @@ export default function Certifications() {
   }
 
   async function handleDelete(id) {
-    await supabase.from('staff_certifications').delete().eq('id', id)
+    const { error } = await supabase.from('staff_certifications').delete().eq('id', id)
+    if (error) {
+      console.error(error)
+      alert('Something went wrong. Please try again.')
+      return
+    }
     setDeleteConfirm(null)
     await fetchCerts()
   }

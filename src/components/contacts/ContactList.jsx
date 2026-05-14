@@ -72,9 +72,11 @@ export default function ContactList({ residentId }) {
       .then(({ data }) => { setContacts(data ?? []); setLoading(false) })
   }, [residentId])
 
-  async function handleDelete(id) {
-    await supabase.from('emergency_contacts').delete().eq('id', id)
-    setContacts(prev => prev.filter(c => c.id !== id))
+  async function handleDelete(contactId) {
+    if (!window.confirm('Delete this contact? This cannot be undone.')) return
+    const { error } = await supabase.from('emergency_contacts').delete().eq('id', contactId)
+    if (error) { alert('Failed to delete contact. Please try again.'); return }
+    setContacts(prev => prev.filter(c => c.id !== contactId))
   }
 
   return (

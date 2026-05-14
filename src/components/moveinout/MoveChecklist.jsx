@@ -74,13 +74,19 @@ export default function MoveChecklist({ residentId, resident }) {
     const authorName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Staff'
     const defaults = type === 'move-in' ? DEFAULT_MOVEIN_ITEMS : DEFAULT_MOVEOUT_ITEMS
     const items = defaults.map(label => ({ label, checked: false, checked_by: null, checked_at: null }))
-    const { data } = await supabase.from('move_checklists').insert({
+    const { data, error } = await supabase.from('move_checklists').insert({
       community_id: communityId,
       resident_id: residentId,
       type,
       created_by_name: authorName,
       items,
     }).select().single()
+    if (error) {
+      console.error(error)
+      alert('Something went wrong. Please try again.')
+      setSaving(false)
+      return
+    }
     setChecklists(c => ({ ...c, [type]: data }))
     setSaving(false)
   }
@@ -93,13 +99,24 @@ export default function MoveChecklist({ residentId, resident }) {
     item.checked_by = item.checked ? authorName : null
     item.checked_at = item.checked ? new Date().toISOString() : null
     items[index] = item
-    const { data } = await supabase.from('move_checklists').update({ items }).eq('id', checklist.id).select().single()
+    const { data, error } = await supabase.from('move_checklists').update({ items }).eq('id', checklist.id).select().single()
+    if (error) {
+      console.error(error)
+      alert('Something went wrong. Please try again.')
+      return
+    }
     setChecklists(c => ({ ...c, [checklist.type]: data }))
   }
 
   async function markComplete(checklist) {
     setMarking(true)
-    const { data } = await supabase.from('move_checklists').update({ completed_at: new Date().toISOString() }).eq('id', checklist.id).select().single()
+    const { data, error } = await supabase.from('move_checklists').update({ completed_at: new Date().toISOString() }).eq('id', checklist.id).select().single()
+    if (error) {
+      console.error(error)
+      alert('Something went wrong. Please try again.')
+      setMarking(false)
+      return
+    }
     setChecklists(c => ({ ...c, [checklist.type]: data }))
     setMarking(false)
   }

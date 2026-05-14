@@ -79,7 +79,13 @@ export default function VitalsLog({ residentId, resident }) {
       weight: form.weight !== '' ? parseFloat(form.weight) : null,
       notes: form.notes.trim() || null,
     }
-    await supabase.from('vital_signs').insert(payload)
+    const { error } = await supabase.from('vital_signs').insert(payload)
+    if (error) {
+      console.error(error)
+      alert('Something went wrong. Please try again.')
+      setSaving(false)
+      return
+    }
     setSaving(false)
     setShowModal(false)
     setForm({ recorded_at: new Date().toISOString().slice(0, 16), systolic: '', diastolic: '', pulse: '', temperature: '', oxygen_saturation: '', weight: '', notes: '' })

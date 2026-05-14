@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { useCommunity } from '../../context/CommunityContext'
 
 function formatDate(dateStr) {
   if (!dateStr) return ''
@@ -52,6 +53,7 @@ function ResultItem({ primary, secondary, onClick }) {
 }
 
 export default function GlobalSearch() {
+  const { communityId } = useCommunity()
   const [query, setQuery]     = useState('')
   const [results, setResults] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -83,9 +85,9 @@ export default function GlobalSearch() {
     timerRef.current = setTimeout(async () => {
       const q = `%${query}%`
       const [resRes, medRes, evtRes] = await Promise.all([
-        supabase.from('residents').select('id, full_name, room_number').ilike('full_name', q).limit(5),
-        supabase.from('medications').select('id, medication_name, residents(id, full_name)').ilike('medication_name', q).limit(5),
-        supabase.from('calendar_events').select('id, title, event_date').ilike('title', q).order('event_date').limit(5),
+        supabase.from('residents').select('id, full_name, room_number').eq('community_id', communityId).ilike('full_name', q).limit(5),
+        supabase.from('medications').select('id, medication_name, residents(id, full_name)').eq('community_id', communityId).ilike('medication_name', q).limit(5),
+        supabase.from('calendar_events').select('id, title, event_date').eq('community_id', communityId).ilike('title', q).order('event_date').limit(5),
       ])
       setResults({
         residents: resRes.data ?? [],

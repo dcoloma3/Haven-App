@@ -133,10 +133,17 @@ export default function BillingHistory({ residentId, resident }) {
       status: form.status,
       notes: form.notes.trim() || null,
     }
+    let error
     if (editRecord) {
-      await supabase.from('billing_records').update(payload).eq('id', editRecord.id)
+      ;({ error } = await supabase.from('billing_records').update(payload).eq('id', editRecord.id))
     } else {
-      await supabase.from('billing_records').insert(payload)
+      ;({ error } = await supabase.from('billing_records').insert(payload))
+    }
+    if (error) {
+      console.error(error)
+      alert('Something went wrong. Please try again.')
+      setSaving(false)
+      return
     }
     setSaving(false)
     setShowModal(false)
@@ -144,7 +151,12 @@ export default function BillingHistory({ residentId, resident }) {
   }
 
   async function changeStatus(record, newStatus) {
-    await supabase.from('billing_records').update({ status: newStatus }).eq('id', record.id)
+    const { error } = await supabase.from('billing_records').update({ status: newStatus }).eq('id', record.id)
+    if (error) {
+      console.error(error)
+      alert('Something went wrong. Please try again.')
+      return
+    }
     await fetchRecords()
   }
 

@@ -131,6 +131,7 @@ export default function IncidentForm({ residentId, residentName, roomNumber, inc
   })
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState({})
+  const [saveError, setSaveError] = useState('')
 
   function set(field, value) {
     setForm(prev => ({ ...prev, [field]: value }))
@@ -191,6 +192,11 @@ export default function IncidentForm({ residentId, residentName, roomNumber, inc
     }
 
     setSaving(false)
+    if (result.error) {
+      console.error(result.error)
+      setSaveError(result.error.message || 'Something went wrong. Please try again.')
+      return
+    }
     if (result.data) {
       const extra = selectedResident
         ? { resident_name: selectedResident.name, room_number: selectedResident.room }
@@ -422,6 +428,11 @@ export default function IncidentForm({ residentId, residentName, roomNumber, inc
         </div>
 
         {/* Footer */}
+        {saveError && (
+          <div className="px-5 pb-2">
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{saveError}</p>
+          </div>
+        )}
         <div className="flex gap-3 px-5 py-4 border-t border-slate-100 flex-shrink-0">
           <button
             onClick={onClose}

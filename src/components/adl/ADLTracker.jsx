@@ -97,10 +97,17 @@ export default function ADLTracker({ residentId, resident }) {
       notes: form.notes.trim() || null,
       ...ADL_CATEGORIES.reduce((acc, c) => ({ ...acc, [c]: form[c] || null }), {}),
     }
+    let error
     if (todayRecord) {
-      await supabase.from('adl_records').update(payload).eq('id', todayRecord.id)
+      ;({ error } = await supabase.from('adl_records').update(payload).eq('id', todayRecord.id))
     } else {
-      await supabase.from('adl_records').insert(payload)
+      ;({ error } = await supabase.from('adl_records').insert(payload))
+    }
+    if (error) {
+      console.error(error)
+      alert('Something went wrong. Please try again.')
+      setSaving(false)
+      return
     }
     setSaving(false)
     setEditing(false)

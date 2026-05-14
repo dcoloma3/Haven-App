@@ -408,6 +408,9 @@ export default function ResidentMedHistory({ residentId, resident }) {
       const safeName = name.replace(/\s+/g, '_')
       const safeMed = selectedMed ? `_${selectedMed.replace(/\s+/g, '_')}` : ''
       doc.save(`${safeName}_MAR${safeMed}_${from}_to_${to}.pdf`)
+    } catch (err) {
+      console.error(err)
+      alert('Failed to generate MAR. Please try again.')
     } finally {
       setGenerating(false)
     }
