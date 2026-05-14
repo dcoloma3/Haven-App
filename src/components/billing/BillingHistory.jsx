@@ -63,6 +63,7 @@ export default function BillingHistory({ residentId, resident }) {
   const [showModal, setShowModal] = useState(false)
   const [editRecord, setEditRecord] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [leaseRate, setLeaseRate] = useState(null) // null = not yet fetched, false = no lease
   const [form, setForm] = useState({
     billing_month: new Date().toISOString().slice(0, 7),
     base_rate: '',
@@ -95,10 +96,28 @@ export default function BillingHistory({ residentId, resident }) {
 
   useEffect(() => { fetchRecords() }, [residentId]) // eslint-disable-line
 
-  function openAdd() {
+  async function openAdd() {
     setEditRecord(null)
-    setForm({ billing_month: new Date().toISOString().slice(0, 7), base_rate: '', level_of_care_charge: '', medication_management_fee: '', ancillary_charges: '', ancillary_description: '', notes: '', status: 'draft' })
+    setLeaseRate(null)
     setShowModal(true)
+    // Fetch lease record to pre-populate base_rate
+    const { data: lease } = await supabase
+      .from('lease_terms')
+      .select('monthly_rate')
+      .eq('resident_id', residentId)
+      .maybeSingle()
+    const rate = lease?.monthly_rate ?? false
+    setLeaseRate(rate)
+    setForm({
+      billing_month: new Date().toISOString().slice(0, 7),
+      base_rate: rate !== false ? String(rate) : '',
+      level_of_care_charge: '',
+      medication_management_fee: '',
+      ancillary_charges: '',
+      ancillary_description: '',
+      notes: '',
+      status: 'draft',
+    })
   }
 
   function openEdit(r) {
@@ -250,6 +269,15 @@ export default function BillingHistory({ residentId, resident }) {
                 <div key={key}>
                   <label className="block text-xs font-medium text-slate-600 mb-1">{label}</label>
                   <input type="number" step="0.01" min="0" value={form[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} className={inputCls} placeholder="0.00" />
+                  {key === 'base_rate' && !editRecord && (
+                    <p className="text-xs text-slate-400 mt-1">
+                      {leaseRate === null
+                        ? 'Checking lease record…'
+                        : leaseRate !== false
+                        ? 'Pre-filled from lease record'
+                        : 'No lease on file — enter manually'}
+                    </p>
+                  )}
                 </div>
               ))}
               <div>

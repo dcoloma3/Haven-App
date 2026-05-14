@@ -24,7 +24,17 @@ import { supabase } from '../../lib/supabase'
 import { useCommunity } from '../../context/CommunityContext'
 
 const TEXTURES = ['Regular', 'Minced & Moist', 'Pureed', 'Mechanical Soft', 'Liquidized']
-const DIET_TYPES = ['Regular', 'Diabetic', 'Low-Sodium', 'Low-Fat', 'Renal', 'Cardiac', 'Vegetarian', 'Vegan']
+const DIET_TYPE_OPTIONS = ['Regular', 'Diabetic', 'Low-Sodium', 'Low-Fat', 'Renal', 'Cardiac', 'Vegetarian', 'Vegan']
+const LIQUID_THICKNESS_OPTIONS = ['Thin', 'Slightly Thick', 'Mildly Thick', 'Moderately Thick', 'Extremely Thick']
+
+function parseDietTypes(raw) {
+  if (!raw) return []
+  return raw.split(',').map(s => s.trim()).filter(Boolean)
+}
+
+function formatDietTypes(arr) {
+  return arr.join(', ')
+}
 
 export default function DietaryProfile({ residentId, resident }) {
   const { communityId } = useCommunity()
@@ -34,7 +44,8 @@ export default function DietaryProfile({ residentId, resident }) {
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
     texture_modification: 'Regular',
-    diet_type: 'Regular',
+    diet_types: ['Regular'], // array for multi-select
+    liquid_thickness: 'Thin',
     allergies: '',
     preferences: '',
     dislikes: '',
@@ -55,7 +66,8 @@ export default function DietaryProfile({ residentId, resident }) {
     if (data) {
       setForm({
         texture_modification: data.texture_modification || 'Regular',
-        diet_type: data.diet_type || 'Regular',
+        diet_types: parseDietTypes(data.diet_type),
+        liquid_thickness: data.liquid_thickness || 'Thin',
         allergies: data.allergies || '',
         preferences: data.preferences || '',
         dislikes: data.dislikes || '',
@@ -69,13 +81,25 @@ export default function DietaryProfile({ residentId, resident }) {
 
   useEffect(() => { fetchProfile() }, [residentId]) // eslint-disable-line
 
+  function toggleDietType(type) {
+    setForm(f => {
+      const current = f.diet_types
+      if (current.includes(type)) {
+        return { ...f, diet_types: current.filter(t => t !== type) }
+      } else {
+        return { ...f, diet_types: [...current, type] }
+      }
+    })
+  }
+
   async function handleSave() {
     setSaving(true)
     const payload = {
       community_id: communityId,
       resident_id: residentId,
       texture_modification: form.texture_modification,
-      diet_type: form.diet_type,
+      diet_type: formatDietTypes(form.diet_types),
+      liquid_thickness: form.liquid_thickness,
       allergies: form.allergies.trim() || null,
       preferences: form.preferences.trim() || null,
       dislikes: form.dislikes.trim() || null,
@@ -129,12 +153,47 @@ export default function DietaryProfile({ residentId, resident }) {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Diet Type</label>
-            <select value={form.diet_type} onChange={e => setForm(f => ({ ...f, diet_type: e.target.value }))} className={inputCls}>
-              {DIET_TYPES.map(d => <option key={d} value={d}>{d}</option>)}
+            <label className="block text-xs font-medium text-slate-600 mb-1">Liquid Thickness</label>
+            <select value={form.liquid_thickness} onChange={e => setForm(f => ({ ...f, liquid_thickness: e.target.value }))} className={inputCls}>
+              {LIQUID_THICKNESS_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
+            <p className="text-xs text-slate-400 mt-0.5">Per IDDSI Framework</p>
           </div>
         </div>
+
+        {/* Diet Type — multi-select checkboxes */}
+        <div>
+          <label className="block text-xs font-medium text-slate-600 mb-2">Diet Type <span className="text-slate-400 font-normal">(select all that apply)</span></label>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {DIET_TYPE_OPTIONS.map(type => {
+              const checked = form.diet_types.includes(type)
+              return (
+                <label
+                  key={type}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors text-xs font-medium ${
+                    checked ? 'bg-[#E6F1FB] border-[#185FA5] text-[#185FA5]' : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    className="sr-only"
+                    checked={checked}
+                    onChange={() => toggleDietType(type)}
+                  />
+                  <span className={`w-3.5 h-3.5 rounded border flex-shrink-0 flex items-center justify-center ${checked ? 'bg-[#185FA5] border-[#185FA5]' : 'border-slate-300'}`}>
+                    {checked && (
+                      <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    )}
+                  </span>
+                  {type}
+                </label>
+              )
+            })}
+          </div>
+        </div>
+
         <div>
           <label className="block text-xs font-medium text-slate-600 mb-1">Allergies</label>
           <input value={form.allergies} onChange={e => setForm(f => ({ ...f, allergies: e.target.value }))} className={inputCls} placeholder="e.g. Peanuts, Shellfish" />
@@ -171,6 +230,8 @@ export default function DietaryProfile({ residentId, resident }) {
     )
   }
 
+  const displayDietTypes = parseDietTypes(profile.diet_type)
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -186,9 +247,38 @@ export default function DietaryProfile({ residentId, resident }) {
       )}
 
       <div className="bg-white border border-slate-200 rounded-2xl divide-y divide-slate-100">
+        {/* Texture */}
+        {profile.texture_modification && (
+          <div className="flex gap-4 px-4 py-3">
+            <span className="text-xs font-semibold text-slate-500 w-36 flex-shrink-0 pt-0.5">Texture Modification</span>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">{profile.texture_modification}</span>
+          </div>
+        )}
+
+        {/* Diet Type — multi-badge */}
+        {displayDietTypes.length > 0 && (
+          <div className="flex gap-4 px-4 py-3">
+            <span className="text-xs font-semibold text-slate-500 w-36 flex-shrink-0 pt-0.5">Diet Type</span>
+            <div className="flex flex-wrap gap-1.5">
+              {displayDietTypes.map(t => (
+                <span key={t} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">{t}</span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Liquid Thickness */}
+        {profile.liquid_thickness && (
+          <div className="flex gap-4 px-4 py-3">
+            <span className="text-xs font-semibold text-slate-500 w-36 flex-shrink-0 pt-0.5">Liquid Thickness</span>
+            <div>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">{profile.liquid_thickness}</span>
+              <p className="text-xs text-slate-400 mt-0.5">Per IDDSI Framework</p>
+            </div>
+          </div>
+        )}
+
         {[
-          { label: 'Texture Modification', value: profile.texture_modification },
-          { label: 'Diet Type', value: profile.diet_type },
           { label: 'Preferences', value: profile.preferences },
           { label: 'Dislikes', value: profile.dislikes },
           { label: 'Fluid Restriction', value: profile.fluid_restriction },

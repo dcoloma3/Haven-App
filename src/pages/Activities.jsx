@@ -97,9 +97,9 @@ export default function Activities() {
 
   async function openAttendance(activity) {
     setShowAttendanceModal(activity)
-    // Build attendance map
+    // Build attendance map — start with null (no selection) for all residents
+    // Only pre-fill residents who already have a saved attendance record
     const map = {}
-    for (const r of residents) map[r.id] = 'attended'
     for (const att of (activity.activity_attendance || [])) map[att.resident_id] = att.status
     setAttendance(map)
   }
@@ -107,13 +107,18 @@ export default function Activities() {
   async function saveAttendance() {
     if (!showAttendanceModal) return
     setSavingAttendance(true)
-    const upserts = residents.map(r => ({
-      activity_id: showAttendanceModal.id,
-      resident_id: r.id,
-      community_id: communityId,
-      status: attendance[r.id] || 'attended',
-    }))
-    await supabase.from('activity_attendance').upsert(upserts, { onConflict: 'activity_id,resident_id' })
+    // Only save residents where a status has been explicitly selected (non-null)
+    const upserts = residents
+      .filter(r => attendance[r.id] != null)
+      .map(r => ({
+        activity_id: showAttendanceModal.id,
+        resident_id: r.id,
+        community_id: communityId,
+        status: attendance[r.id],
+      }))
+    if (upserts.length > 0) {
+      await supabase.from('activity_attendance').upsert(upserts, { onConflict: 'activity_id,resident_id' })
+    }
     setSavingAttendance(false)
     setShowAttendanceModal(null)
     await load()
@@ -280,23 +285,24 @@ export default function Activities() {
                 <p className="text-xs text-slate-500 font-medium">
                   {Object.values(attendance).filter(s => s === 'attended').length} attended ·{' '}
                   {Object.values(attendance).filter(s => s === 'absent').length} absent ·{' '}
-                  {Object.values(attendance).filter(s => s === 'declined').length} declined
+                  {Object.values(attendance).filter(s => s === 'declined').length} declined ·{' '}
+                  {residents.filter(r => attendance[r.id] == null).length} unrecorded
                 </p>
               </div>
               <div className="space-y-2">
                 {residents.map(r => (
-                  <div key={r.id} className="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-3">
+                  <div key={r.id} className={`flex items-center justify-between rounded-xl px-4 py-3 ${attendance[r.id] == null ? 'bg-slate-100' : 'bg-slate-50'}`}>
                     <p className="text-sm font-medium text-slate-700">{r.first_name} {r.last_name}</p>
                     <div className="flex gap-1">
                       {[
-                        { val: 'attended', label: 'Attended', color: 'bg-emerald-100 text-emerald-700 border-emerald-200', active: 'bg-emerald-500 text-white border-emerald-500' },
-                        { val: 'absent', label: 'Absent', color: 'bg-slate-100 text-slate-500 border-slate-200', active: 'bg-slate-500 text-white border-slate-500' },
-                        { val: 'declined', label: 'Declined', color: 'bg-red-50 text-red-500 border-red-200', active: 'bg-red-500 text-white border-red-500' },
-                      ].map(({ val, label, color, active }) => (
+                        { val: 'attended', label: 'Attended', inactive: 'bg-white text-slate-400 border-slate-200 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200', active: 'bg-emerald-500 text-white border-emerald-500' },
+                        { val: 'absent', label: 'Absent', inactive: 'bg-white text-slate-400 border-slate-200 hover:bg-slate-100 hover:text-slate-600 hover:border-slate-300', active: 'bg-slate-500 text-white border-slate-500' },
+                        { val: 'declined', label: 'Declined', inactive: 'bg-white text-slate-400 border-slate-200 hover:bg-red-50 hover:text-red-500 hover:border-red-200', active: 'bg-red-500 text-white border-red-500' },
+                      ].map(({ val, label, inactive, active }) => (
                         <button
                           key={val}
-                          onClick={() => setAttendance(a => ({ ...a, [r.id]: val }))}
-                          className={`text-xs font-medium px-2.5 py-1 rounded-lg border transition-colors ${attendance[r.id] === val ? active : color}`}
+                          onClick={() => setAttendance(a => ({ ...a, [r.id]: a[r.id] === val ? null : val }))}
+                          className={`text-xs font-medium px-2.5 py-1 rounded-lg border transition-colors ${attendance[r.id] === val ? active : inactive}`}
                         >
                           {label}
                         </button>

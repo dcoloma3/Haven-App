@@ -1,3 +1,14 @@
+/*
+-- Run in Supabase SQL editor:
+alter table residents add column if not exists gender text;
+alter table residents add column if not exists insurance_carrier text;
+alter table residents add column if not exists insurance_id text;
+alter table residents add column if not exists admission_type text;
+alter table emergency_contacts add column if not exists email text;
+alter table emergency_contacts add column if not exists is_primary boolean not null default false;
+alter table emergency_contacts add column if not exists is_poa boolean not null default false;
+*/
+
 import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { RESIDENT_COLORS, getColor } from '../../lib/colors'
@@ -22,6 +33,17 @@ function Field({ label, value, wide }) {
 }
 
 const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
+
+const GENDER_OPTIONS = ['Male', 'Female', 'Non-binary', 'Other', 'Prefer not to say']
+const ADMISSION_TYPE_OPTIONS = [
+  'Private Pay',
+  'Medicare',
+  'Medicaid',
+  'Medi-Cal',
+  'VA Benefits',
+  'Long-Term Care Insurance',
+  'Other',
+]
 
 export default function ResidentProfile({ resident, onUpdate }) {
   const { communityId } = useCommunity()
@@ -55,6 +77,11 @@ export default function ResidentProfile({ resident, onUpdate }) {
         room_number: form.room_number || null,
         move_in_date: form.move_in_date || null,
         physician: form.physician || null,
+        physician_phone: form.physician_phone || null,
+        gender: form.gender || null,
+        insurance_carrier: form.insurance_carrier || null,
+        insurance_id: form.insurance_id || null,
+        admission_type: form.admission_type || null,
         notes: form.notes || null,
         color: form.color || 'blue',
       })
@@ -88,16 +115,36 @@ export default function ResidentProfile({ resident, onUpdate }) {
               <button onClick={startEdit} className="text-sm text-[#185FA5] hover:text-[#0C447C] transition-colors">Edit</button>
             </div>
           </div>
-          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+
+          {/* Personal Info */}
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-6">
             <Field label="First Name" value={resident.first_name || (resident.full_name?.split(' ')[0] ?? '')} />
             <Field label="Last Name" value={resident.last_name || (resident.full_name?.split(' ').slice(-1)[0] ?? '')} />
             <Field label="Middle Name" value={resident.middle_name} />
+            <Field label="Gender" value={resident.gender} />
             <Field label="Date of Birth" value={formatDate(resident.date_of_birth)} />
             <Field label="Room Number" value={resident.room_number} />
             <Field label="Move-in Date" value={formatDate(resident.move_in_date)} />
-            <Field label="Physician" value={resident.physician} />
-            <Field label="Notes" value={resident.notes} wide />
+            <Field label="Admission Type" value={resident.admission_type} />
+            <Field label="Primary Physician" value={resident.physician} />
+            <Field label="Physician Phone" value={resident.physician_phone} />
           </dl>
+
+          {/* Financial & Insurance */}
+          <div className="border-t border-slate-100 pt-5 mb-5">
+            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-4">Financial &amp; Insurance</h3>
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <Field label="Insurance Carrier" value={resident.insurance_carrier} />
+              <Field label="Insurance ID / Member #" value={resident.insurance_id} />
+            </dl>
+          </div>
+
+          {/* Notes */}
+          <div className="border-t border-slate-100 pt-5">
+            <dl className="grid grid-cols-1 gap-5">
+              <Field label="Notes" value={resident.notes} wide />
+            </dl>
+          </div>
         </div>
 
         {showEventForm && (
@@ -119,6 +166,7 @@ export default function ResidentProfile({ resident, onUpdate }) {
       <h2 className="font-medium text-slate-700 mb-5">Edit Profile</h2>
       <div className="space-y-4">
 
+        {/* Name */}
         <div className="grid grid-cols-3 gap-3">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">First Name <span className="text-red-500">*</span></label>
@@ -134,33 +182,76 @@ export default function ResidentProfile({ resident, onUpdate }) {
           </div>
         </div>
 
+        {/* Gender + DOB */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Gender</label>
+            <select className={inputCls} value={form.gender ?? ''} onChange={e => set('gender', e.target.value)}>
+              <option value="">— Select —</option>
+              {GENDER_OPTIONS.map(g => <option key={g} value={g}>{g}</option>)}
+            </select>
+          </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Date of Birth</label>
             <input type="date" className={inputCls} value={form.date_of_birth ?? ''} onChange={e => set('date_of_birth', e.target.value)} />
           </div>
+        </div>
+
+        {/* Room + Move-in */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Room Number</label>
             <input className={inputCls} value={form.room_number ?? ''} onChange={e => set('room_number', e.target.value)} placeholder="e.g. 1" />
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Move-in Date</label>
             <input type="date" className={inputCls} value={form.move_in_date ?? ''} onChange={e => set('move_in_date', e.target.value)} />
           </div>
+        </div>
+
+        {/* Admission Type */}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Admission Type</label>
+          <select className={inputCls} value={form.admission_type ?? ''} onChange={e => set('admission_type', e.target.value)}>
+            <option value="">— Select —</option>
+            {ADMISSION_TYPE_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+
+        {/* Primary Physician + Physician Phone */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Physician</label>
-            <input className={inputCls} value={form.physician ?? ''} onChange={e => set('physician', e.target.value)} />
+            <label className="block text-sm font-medium text-slate-700 mb-1">Primary Physician</label>
+            <input className={inputCls} value={form.physician ?? ''} onChange={e => set('physician', e.target.value)} placeholder="Dr. Smith" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Physician Phone</label>
+            <input type="tel" className={inputCls} value={form.physician_phone ?? ''} onChange={e => set('physician_phone', e.target.value)} placeholder="(555) 000-0000" />
           </div>
         </div>
 
+        {/* Financial & Insurance */}
+        <div className="border-t border-slate-100 pt-4">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Financial &amp; Insurance</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Insurance Carrier</label>
+              <input className={inputCls} value={form.insurance_carrier ?? ''} onChange={e => set('insurance_carrier', e.target.value)} placeholder="e.g. Medicare" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Insurance ID / Member #</label>
+              <input className={inputCls} value={form.insurance_id ?? ''} onChange={e => set('insurance_id', e.target.value)} placeholder="e.g. 1EG4-TE5-MK72" />
+            </div>
+          </div>
+        </div>
+
+        {/* Notes */}
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">Notes</label>
           <textarea className={`${inputCls} resize-none`} rows={3} value={form.notes ?? ''} onChange={e => set('notes', e.target.value)} />
         </div>
 
+        {/* Color */}
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-2">Color</label>
           <div className="flex gap-2.5">

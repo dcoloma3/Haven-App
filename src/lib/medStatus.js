@@ -30,7 +30,8 @@ export function isMedDueOnDate(med, dateStr) {
 /**
  * Compute a single resident's med status for a given date.
  * @param {Array} meds - medications for this resident
- * @param {Set} administeredSet - Set of `${medicationId}::${time}` strings already given
+ * @param {Set} administeredSet - Set of `${medicationId}::${time}` strings already documented
+ *   (admin_status = 'given' | 'refused' | 'held' all count as documented)
  * @param {string} dateStr - YYYY-MM-DD
  * @returns {'no_meds' | 'none' | 'partial' | 'all'}
  */

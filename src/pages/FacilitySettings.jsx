@@ -1,3 +1,9 @@
+/*
+-- Run in Supabase SQL editor to add new community columns:
+alter table communities add column if not exists total_beds integer;
+alter table communities add column if not exists default_monthly_rate numeric(10,2);
+*/
+
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
@@ -9,7 +15,7 @@ const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm fo
 export default function FacilitySettings() {
   const navigate = useNavigate()
   const { community, reload } = useCommunity()
-  const [form, setForm] = useState({ name: '', license_number: '', address: '', phone: '', email: '', website: '' })
+  const [form, setForm] = useState({ name: '', license_number: '', address: '', phone: '', email: '', website: '', total_beds: '', default_monthly_rate: '' })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
@@ -23,6 +29,8 @@ export default function FacilitySettings() {
         phone: community.phone ?? '',
         email: community.email ?? '',
         website: community.website ?? '',
+        total_beds: community.total_beds ?? '',
+        default_monthly_rate: community.default_monthly_rate ?? '',
       })
     }
   }, [community])
@@ -46,6 +54,8 @@ export default function FacilitySettings() {
         phone: form.phone || null,
         email: form.email || null,
         website: form.website || null,
+        total_beds: form.total_beds !== '' ? Number(form.total_beds) : null,
+        default_monthly_rate: form.default_monthly_rate !== '' ? Number(form.default_monthly_rate) : null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', community.id)
@@ -101,6 +111,19 @@ export default function FacilitySettings() {
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Website</label>
             <input type="url" className={inputCls} value={form.website} onChange={e => set('website', e.target.value)} placeholder="https://facility.com" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Total Beds</label>
+              <input type="number" min="0" step="1" className={inputCls} value={form.total_beds} onChange={e => set('total_beds', e.target.value)} placeholder="e.g. 20" />
+              <p className="text-xs text-slate-400 mt-1">Used by Occupancy reports</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Default Monthly Rate ($)</label>
+              <input type="number" min="0" step="0.01" className={inputCls} value={form.default_monthly_rate} onChange={e => set('default_monthly_rate', e.target.value)} placeholder="e.g. 4500" />
+              <p className="text-xs text-slate-400 mt-1">Used by Billing as a default</p>
+            </div>
           </div>
 
           {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}

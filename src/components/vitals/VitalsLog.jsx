@@ -1,3 +1,12 @@
+/*
+-- Run in Supabase SQL editor:
+alter table vital_signs add column if not exists blood_glucose numeric(5,1);
+alter table vital_signs add column if not exists pain_scale integer;
+alter table dietary_profiles add column if not exists liquid_thickness text default 'Thin';
+alter table medication_administrations add column if not exists admin_status text default 'given';
+alter table medication_administrations add column if not exists admin_notes text;
+*/
+
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useCommunity } from '../../context/CommunityContext'
@@ -11,11 +20,42 @@ function isOutOfRange(field, value) {
   if (field === 'pulse') return v > 100 || v < 60
   if (field === 'oxygen_saturation') return v < 95
   if (field === 'temperature') return v > 99.5 || v < 97.0
+  if (field === 'blood_glucose') return v > 180 || v < 70
+  if (field === 'pain_scale') return v >= 4
   return false
 }
 
+function isPainRed(value) {
+  if (value == null || value === '') return false
+  return Number(value) >= 7
+}
+
+function isPainAmber(value) {
+  if (value == null || value === '') return false
+  const v = Number(value)
+  return v >= 4 && v < 7
+}
+
 function anyOutOfRange(record) {
-  return ['systolic', 'diastolic', 'pulse', 'oxygen_saturation', 'temperature'].some(f => isOutOfRange(f, record[f]))
+  return ['systolic', 'diastolic', 'pulse', 'oxygen_saturation', 'temperature', 'blood_glucose', 'pain_scale'].some(
+    f => isOutOfRange(f, record[f])
+  )
+}
+
+function painColor(val) {
+  if (val == null || val === '') return ''
+  const v = Number(val)
+  if (v >= 7) return 'text-red-600'
+  if (v >= 4) return 'text-amber-600'
+  return 'text-emerald-600'
+}
+
+function painBg(val) {
+  if (val == null || val === '') return 'bg-slate-50'
+  const v = Number(val)
+  if (v >= 7) return 'bg-red-50'
+  if (v >= 4) return 'bg-amber-50'
+  return 'bg-emerald-50'
 }
 
 const RANGES = {
@@ -25,25 +65,32 @@ const RANGES = {
   temperature: 'Normal: 97.0–99.5 °F',
   oxygen_saturation: 'Normal: ≥95%',
   weight: '',
+  blood_glucose: 'Normal fasting: 70–100 mg/dL',
+  pain_scale: '0 = No pain, 10 = Worst pain',
+}
+
+const EMPTY_FORM = {
+  recorded_at: new Date().toISOString().slice(0, 16),
+  systolic: '',
+  diastolic: '',
+  pulse: '',
+  temperature: '',
+  oxygen_saturation: '',
+  weight: '',
+  blood_glucose: '',
+  pain_scale: '',
+  notes: '',
 }
 
 export default function VitalsLog({ residentId, resident }) {
-  const { communityId } = useCommunity()
+  const { communityId, isAdmin } = useCommunity()
   const { profile } = useProfile()
   const [records, setRecords] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
+  const [editRecord, setEditRecord] = useState(null) // null = new, object = editing existing
   const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({
-    recorded_at: new Date().toISOString().slice(0, 16),
-    systolic: '',
-    diastolic: '',
-    pulse: '',
-    temperature: '',
-    oxygen_saturation: '',
-    weight: '',
-    notes: '',
-  })
+  const [form, setForm] = useState(EMPTY_FORM)
 
   const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
 
@@ -63,6 +110,35 @@ export default function VitalsLog({ residentId, resident }) {
     setForm(f => ({ ...f, [field]: value }))
   }
 
+  function openNew() {
+    setEditRecord(null)
+    setForm(EMPTY_FORM)
+    setShowModal(true)
+  }
+
+  function openEdit(r) {
+    setEditRecord(r)
+    setForm({
+      recorded_at: r.recorded_at ? r.recorded_at.slice(0, 16) : new Date().toISOString().slice(0, 16),
+      systolic: r.systolic ?? '',
+      diastolic: r.diastolic ?? '',
+      pulse: r.pulse ?? '',
+      temperature: r.temperature ?? '',
+      oxygen_saturation: r.oxygen_saturation ?? '',
+      weight: r.weight ?? '',
+      blood_glucose: r.blood_glucose ?? '',
+      pain_scale: r.pain_scale ?? '',
+      notes: r.notes ?? '',
+    })
+    setShowModal(true)
+  }
+
+  function closeModal() {
+    setShowModal(false)
+    setEditRecord(null)
+    setForm(EMPTY_FORM)
+  }
+
   async function handleSave() {
     setSaving(true)
     const authorName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Staff'
@@ -77,9 +153,18 @@ export default function VitalsLog({ residentId, resident }) {
       temperature: form.temperature !== '' ? parseFloat(form.temperature) : null,
       oxygen_saturation: form.oxygen_saturation !== '' ? parseInt(form.oxygen_saturation) : null,
       weight: form.weight !== '' ? parseFloat(form.weight) : null,
+      blood_glucose: form.blood_glucose !== '' ? parseFloat(form.blood_glucose) : null,
+      pain_scale: form.pain_scale !== '' ? parseInt(form.pain_scale) : null,
       notes: form.notes.trim() || null,
     }
-    const { error } = await supabase.from('vital_signs').insert(payload)
+
+    let error
+    if (editRecord) {
+      ;({ error } = await supabase.from('vital_signs').update(payload).eq('id', editRecord.id))
+    } else {
+      ;({ error } = await supabase.from('vital_signs').insert(payload))
+    }
+
     if (error) {
       console.error(error)
       alert('Something went wrong. Please try again.')
@@ -87,8 +172,13 @@ export default function VitalsLog({ residentId, resident }) {
       return
     }
     setSaving(false)
-    setShowModal(false)
-    setForm({ recorded_at: new Date().toISOString().slice(0, 16), systolic: '', diastolic: '', pulse: '', temperature: '', oxygen_saturation: '', weight: '', notes: '' })
+    closeModal()
+    await fetchRecords()
+  }
+
+  async function handleDelete(r) {
+    if (!window.confirm('Delete this vital signs record? This cannot be undone.')) return
+    await supabase.from('vital_signs').delete().eq('id', r.id)
     await fetchRecords()
   }
 
@@ -99,7 +189,7 @@ export default function VitalsLog({ residentId, resident }) {
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-slate-700">Vital Signs Log</h3>
         <button
-          onClick={() => setShowModal(true)}
+          onClick={openNew}
           className="bg-[#185FA5] hover:bg-[#0C447C] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2"
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -128,9 +218,27 @@ export default function VitalsLog({ residentId, resident }) {
                   <p className="text-sm font-semibold text-slate-800">{new Date(r.recorded_at).toLocaleString()}</p>
                   {r.recorded_by_name && <p className="text-xs text-slate-400">Recorded by {r.recorded_by_name}</p>}
                 </div>
-                {anyOutOfRange(r) && (
-                  <span className="bg-red-100 text-red-600 text-xs font-semibold px-2.5 py-1 rounded-full">Alert</span>
-                )}
+                <div className="flex items-center gap-2">
+                  {anyOutOfRange(r) && (
+                    <span className="bg-red-100 text-red-600 text-xs font-semibold px-2.5 py-1 rounded-full">Alert</span>
+                  )}
+                  {isAdmin && (
+                    <>
+                      <button
+                        onClick={() => openEdit(r)}
+                        className="text-xs text-[#185FA5] hover:text-[#0C447C] font-medium transition-colors px-2 py-1 rounded-lg hover:bg-[#E6F1FB]"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(r)}
+                        className="text-xs text-red-400 hover:text-red-600 font-medium transition-colors px-2 py-1 rounded-lg hover:bg-red-50"
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {r.systolic != null && (
@@ -169,6 +277,18 @@ export default function VitalsLog({ residentId, resident }) {
                     <p className="text-sm font-semibold text-slate-800">{r.weight} lbs</p>
                   </div>
                 )}
+                {r.blood_glucose != null && (
+                  <div className={`p-2 rounded-lg ${isOutOfRange('blood_glucose', r.blood_glucose) ? 'bg-red-50' : 'bg-slate-50'}`}>
+                    <p className="text-xs text-slate-500">Blood Glucose</p>
+                    <p className={`text-sm font-semibold ${isOutOfRange('blood_glucose', r.blood_glucose) ? 'text-red-600' : 'text-slate-800'}`}>{r.blood_glucose} mg/dL</p>
+                  </div>
+                )}
+                {r.pain_scale != null && (
+                  <div className={`p-2 rounded-lg ${painBg(r.pain_scale)}`}>
+                    <p className="text-xs text-slate-500">Pain Scale</p>
+                    <p className={`text-sm font-semibold ${painColor(r.pain_scale)}`}>{r.pain_scale}/10</p>
+                  </div>
+                )}
               </div>
               {r.notes && <p className="text-xs text-slate-500 mt-3 pt-3 border-t border-slate-100">{r.notes}</p>}
             </div>
@@ -176,13 +296,13 @@ export default function VitalsLog({ residentId, resident }) {
         </div>
       )}
 
-      {/* Record Vitals Modal */}
+      {/* Record / Edit Vitals Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
           <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-2xl max-h-[92vh] flex flex-col">
             <div className="sticky top-0 bg-white border-b border-slate-200 px-5 py-4 flex items-center justify-between rounded-t-2xl sm:rounded-t-2xl">
-              <h2 className="font-bold text-slate-800 text-lg">Record Vital Signs</h2>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+              <h2 className="font-bold text-slate-800 text-lg">{editRecord ? 'Edit Vital Signs' : 'Record Vital Signs'}</h2>
+              <button onClick={closeModal} className="text-slate-400 hover:text-slate-600 transition-colors">
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
@@ -201,30 +321,61 @@ export default function VitalsLog({ residentId, resident }) {
                   { key: 'temperature', label: 'Temperature (°F)' },
                   { key: 'oxygen_saturation', label: 'O2 Sat (%)' },
                   { key: 'weight', label: 'Weight (lbs)' },
+                  { key: 'blood_glucose', label: 'Blood Glucose (mg/dL)' },
                 ].map(({ key, label }) => (
                   <div key={key}>
                     <label className="block text-xs font-medium text-slate-600 mb-1">{label}</label>
                     <input
                       type="number"
-                      step={key === 'temperature' || key === 'weight' ? '0.1' : '1'}
+                      step={key === 'temperature' || key === 'weight' || key === 'blood_glucose' ? '0.1' : '1'}
                       value={form[key]}
                       onChange={e => handleChange(key, e.target.value)}
                       className={`${inputCls} ${isOutOfRange(key, form[key]) ? 'border-red-300 ring-red-200' : ''}`}
                       placeholder="—"
                     />
-                    {RANGES[key] && <p className="text-xs text-slate-400 mt-0.5">{RANGES[key]}</p>}
+                    {RANGES[key] && (
+                      <p className={`text-xs mt-0.5 ${isOutOfRange(key, form[key]) ? 'text-red-500 font-medium' : 'text-slate-400'}`}>
+                        {RANGES[key]}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
+
+              {/* Pain Scale */}
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Pain Scale (0–10)</label>
+                <div className="flex gap-1 flex-wrap">
+                  {[0,1,2,3,4,5,6,7,8,9,10].map(n => {
+                    const isSelected = form.pain_scale !== '' && parseInt(form.pain_scale) === n
+                    let colorCls
+                    if (n <= 3) colorCls = isSelected ? 'bg-emerald-500 text-white border-emerald-500' : 'border-emerald-300 text-emerald-700 hover:bg-emerald-50'
+                    else if (n <= 6) colorCls = isSelected ? 'bg-amber-500 text-white border-amber-500' : 'border-amber-300 text-amber-700 hover:bg-amber-50'
+                    else colorCls = isSelected ? 'bg-red-500 text-white border-red-500' : 'border-red-300 text-red-700 hover:bg-red-50'
+                    return (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => handleChange('pain_scale', isSelected ? '' : String(n))}
+                        className={`w-9 h-9 rounded-lg border text-xs font-semibold transition-colors ${colorCls}`}
+                      >
+                        {n}
+                      </button>
+                    )
+                  })}
+                </div>
+                <p className="text-xs text-slate-400 mt-1">{RANGES.pain_scale}</p>
+              </div>
+
               <div>
                 <label className="block text-xs font-medium text-slate-600 mb-1">Notes</label>
                 <textarea value={form.notes} onChange={e => handleChange('notes', e.target.value)} rows={3} className={inputCls + ' resize-none'} placeholder="Optional notes…" />
               </div>
             </div>
             <div className="sticky bottom-0 bg-white border-t border-slate-200 px-5 py-4 flex gap-3">
-              <button onClick={() => setShowModal(false)} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
+              <button onClick={closeModal} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
               <button onClick={handleSave} disabled={saving} className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
-                {saving ? 'Saving…' : 'Save Vitals'}
+                {saving ? 'Saving…' : editRecord ? 'Update Vitals' : 'Save Vitals'}
               </button>
             </div>
           </div>

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import Layout from '../components/layout/Layout'
 import ResidentForm from '../components/residents/ResidentForm'
@@ -84,8 +84,6 @@ function StatusBadge({ reason }) {
   )
 }
 
-const TODAY_STR = new Date().toISOString().split('T')[0]
-
 export default function Dashboard() {
   const [residents, setResidents] = useState([])
   const [loading, setLoading] = useState(true)
@@ -93,6 +91,10 @@ export default function Dashboard() {
   const [showFormer, setShowFormer] = useState(false)
   const [search, setSearch] = useState('')
   const [medStatusMap, setMedStatusMap] = useState({})
+  const [todayStr, setTodayStr] = useState(() => new Date().toISOString().split('T')[0])
+  const [openIncidentCount, setOpenIncidentCount] = useState(0)
+  const [highSeverityCount, setHighSeverityCount] = useState(0)
+  const [apptCount, setApptCount] = useState(0)
   const navigate = useNavigate()
   const location = useLocation()
   const unauthorized = location.state?.unauthorized
@@ -104,6 +106,30 @@ export default function Dashboard() {
   useEffect(() => {
     if (openAddResident) setShowForm(true)
   }, [openAddResident])
+
+  // Keep todayStr in sync — updates when the clock rolls past midnight
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const newDate = new Date().toISOString().split('T')[0]
+      setTodayStr(prev => prev !== newDate ? newDate : prev)
+    }, 60000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Fetch open incidents and today's appointments
+  useEffect(() => {
+    if (!communityId || showFormer) return
+    async function fetchSummaryStats() {
+      const [{ data: incidents }, { data: appts }] = await Promise.all([
+        supabase.from('incidents').select('id, severity').eq('community_id', communityId).eq('status', 'open'),
+        supabase.from('calendar_events').select('id').eq('community_id', communityId).eq('start_date', todayStr),
+      ])
+      setOpenIncidentCount((incidents ?? []).length)
+      setHighSeverityCount((incidents ?? []).filter(i => i.severity === 'high').length)
+      setApptCount((appts ?? []).length)
+    }
+    fetchSummaryStats()
+  }, [communityId, showFormer, todayStr])
 
   const fetchResidents = useCallback(() => {
     if (!communityId) return
@@ -128,7 +154,7 @@ export default function Dashboard() {
     async function fetchMedStatuses() {
       const [{ data: meds }, { data: admins }] = await Promise.all([
         supabase.from('medications').select('id, resident_id, scheduled_times, frequency_type, frequency_days, frequency_interval, start_date, end_date').eq('community_id', communityId),
-        supabase.from('medication_administrations').select('medication_id, scheduled_time, resident_id').eq('administered_date', TODAY_STR),
+        supabase.from('medication_administrations').select('medication_id, scheduled_time, resident_id').eq('administered_date', todayStr),
       ])
       if (!meds) return
       const statusMap = {}
@@ -143,12 +169,12 @@ export default function Dashboard() {
         adminsByResident[a.resident_id].add(adminKey(a.medication_id, a.scheduled_time))
       })
       Object.entries(medsByResident).forEach(([rid, rMeds]) => {
-        statusMap[rid] = computeResidentStatus(rMeds, adminsByResident[rid] ?? new Set(), TODAY_STR)
+        statusMap[rid] = computeResidentStatus(rMeds, adminsByResident[rid] ?? new Set(), todayStr)
       })
       setMedStatusMap(statusMap)
     }
     fetchMedStatuses()
-  }, [communityId, showFormer])
+  }, [communityId, showFormer, todayStr])
 
   function handleSaved(newResident) {
     setResidents(prev => [...prev, newResident].sort((a, b) => getResidentFullName(a).localeCompare(getResidentFullName(b))))
@@ -176,6 +202,65 @@ export default function Dashboard() {
         <div className="mb-6">
           <p className="text-sm font-medium text-slate-400 uppercase tracking-widest mb-1">Welcome to</p>
           <h1 className="text-3xl font-bold text-slate-800 leading-tight">{community.name}</h1>
+        </div>
+      )}
+
+      {/* Summary stats bar — active residents only */}
+      {!showFormer && !loading && residents.length > 0 && (
+        <div className="mb-5 space-y-3">
+          {/* High-severity alert banner */}
+          {highSeverityCount > 0 && (
+            <div className="flex items-center justify-between bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
+              <span>⚠ {highSeverityCount} high-severity incident{highSeverityCount !== 1 ? 's' : ''} require attention</span>
+              <Link to="/incidents" className="text-red-600 hover:text-red-800 font-semibold ml-4 flex-shrink-0 underline">View</Link>
+            </div>
+          )}
+
+          {/* Stats grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {/* Active Residents */}
+            <div className="bg-white border border-slate-200 rounded-2xl px-4 py-3 text-center">
+              <p className="text-2xl font-bold text-slate-800">{residents.length}</p>
+              <p className="text-xs text-slate-500 mt-0.5">Active Residents</p>
+            </div>
+
+            {/* Meds Incomplete */}
+            {(() => {
+              const medsIncomplete = residents.filter(r => {
+                const s = medStatusMap[r.id]
+                return s === 'none' || s === 'partial'
+              }).length
+              const isAmber = medsIncomplete > 0
+              return (
+                <div className={`rounded-2xl px-4 py-3 text-center border ${isAmber ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'}`}>
+                  <p className={`text-2xl font-bold ${isAmber ? 'text-amber-700' : 'text-emerald-700'}`}>{medsIncomplete}</p>
+                  <p className={`text-xs mt-0.5 ${isAmber ? 'text-amber-600' : 'text-emerald-600'}`}>Meds Incomplete</p>
+                </div>
+              )
+            })()}
+
+            {/* Open Incidents */}
+            {(() => {
+              const isRed = openIncidentCount > 0
+              return (
+                <div className={`rounded-2xl px-4 py-3 text-center border ${isRed ? 'bg-red-50 border-red-200' : 'bg-white border-slate-200'}`}>
+                  <p className={`text-2xl font-bold ${isRed ? 'text-red-700' : 'text-slate-800'}`}>{openIncidentCount}</p>
+                  <p className={`text-xs mt-0.5 ${isRed ? 'text-red-600' : 'text-slate-500'}`}>Open Incidents</p>
+                </div>
+              )
+            })()}
+
+            {/* Appointments Today */}
+            {(() => {
+              const hasAppts = apptCount > 0
+              return (
+                <div className={`rounded-2xl px-4 py-3 text-center border ${hasAppts ? 'border-[#185FA5] bg-[#E6F1FB]' : 'bg-white border-slate-200'}`}>
+                  <p className={`text-2xl font-bold ${hasAppts ? 'text-[#185FA5]' : 'text-slate-800'}`}>{apptCount}</p>
+                  <p className={`text-xs mt-0.5 ${hasAppts ? 'text-[#185FA5]' : 'text-slate-500'}`}>Appts Today</p>
+                </div>
+              )
+            })()}
+          </div>
         </div>
       )}
 

@@ -3,6 +3,7 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { supabase } from '../../lib/supabase'
 import { isMedDueOnDate } from '../../lib/medStatus'
+import { useCommunity } from '../../context/CommunityContext'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -93,6 +94,7 @@ const PRESETS = [
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function ResidentMedHistory({ residentId, resident }) {
+  const { community } = useCommunity()
   const [rangePreset, setRangePreset] = useState('month')
   const [customFrom, setCustomFrom] = useState('')
   const [customTo, setCustomTo] = useState('')
@@ -207,7 +209,7 @@ export default function ResidentMedHistory({ residentId, resident }) {
       doc.text('Medication Administration Record (MAR)', 14, 11)
       doc.setFontSize(8)
       doc.setFont('helvetica', 'normal')
-      doc.text(`The Haven  ·  Generated: ${generatedOn}`, 14, 18)
+      doc.text(`${community?.name ?? 'Haven'}  ·  Generated: ${generatedOn}`, 14, 18)
       doc.text(modeLabel, 14, 24)
       if (selectedMed) {
         doc.setFont('helvetica', 'bold')

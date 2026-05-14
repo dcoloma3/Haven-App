@@ -281,23 +281,165 @@ function MedicationModal({ residentId, medication, onClose, onSaved }) {
   )
 }
 
-// ─── Today's Dispense Checkbox ────────────────────────────────────────────────
+// ─── Admin Status Badge ───────────────────────────────────────────────────────
 
-function TodayCheckbox({ done, toggling, onToggle }) {
+function AdminStatusBadge({ status }) {
+  if (!status) return null
+  if (status === 'given') return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">Given</span>
+  if (status === 'refused') return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">Refused</span>
+  if (status === 'held') return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">Held</span>
+  return null
+}
+
+// ─── 3-State Dose Row ─────────────────────────────────────────────────────────
+
+function DoseRow({ med, time, record, toggling, onSet }) {
+  const [noteValue, setNoteValue] = useState('')
+  const [showNoteInput, setShowNoteInput] = useState(null) // 'refused' | 'held' | null
+  const [savingNote, setSavingNote] = useState(false)
+
+  const status = record?.admin_status ?? null
+  const key = adminKey(med.id, time)
+  const isTogg = toggling.has(key)
+
+  async function handleAction(newStatus) {
+    // If clicking the already-active status, remove the record
+    if (status === newStatus) {
+      onSet(med, time, null, null)
+      setShowNoteInput(null)
+      return
+    }
+    // For given: save immediately, no note needed
+    if (newStatus === 'given') {
+      onSet(med, time, newStatus, null)
+      setShowNoteInput(null)
+    } else {
+      // refused or held: show inline note input
+      setShowNoteInput(newStatus)
+    }
+  }
+
+  async function handleSaveNote() {
+    setSavingNote(true)
+    await onSet(med, time, showNoteInput, noteValue.trim() || null)
+    setSavingNote(false)
+    setShowNoteInput(null)
+    setNoteValue('')
+  }
+
+  function handleCancelNote() {
+    setShowNoteInput(null)
+    setNoteValue('')
+  }
+
+  const btnBase = 'flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-all'
+
   return (
-    <button
-      onClick={onToggle}
-      disabled={toggling}
-      className={`flex-shrink-0 w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all active:scale-95 ${
-        done ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-300 bg-white hover:border-[#185FA5]'
-      } ${toggling ? 'opacity-40' : ''}`}
-    >
-      {done && (
-        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="20 6 9 17 4 12" />
-        </svg>
+    <div className={`px-5 py-3.5 transition-colors ${status === 'given' ? 'bg-emerald-50/50' : status === 'refused' ? 'bg-red-50/30' : status === 'held' ? 'bg-amber-50/30' : ''}`}>
+      <div className="flex items-center gap-3">
+        <div className="flex-1 min-w-0">
+          <p className={`text-sm font-medium truncate ${status === 'given' ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
+            {med.medication_name}
+          </p>
+          <p className="text-xs text-slate-400 mt-0.5">
+            {[med.dose, fmt12(time)].filter(Boolean).join(' · ')}
+          </p>
+          {status === 'given' && record?.administered_at && (
+            <p className="text-xs text-emerald-600 mt-0.5">
+              Given at {new Date(record.administered_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+            </p>
+          )}
+          {status && <div className="mt-1"><AdminStatusBadge status={status} /></div>}
+          {record?.admin_notes && (
+            <p className="text-xs text-slate-400 mt-0.5 italic">{record.admin_notes}</p>
+          )}
+        </div>
+
+        {/* 3-state buttons */}
+        <div className={`flex gap-1.5 flex-shrink-0 ${isTogg ? 'opacity-50 pointer-events-none' : ''}`}>
+          {/* Given */}
+          <button
+            onClick={() => handleAction('given')}
+            title="Mark Given"
+            className={`${btnBase} ${
+              status === 'given'
+                ? 'bg-emerald-500 border-emerald-500 text-white'
+                : 'border-slate-200 text-slate-500 hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50'
+            }`}
+          >
+            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            <span className="hidden sm:inline">Given</span>
+          </button>
+
+          {/* Refused */}
+          <button
+            onClick={() => handleAction('refused')}
+            title="Mark Refused"
+            className={`${btnBase} ${
+              status === 'refused'
+                ? 'bg-red-500 border-red-500 text-white'
+                : 'border-slate-200 text-slate-500 hover:border-red-400 hover:text-red-600 hover:bg-red-50'
+            }`}
+          >
+            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+            <span className="hidden sm:inline">Refused</span>
+          </button>
+
+          {/* Held */}
+          <button
+            onClick={() => handleAction('held')}
+            title="Mark Held"
+            className={`${btnBase} ${
+              status === 'held'
+                ? 'bg-amber-500 border-amber-500 text-white'
+                : 'border-slate-200 text-slate-500 hover:border-amber-400 hover:text-amber-600 hover:bg-amber-50'
+            }`}
+          >
+            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" />
+            </svg>
+            <span className="hidden sm:inline">Held</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Inline note input for refused/held */}
+      {showNoteInput && (
+        <div className="mt-2.5 pl-0">
+          <p className="text-xs text-slate-500 mb-1.5 font-medium">
+            {showNoteInput === 'refused' ? 'Reason refused' : 'Reason held'} (optional)
+          </p>
+          <div className="flex gap-2 items-end">
+            <input
+              type="text"
+              value={noteValue}
+              onChange={e => setNoteValue(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleSaveNote() }}
+              placeholder="Add a note…"
+              className="flex-1 border border-slate-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent"
+              autoFocus
+            />
+            <button
+              onClick={handleSaveNote}
+              disabled={savingNote}
+              className="bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+            >
+              {savingNote ? '…' : 'Save'}
+            </button>
+            <button
+              onClick={handleCancelNote}
+              className="border border-slate-200 text-slate-600 text-xs px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors"
+            >
+              Skip
+            </button>
+          </div>
+        </div>
       )}
-    </button>
+    </div>
   )
 }
 
@@ -325,19 +467,21 @@ function TodayMedications({ residentId, medications, onStatusChange }) {
       })
   }, [residentId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function handleToggle(med, time) {
+  // Handle set/update/delete of a dose record
+  async function handleSet(med, time, newStatus, note) {
     const key = adminKey(med.id, time)
     if (toggling.has(key)) return
     setToggling(prev => new Set(prev).add(key))
 
-    let next
-    if (administered.has(key)) {
+    if (newStatus === null) {
+      // Remove the record
       const record = administered.get(key)
-      next = new Map(administered)
-      next.delete(key)
-      setAdministered(next)
-      await supabase.from('medication_administrations').delete().eq('id', record.id)
+      if (record) {
+        await supabase.from('medication_administrations').delete().eq('id', record.id)
+      }
+      setAdministered(prev => { const n = new Map(prev); n.delete(key); return n })
     } else {
+      const existingRecord = administered.get(key)
       const { data: { session } } = await supabase.auth.getSession()
       const payload = {
         medication_id: med.id,
@@ -345,27 +489,43 @@ function TodayMedications({ residentId, medications, onStatusChange }) {
         scheduled_time: time,
         administered_date: TODAY_STR,
         administered_by: session?.user?.id ?? null,
+        admin_status: newStatus,
+        admin_notes: note ?? null,
       }
-      next = new Map(administered)
-      next.set(key, { ...payload, id: 'temp' })
-      setAdministered(next)
-      const { data } = await supabase.from('medication_administrations').insert([payload]).select().single()
-      if (data) {
-        setAdministered(prev => { const n = new Map(prev); n.set(key, data); return n })
-        next = new Map(next)
-        next.set(key, data)
+
+      if (existingRecord) {
+        // Update existing
+        const { data } = await supabase
+          .from('medication_administrations')
+          .update({ admin_status: newStatus, admin_notes: note ?? null })
+          .eq('id', existingRecord.id)
+          .select()
+          .single()
+        if (data) {
+          setAdministered(prev => { const n = new Map(prev); n.set(key, data); return n })
+        }
+      } else {
+        // Insert new
+        const tempRecord = { ...payload, id: 'temp' }
+        setAdministered(prev => { const n = new Map(prev); n.set(key, tempRecord); return n })
+        const { data } = await supabase
+          .from('medication_administrations')
+          .insert([payload])
+          .select()
+          .single()
+        if (data) {
+          setAdministered(prev => { const n = new Map(prev); n.set(key, data); return n })
+        }
       }
     }
 
     setToggling(prev => { const n = new Set(prev); n.delete(key); return n })
-
-    // Notify parent so it can refresh the ring
     if (onStatusChange) onStatusChange()
   }
 
   const todayLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 
-  // Flatten to time-sorted rows: one row per (med, time) pair
+  // Flatten to time-sorted rows
   const rows = []
   todayMeds.forEach(med => {
     ;(med.scheduled_times ?? []).forEach(time => {
@@ -375,7 +535,8 @@ function TodayMedications({ residentId, medications, onStatusChange }) {
   rows.sort((a, b) => a.time.localeCompare(b.time))
 
   const totalDoses = rows.length
-  const doneDoses = rows.filter(({ med, time }) => administered.has(adminKey(med.id, time))).length
+  // Count as documented if any status is present (given, refused, held)
+  const documentedDoses = rows.filter(({ med, time }) => administered.has(adminKey(med.id, time))).length
 
   return (
     <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden mb-4">
@@ -386,8 +547,8 @@ function TodayMedications({ residentId, medications, onStatusChange }) {
           <p className="text-xs text-slate-400 mt-0.5">{todayLabel}</p>
         </div>
         {totalDoses > 0 && !loadingAdmins && (
-          <span className={`text-sm font-semibold flex-shrink-0 mt-0.5 ${doneDoses === totalDoses ? 'text-emerald-600' : doneDoses > 0 ? 'text-amber-500' : 'text-slate-400'}`}>
-            {doneDoses}/{totalDoses} given
+          <span className={`text-sm font-semibold flex-shrink-0 mt-0.5 ${documentedDoses === totalDoses ? 'text-emerald-600' : documentedDoses > 0 ? 'text-amber-500' : 'text-slate-400'}`}>
+            {documentedDoses}/{totalDoses} documented
           </span>
         )}
       </div>
@@ -402,28 +563,16 @@ function TodayMedications({ residentId, medications, onStatusChange }) {
         <div className="divide-y divide-slate-100">
           {rows.map(({ med, time }) => {
             const key = adminKey(med.id, time)
-            const isDone = administered.has(key)
-            const isTogg = toggling.has(key)
+            const record = administered.get(key) ?? null
             return (
-              <div
+              <DoseRow
                 key={key}
-                className={`flex items-center gap-3 px-5 py-3.5 transition-colors ${isDone ? 'bg-emerald-50/50' : ''}`}
-              >
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-medium truncate ${isDone ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
-                    {med.medication_name}
-                  </p>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    {[med.dose, fmt12(time)].filter(Boolean).join(' · ')}
-                  </p>
-                  {isDone && administered.get(key)?.administered_at && (
-                    <p className="text-xs text-emerald-600 mt-0.5">
-                      Given at {new Date(administered.get(key).administered_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-                    </p>
-                  )}
-                </div>
-                <TodayCheckbox done={isDone} toggling={isTogg} onToggle={() => handleToggle(med, time)} />
-              </div>
+                med={med}
+                time={time}
+                record={record}
+                toggling={toggling}
+                onSet={handleSet}
+              />
             )
           })}
         </div>
