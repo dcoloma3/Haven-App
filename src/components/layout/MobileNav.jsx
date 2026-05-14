@@ -135,14 +135,25 @@ export default function MobileNav() {
         </NavLink>
       )}
 
-      <NavLink to="/incidents" className={tabCls}>
-        {({ isActive }) => (
-          <>
-            <IncidentsIcon active={isActive} />
-            <span className="text-[10px] font-medium tracking-wide">Incidents</span>
-          </>
-        )}
-      </NavLink>
+      {isAdmin ? (
+        <NavLink to="/staff" className={tabCls}>
+          {({ isActive }) => (
+            <>
+              <StaffIcon active={isActive} />
+              <span className="text-[10px] font-medium tracking-wide">Staff</span>
+            </>
+          )}
+        </NavLink>
+      ) : (
+        <NavLink to="/incidents" className={tabCls}>
+          {({ isActive }) => (
+            <>
+              <IncidentsIcon active={isActive} />
+              <span className="text-[10px] font-medium tracking-wide">Incidents</span>
+            </>
+          )}
+        </NavLink>
+      )}
 
       <NavLink to="/profile" className={tabCls}>
         {({ isActive }) => (

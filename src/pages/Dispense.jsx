@@ -613,11 +613,6 @@ export default function Dispense() {
       {/* ── Header ── */}
       <div className="flex items-center justify-between mb-1">
         <h1 className="text-xl font-bold text-slate-800">Dispense</h1>
-        {dispenseTab === 'routine' && !loading && totalMeds > 0 && (
-          <span className="text-sm text-slate-500">
-            <span className="font-bold text-[#185FA5]">{totalDone}</span> / {totalMeds} given
-          </span>
-        )}
       </div>
 
       {/* ── Routine / PRN tabs ── */}
@@ -641,18 +636,50 @@ export default function Dispense() {
 
       {dispenseTab === 'routine' && (<>
 
-      {/* ── Date navigation ── */}
+      {/* ── Pass Progress stat cards ── */}
+      {!loading && totalMeds > 0 && (() => {
+        const pct = Math.round(totalDone / totalMeds * 100)
+        const allDone = totalDone === totalMeds
+        return (
+          <div className="grid grid-cols-4 gap-2 sm:gap-3 mb-5">
+            <div className="bg-white rounded-xl p-3 sm:p-3.5 border border-slate-200">
+              <p className="text-slate-400 mb-0.5 text-[11px] sm:text-xs">Total Doses</p>
+              <p className="font-bold text-slate-800 text-lg sm:text-xl">{totalMeds}</p>
+            </div>
+            <div className="bg-white rounded-xl p-3 sm:p-3.5 border border-slate-200">
+              <p className="text-slate-400 mb-0.5 text-[11px] sm:text-xs">Given</p>
+              <p className="font-bold text-lg sm:text-xl" style={{ color: '#22c55e' }}>{totalDone}</p>
+            </div>
+            <div className="bg-white rounded-xl p-3 sm:p-3.5 border border-slate-200">
+              <p className="text-slate-400 mb-0.5 text-[11px] sm:text-xs">Pending</p>
+              <p className="font-bold text-lg sm:text-xl" style={{ color: totalMeds - totalDone > 0 ? '#f59e0b' : '#94a3b8' }}>{totalMeds - totalDone}</p>
+            </div>
+            <div
+              className="rounded-xl p-3 sm:p-3.5"
+              style={{
+                backgroundColor: allDone ? '#dcfce7' : '#fef9c3',
+                border: `1px solid ${allDone ? '#86efac' : '#fde047'}`,
+              }}
+            >
+              <p className="mb-0.5 text-[11px] sm:text-xs" style={{ color: allDone ? '#15803d' : '#a16207' }}>Pass Progress</p>
+              <p className="font-bold text-lg sm:text-xl" style={{ color: allDone ? '#15803d' : '#a16207' }}>{pct}%</p>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* ── Date navigation — arrows flanking the date ── */}
       <div className="flex items-center gap-2 mb-6">
-        <button onClick={prevDay} className="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-500 active:bg-slate-100">
+        <button onClick={prevDay} className="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-500 active:bg-slate-100 flex-shrink-0">
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
         </button>
-        <button onClick={nextDay} className="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-500 active:bg-slate-100">
+        <span className="text-sm font-medium text-slate-600 flex-1 text-center truncate">{formatDisplayDate(date)}</span>
+        {!isToday && (
+          <button onClick={() => setDate(new Date())} className="text-xs font-semibold text-[#185FA5] flex-shrink-0">Today</button>
+        )}
+        <button onClick={nextDay} className="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-500 active:bg-slate-100 flex-shrink-0">
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
         </button>
-        <span className="text-sm font-medium text-slate-600 flex-1 truncate">{formatDisplayDate(date)}</span>
-        {!isToday && (
-          <button onClick={() => setDate(new Date())} className="text-xs font-semibold text-[#185FA5]">Today</button>
-        )}
       </div>
 
       {/* ── All-done completion banner ── */}
