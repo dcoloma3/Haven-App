@@ -181,7 +181,8 @@ export default function Occupancy() {
               </div>
             ) : (
               <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-                <table className="w-full text-sm">
+                <div className="overflow-x-auto">
+                <table className="w-full text-sm min-w-[480px]">
                   <thead>
                     <tr className="border-b border-slate-100 bg-slate-50">
                       <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Prospect</th>
@@ -232,6 +233,7 @@ export default function Occupancy() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
             )}
           </div>

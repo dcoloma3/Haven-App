@@ -175,9 +175,9 @@ export default function Certifications() {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-5">
-        <div className="flex gap-1 bg-white border border-slate-200 rounded-xl p-1">
+        <div className="flex gap-1 bg-white border border-slate-200 rounded-xl p-1 overflow-x-auto flex-shrink-0">
           {[['all', 'All'], ['expired', 'Expired'], ['expiring_soon', 'Expiring Soon'], ['valid', 'Valid']].map(([val, label]) => (
-            <button key={val} onClick={() => setFilter(val)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filter === val ? 'bg-[#185FA5] text-white' : 'text-slate-600 hover:bg-slate-100'}`}>{label}</button>
+            <button key={val} onClick={() => setFilter(val)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${filter === val ? 'bg-[#185FA5] text-white' : 'text-slate-600 hover:bg-slate-100'}`}>{label}</button>
           ))}
         </div>
         <input
@@ -209,7 +209,7 @@ export default function Certifications() {
                         <p className="text-sm font-medium text-slate-800">{c.cert_name}</p>
                         <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${STATUS_COLORS[c.computedStatus]}`}>{STATUS_LABELS[c.computedStatus]}</span>
                       </div>
-                      <div className="flex gap-3 text-xs text-slate-400">
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-400">
                         {c.issued_date && <span>Issued: {new Date(c.issued_date + 'T00:00:00').toLocaleDateString()}</span>}
                         {c.expiry_date && <span>Expires: {new Date(c.expiry_date + 'T00:00:00').toLocaleDateString()}</span>}
                         {c.cert_number && <span>#{c.cert_number}</span>}

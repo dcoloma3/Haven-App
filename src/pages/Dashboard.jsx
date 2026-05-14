@@ -265,11 +265,11 @@ export default function Dashboard() {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-4 gap-3">
-        <h1 className="text-xl font-bold text-slate-800 flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-between mb-4 gap-2">
+        <h1 className="text-xl font-bold text-slate-800">
           {showFormer ? 'Former Residents' : 'Residents'}
         </h1>
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="flex items-center gap-2">
           {/* Toggle: Active / Former */}
           <div className="flex items-center bg-slate-100 rounded-xl p-1 gap-1">
             <button

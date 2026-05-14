@@ -309,7 +309,7 @@ function MonthlyView({ date, shifts, colorMap, onAddShift, onEditShift }) {
                 </span>
                 <button
                   onClick={() => onAddShift(dateStr)}
-                  className="text-slate-300 hover:text-[#185FA5] opacity-0 group-hover:opacity-100 transition-all text-base leading-none"
+                  className="text-slate-300 hover:text-[#185FA5] sm:opacity-0 sm:group-hover:opacity-100 opacity-100 transition-all text-base leading-none p-1"
                   title="Add shift"
                 >
                   +

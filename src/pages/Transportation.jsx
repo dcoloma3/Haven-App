@@ -193,7 +193,8 @@ export default function Transportation() {
         </div>
       ) : (
         <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[600px]">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50">
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Resident</th>
@@ -237,6 +238,7 @@ export default function Transportation() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
@@ -275,18 +277,20 @@ export default function Transportation() {
                   </div>
                 )}
               </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="col-span-3 sm:col-span-1">
+              <div className="space-y-3">
+                <div>
                   <label className="block text-xs font-medium text-slate-600 mb-1">Date <span className="text-red-500">*</span></label>
                   <input type="date" value={form.trip_date} onChange={e => setForm(f => ({ ...f, trip_date: e.target.value }))} className={inputCls} />
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Departure</label>
-                  <input type="time" value={form.departure_time} onChange={e => setForm(f => ({ ...f, departure_time: e.target.value }))} className={inputCls} />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Return</label>
-                  <input type="time" value={form.return_time} onChange={e => setForm(f => ({ ...f, return_time: e.target.value }))} className={inputCls} />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Departure</label>
+                    <input type="time" value={form.departure_time} onChange={e => setForm(f => ({ ...f, departure_time: e.target.value }))} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Return</label>
+                    <input type="time" value={form.return_time} onChange={e => setForm(f => ({ ...f, return_time: e.target.value }))} className={inputCls} />
+                  </div>
                 </div>
               </div>
               <div>

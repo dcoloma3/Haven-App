@@ -320,9 +320,9 @@ export default function Activities() {
               </div>
               <div className="space-y-2">
                 {residents.map(r => (
-                  <div key={r.id} className={`flex items-center justify-between rounded-xl px-4 py-3 ${attendance[r.id] == null ? 'bg-slate-100' : 'bg-slate-50'}`}>
-                    <p className="text-sm font-medium text-slate-700">{r.first_name} {r.last_name}</p>
-                    <div className="flex gap-1">
+                  <div key={r.id} className={`flex items-center gap-2 rounded-xl px-4 py-3 ${attendance[r.id] == null ? 'bg-slate-100' : 'bg-slate-50'}`}>
+                    <p className="text-sm font-medium text-slate-700 flex-1 min-w-0 truncate">{r.first_name} {r.last_name}</p>
+                    <div className="flex gap-1 flex-shrink-0">
                       {[
                         { val: 'attended', label: 'Attended', inactive: 'bg-white text-slate-400 border-slate-200 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200', active: 'bg-emerald-500 text-white border-emerald-500' },
                         { val: 'absent', label: 'Absent', inactive: 'bg-white text-slate-400 border-slate-200 hover:bg-slate-100 hover:text-slate-600 hover:border-slate-300', active: 'bg-slate-500 text-white border-slate-500' },

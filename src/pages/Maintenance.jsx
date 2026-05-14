@@ -145,15 +145,15 @@ export default function Maintenance() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-3 gap-3 mb-6">
         {[
           { label: 'Open', value: stats.open, color: 'text-blue-600' },
           { label: 'In Progress', value: stats.inProgress, color: 'text-amber-600' },
-          { label: 'Resolved (month)', value: stats.resolved, color: 'text-emerald-600' },
+          { label: 'Resolved', value: stats.resolved, color: 'text-emerald-600' },
         ].map(({ label, value, color }) => (
-          <div key={label} className="bg-white border border-slate-200 rounded-2xl p-4 text-center">
+          <div key={label} className="bg-white border border-slate-200 rounded-2xl p-3 text-center">
             <p className={`text-2xl font-bold ${color}`}>{value}</p>
-            <p className="text-xs text-slate-500 mt-0.5">{label}</p>
+            <p className="text-xs text-slate-500 mt-0.5 leading-tight">{label}</p>
           </div>
         ))}
       </div>
