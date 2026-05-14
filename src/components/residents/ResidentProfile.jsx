@@ -81,6 +81,7 @@ export default function ResidentProfile({ resident, onUpdate }) {
         gender: form.gender || null,
         insurance_carrier: form.insurance_carrier || null,
         insurance_id: form.insurance_id || null,
+        care_level: form.care_level || null,
         admission_type: form.admission_type || null,
         notes: form.notes || null,
         color: form.color || 'blue',
@@ -125,6 +126,7 @@ export default function ResidentProfile({ resident, onUpdate }) {
             <Field label="Date of Birth" value={formatDate(resident.date_of_birth)} />
             <Field label="Room Number" value={resident.room_number} />
             <Field label="Move-in Date" value={formatDate(resident.move_in_date)} />
+            <Field label="Care Level" value={resident.care_level} />
             <Field label="Admission Type" value={resident.admission_type} />
             <Field label="Primary Physician" value={resident.physician} />
             <Field label="Physician Phone" value={resident.physician_phone} />
@@ -207,6 +209,20 @@ export default function ResidentProfile({ resident, onUpdate }) {
             <label className="block text-sm font-medium text-slate-700 mb-1">Move-in Date</label>
             <input type="date" className={inputCls} value={form.move_in_date ?? ''} onChange={e => set('move_in_date', e.target.value)} />
           </div>
+        </div>
+
+        {/* Care Level */}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Care Level</label>
+          <select className={inputCls} value={form.care_level ?? ''} onChange={e => set('care_level', e.target.value)}>
+            <option value="">— Select —</option>
+            <option value="AL">Assisted Living (AL)</option>
+            <option value="IL">Independent Living (IL)</option>
+            <option value="MC">Memory Care (MC)</option>
+            <option value="SNF">Skilled Nursing (SNF)</option>
+            <option value="Hospice">Hospice</option>
+            <option value="Respite">Respite</option>
+          </select>
         </div>
 
         {/* Admission Type */}

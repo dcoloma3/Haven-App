@@ -5,7 +5,9 @@ const CommunityContext = createContext(null)
 
 export function CommunityProvider({ children }) {
   const [memberships, setMemberships] = useState(null)
-  const [activeCommunityId, setActiveCommunityId] = useState(null)
+  const [activeCommunityId, setActiveCommunityId] = useState(() => {
+    try { return localStorage.getItem('haven_community_id') || null } catch { return null }
+  })
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
   const [allCommunities, setAllCommunities] = useState([])
   const [editMode] = useState(true) // super admin always has full edit access
@@ -36,7 +38,13 @@ export function CommunityProvider({ children }) {
       .eq('user_id', userId)
     const list = data ?? []
     setMemberships(list)
-    if (list.length === 1) setActiveCommunityId(list[0].communities.id)
+    if (list.length === 1) {
+      setActiveCommunityId(prev => {
+        const id = prev || list[0].communities.id
+        try { localStorage.setItem('haven_community_id', id) } catch {}
+        return id
+      })
+    }
 
     // Super admin gets full list of all communities
     if (superAdmin) {
@@ -56,6 +64,7 @@ export function CommunityProvider({ children }) {
       if (!session) {
         setMemberships([])
         setActiveCommunityId(null)
+        try { localStorage.removeItem('haven_community_id') } catch {}
         setIsSuperAdmin(false)
         setAllCommunities([])
       } else {
@@ -98,7 +107,10 @@ export function CommunityProvider({ children }) {
       allCommunities,
       editMode: true,
       loading: memberships === null,
-      setCommunityId: setActiveCommunityId,
+      setCommunityId: (id) => {
+        try { id ? localStorage.setItem('haven_community_id', id) : localStorage.removeItem('haven_community_id') } catch {}
+        setActiveCommunityId(id)
+      },
       reload,
       reloadAllCommunities,
     }}>

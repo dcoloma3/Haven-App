@@ -205,17 +205,21 @@ export default function SuperAdmin() {
     if (!allCommunities.length) return
     const ids = allCommunities.map(c => c.id)
 
-    const [{ data: residents }, { data: members }] = await Promise.all([
+    const [{ data: residents }, { data: members }, { data: profiles }] = await Promise.all([
       supabase.from('residents').select('community_id').in('community_id', ids).eq('status', 'active'),
-      supabase.from('community_members').select('community_id, role, profiles!user_id(full_name, email)').in('community_id', ids),
+      supabase.from('community_members').select('community_id, role, user_id').in('community_id', ids),
+      supabase.from('profiles').select('user_id, full_name, email'),
     ])
+
+    const profileMap = {}
+    ;(profiles ?? []).forEach(p => { profileMap[p.user_id] = p })
 
     const newStats = {}
     ids.forEach(id => {
       const residentCount = (residents ?? []).filter(r => r.community_id === id).length
       const communityMembers = (members ?? []).filter(m => m.community_id === id)
-      const admin = communityMembers.find(m => m.role === 'admin')
-      const adminProfile = admin?.profiles
+      const adminMember = communityMembers.find(m => m.role === 'admin')
+      const adminProfile = adminMember ? profileMap[adminMember.user_id] : null
       const staffCount = communityMembers.length
       newStats[id] = {
         residentCount,

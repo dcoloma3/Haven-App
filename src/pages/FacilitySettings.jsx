@@ -69,14 +69,12 @@ export default function FacilitySettings() {
 
   return (
     <Layout>
-      <button
-        onClick={() => navigate(-1)}
-        className="text-sm text-slate-500 hover:text-slate-800 mb-4 flex items-center gap-1 transition-colors"
-      >
-        ← Back
-      </button>
-
-      <h1 className="text-xl font-semibold text-slate-800 mb-6">Community Settings</h1>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Community Settings</h1>
+          <p className="text-sm text-slate-500 mt-1">Manage your facility information</p>
+        </div>
+      </div>
 
       <div className="bg-white border border-slate-200 rounded-2xl p-6 max-w-lg">
         <form onSubmit={handleSave} className="space-y-4">

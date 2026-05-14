@@ -122,7 +122,9 @@ export default function NotificationLog() {
     return true
   })
 
-  const types = [...new Set(logs.map(l => l.notification_type))]
+  const KNOWN_TYPES = ['Call', 'Text', 'Email', 'In Person', 'Other']
+  const extraTypes = [...new Set(logs.map(l => l.notification_type))].filter(t => !KNOWN_TYPES.includes(t))
+  const types = [...KNOWN_TYPES, ...extraTypes]
 
   return (
     <Layout>
