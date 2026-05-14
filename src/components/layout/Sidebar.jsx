@@ -244,7 +244,7 @@ export default function Sidebar() {
             </NavLink>
 
             <NavLink to="/occupancy" className={linkCls}>
-              {({ isActive }) => (<><OccupancyIcon active={isActive} /><span>Occupancy</span></>)}
+              {({ isActive }) => (<><OccupancyIcon active={isActive} /><span>Prospects</span></>)}
             </NavLink>
 
             <NavLink to="/certifications" className={linkCls}>

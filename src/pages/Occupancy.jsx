@@ -1,22 +1,9 @@
 /*
--- Run in Supabase SQL editor:
-create table waitlist (
-  id uuid primary key default gen_random_uuid(),
-  community_id uuid references communities(id) on delete cascade,
-  created_at timestamptz default now(),
-  prospect_name text not null,
-  contact_name text,
-  contact_phone text,
-  contact_email text,
-  requested_room_type text,
-  notes text,
-  priority text not null default 'medium',
-  status text not null default 'waiting'
-);
-create index on waitlist(community_id, created_at desc);
-alter table waitlist enable row level security;
-create policy "community admins can manage waitlist" on waitlist
-  for all using (community_id in (select community_id from community_members where user_id = auth.uid() and role = 'admin'));
+-- Run in Supabase SQL editor (supabase-migration-care-level-prospects.sql):
+alter table waitlist add column if not exists referral_source text;
+alter table waitlist add column if not exists care_level_interest text;
+alter table waitlist add column if not exists inquiry_date date;
+alter table waitlist add column if not exists tour_date date;
 */
 
 import { useEffect, useState } from 'react'
@@ -25,18 +12,33 @@ import { supabase } from '../lib/supabase'
 import { useCommunity } from '../context/CommunityContext'
 import Layout from '../components/layout/Layout'
 
-const PRIORITY_COLORS = {
-  high: 'bg-red-100 text-red-700',
-  medium: 'bg-amber-100 text-amber-700',
-  low: 'bg-slate-100 text-slate-600',
+const CARE_LEVEL_COLORS = {
+  AL:      'bg-blue-100 text-blue-700',
+  IL:      'bg-emerald-100 text-emerald-700',
+  MC:      'bg-purple-100 text-purple-700',
+  SNF:     'bg-amber-100 text-amber-700',
+  Hospice: 'bg-slate-100 text-slate-600',
+  Respite: 'bg-orange-100 text-orange-700',
 }
 
-const STATUS_COLORS = {
-  waiting: 'bg-blue-100 text-blue-700',
-  toured: 'bg-amber-100 text-amber-700',
-  accepted: 'bg-emerald-100 text-emerald-700',
-  declined: 'bg-slate-100 text-slate-500',
-}
+const PIPELINE_STAGES = [
+  { key: 'inquiry',   label: 'Inquiry',       color: 'bg-blue-50 border-blue-200',    text: 'text-blue-700',    dot: 'bg-blue-400' },
+  { key: 'toured',    label: 'Toured',         color: 'bg-amber-50 border-amber-200',  text: 'text-amber-700',   dot: 'bg-amber-400' },
+  { key: 'waiting',   label: 'Deciding',       color: 'bg-purple-50 border-purple-200',text: 'text-purple-700',  dot: 'bg-purple-400' },
+  { key: 'accepted',  label: 'Move-In Ready',  color: 'bg-emerald-50 border-emerald-200', text: 'text-emerald-700', dot: 'bg-emerald-500' },
+  { key: 'declined',  label: 'Declined',       color: 'bg-slate-50 border-slate-200',  text: 'text-slate-500',   dot: 'bg-slate-300' },
+]
+
+const REFERRAL_SOURCES = [
+  'A Place For Mom',
+  'Family Referral',
+  'Doctor / Hospital',
+  'Website',
+  'Walk-in',
+  'Social Media',
+  'Senior Advisor',
+  'Other',
+]
 
 export default function Occupancy() {
   const { communityId, isAdmin } = useCommunity()
@@ -48,16 +50,31 @@ export default function Occupancy() {
   const [editProspect, setEditProspect] = useState(null)
   const [saving, setSaving] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
-  const [form, setForm] = useState({ prospect_name: '', contact_name: '', contact_phone: '', contact_email: '', requested_room_type: '', notes: '', priority: 'medium', status: 'waiting' })
+  const [stageFilter, setStageFilter] = useState('all')
+  const [totalBeds, setTotalBeds] = useState(null)
+
+  const emptyForm = {
+    prospect_name: '',
+    contact_name: '',
+    contact_phone: '',
+    contact_email: '',
+    care_level_interest: '',
+    referral_source: '',
+    inquiry_date: '',
+    tour_date: '',
+    requested_room_type: '',
+    notes: '',
+    priority: 'medium',
+    status: 'inquiry',
+  }
+  const [form, setForm] = useState(emptyForm)
 
   const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
 
-  const [totalBeds, setTotalBeds] = useState(null)
-
   async function load() {
     const [{ data: res }, { data: wl }, { data: comm }] = await Promise.all([
-      supabase.from('residents').select('id, first_name, last_name, room_number, status').eq('community_id', communityId).order('room_number'),
-      supabase.from('waitlist').select('*').eq('community_id', communityId).order('priority').order('created_at'),
+      supabase.from('residents').select('id, first_name, last_name, room_number, status, care_level').eq('community_id', communityId).order('room_number'),
+      supabase.from('waitlist').select('*').eq('community_id', communityId).order('created_at', { ascending: false }),
       supabase.from('communities').select('total_beds').eq('id', communityId).single(),
     ])
     setResidents(res || [])
@@ -71,22 +88,60 @@ export default function Occupancy() {
   const activeResidents = residents.filter(r => r.status === 'active')
   const occupiedRooms = [...new Set(activeResidents.map(r => r.room_number).filter(Boolean))]
 
+  // Pipeline counts
+  const stageCounts = PIPELINE_STAGES.reduce((acc, s) => {
+    acc[s.key] = waitlist.filter(p => p.status === s.key).length
+    return acc
+  }, {})
+  const activeProspects = waitlist.filter(p => p.status !== 'declined').length
+
+  const filteredProspects = stageFilter === 'all'
+    ? waitlist
+    : waitlist.filter(p => p.status === stageFilter)
+
   function openAdd() {
     setEditProspect(null)
-    setForm({ prospect_name: '', contact_name: '', contact_phone: '', contact_email: '', requested_room_type: '', notes: '', priority: 'medium', status: 'waiting' })
+    setForm({ ...emptyForm, inquiry_date: new Date().toISOString().split('T')[0] })
     setShowModal(true)
   }
 
   function openEdit(p) {
     setEditProspect(p)
-    setForm({ prospect_name: p.prospect_name, contact_name: p.contact_name || '', contact_phone: p.contact_phone || '', contact_email: p.contact_email || '', requested_room_type: p.requested_room_type || '', notes: p.notes || '', priority: p.priority, status: p.status })
+    setForm({
+      prospect_name: p.prospect_name || '',
+      contact_name: p.contact_name || '',
+      contact_phone: p.contact_phone || '',
+      contact_email: p.contact_email || '',
+      care_level_interest: p.care_level_interest || '',
+      referral_source: p.referral_source || '',
+      inquiry_date: p.inquiry_date || '',
+      tour_date: p.tour_date || '',
+      requested_room_type: p.requested_room_type || '',
+      notes: p.notes || '',
+      priority: p.priority || 'medium',
+      status: p.status || 'inquiry',
+    })
     setShowModal(true)
   }
 
   async function handleSave() {
     if (!form.prospect_name.trim()) return
     setSaving(true)
-    const payload = { community_id: communityId, ...form, prospect_name: form.prospect_name.trim() }
+    const payload = {
+      community_id: communityId,
+      prospect_name: form.prospect_name.trim(),
+      contact_name: form.contact_name.trim() || null,
+      contact_phone: form.contact_phone.trim() || null,
+      contact_email: form.contact_email.trim() || null,
+      care_level_interest: form.care_level_interest || null,
+      referral_source: form.referral_source || null,
+      inquiry_date: form.inquiry_date || null,
+      tour_date: form.tour_date || null,
+      requested_room_type: form.requested_room_type.trim() || null,
+      notes: form.notes.trim() || null,
+      priority: form.priority,
+      status: form.status,
+    }
     if (editProspect) {
       await supabase.from('waitlist').update(payload).eq('id', editProspect.id)
     } else {
@@ -103,20 +158,45 @@ export default function Occupancy() {
     await load()
   }
 
-  async function updateStatus(id, status) {
-    await supabase.from('waitlist').update({ status }).eq('id', id)
+  async function advanceStage(p) {
+    const order = PIPELINE_STAGES.map(s => s.key)
+    const idx = order.indexOf(p.status)
+    if (idx === -1 || idx >= order.length - 2) return // don't auto-advance to declined
+    const next = order[idx + 1]
+    await supabase.from('waitlist').update({ status: next }).eq('id', p.id)
     await load()
+  }
+
+  function stageInfo(key) {
+    return PIPELINE_STAGES.find(s => s.key === key) || PIPELINE_STAGES[0]
   }
 
   return (
     <Layout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">Occupancy & Waitlist</h1>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Occupancy & Prospects</h1>
+          <p className="text-sm text-slate-500 mt-1">Track your rooms and incoming prospects</p>
+        </div>
+        {isAdmin && (
+          <button
+            onClick={openAdd}
+            className="text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all active:scale-95 flex items-center gap-2"
+            style={{ background: 'linear-gradient(135deg, #185FA5 0%, #2d8fe8 100%)', boxShadow: '0 2px 12px rgba(24,95,165,0.4)' }}
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Add Prospect
+          </button>
+        )}
       </div>
 
       {loading ? <p className="text-slate-400 text-sm">Loading…</p> : (
         <div className="space-y-8">
-          {/* Occupancy Overview */}
+
+          {/* ── Occupancy Overview ── */}
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-semibold text-slate-700">Occupancy Overview</h2>
@@ -131,8 +211,14 @@ export default function Occupancy() {
                       <p className="text-xl font-bold text-slate-400">{totalBeds - occupiedRooms.length}</p>
                       <p className="text-xs text-slate-500">Available</p>
                     </div>
-                    <div className={`text-center px-3 py-1 rounded-xl ${occupiedRooms.length / totalBeds >= 0.9 ? 'bg-emerald-50' : occupiedRooms.length / totalBeds >= 0.7 ? 'bg-amber-50' : 'bg-red-50'}`}>
-                      <p className={`text-xl font-bold ${occupiedRooms.length / totalBeds >= 0.9 ? 'text-emerald-600' : occupiedRooms.length / totalBeds >= 0.7 ? 'text-amber-600' : 'text-red-600'}`}>
+                    <div className={`text-center px-3 py-1 rounded-xl ${
+                      occupiedRooms.length / totalBeds >= 0.9 ? 'bg-emerald-50' :
+                      occupiedRooms.length / totalBeds >= 0.7 ? 'bg-amber-50' : 'bg-red-50'
+                    }`}>
+                      <p className={`text-xl font-bold ${
+                        occupiedRooms.length / totalBeds >= 0.9 ? 'text-emerald-600' :
+                        occupiedRooms.length / totalBeds >= 0.7 ? 'text-amber-600' : 'text-red-600'
+                      }`}>
                         {Math.round((occupiedRooms.length / totalBeds) * 100)}%
                       </p>
                       <p className="text-xs text-slate-500">Occupancy</p>
@@ -140,99 +226,164 @@ export default function Occupancy() {
                   </>
                 )}
                 {totalBeds == null && (
-                  <p className="text-xs text-slate-400 italic">Set total beds in <a href="/settings" className="text-[#185FA5] hover:underline">Settings</a> to see occupancy %</p>
+                  <p className="text-xs text-slate-400 italic">
+                    Set total beds in <a href="/settings" className="text-[#185FA5] hover:underline">Settings</a>
+                  </p>
                 )}
               </div>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {activeResidents.map(r => (
+
+            {activeResidents.length === 0 ? (
+              <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center">
+                <p className="text-slate-400 text-sm">No active residents yet</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {activeResidents.map(r => (
+                  <button
+                    key={r.id}
+                    onClick={() => navigate(`/residents/${r.id}`)}
+                    className="bg-white border border-slate-200 rounded-2xl p-4 text-left hover:border-[#185FA5] hover:shadow-sm transition-all"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-[#185FA5] flex items-center justify-center text-white font-bold text-sm mb-2">
+                      {r.first_name?.[0] || '?'}
+                    </div>
+                    <p className="text-sm font-semibold text-slate-800 truncate">{r.first_name} {r.last_name}</p>
+                    <p className="text-xs text-slate-400 mb-1.5">Room {r.room_number || '—'}</p>
+                    {r.care_level && (
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-semibold ${CARE_LEVEL_COLORS[r.care_level] || 'bg-slate-100 text-slate-600'}`}>
+                        {r.care_level}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ── Prospect Pipeline ── */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-base font-semibold text-slate-700">Prospect Pipeline</h2>
+                {activeProspects > 0 && (
+                  <p className="text-xs text-slate-400 mt-0.5">{activeProspects} active prospect{activeProspects !== 1 ? 's' : ''}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Pipeline stage bar */}
+            <div className="grid grid-cols-5 gap-2 mb-5">
+              {PIPELINE_STAGES.map(s => (
                 <button
-                  key={r.id}
-                  onClick={() => navigate(`/residents/${r.id}`)}
-                  className="bg-white border border-slate-200 rounded-2xl p-4 text-left hover:border-[#185FA5] hover:shadow-sm transition-all"
+                  key={s.key}
+                  onClick={() => setStageFilter(stageFilter === s.key ? 'all' : s.key)}
+                  className={`border rounded-xl p-3 text-left transition-all ${
+                    stageFilter === s.key
+                      ? `${s.color} border-2`
+                      : 'bg-white border-slate-200 hover:border-slate-300'
+                  }`}
                 >
-                  <div className="w-10 h-10 rounded-full bg-[#185FA5] flex items-center justify-center text-white font-bold text-sm mb-2">
-                    {r.first_name?.[0] || '?'}
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <div className={`w-2 h-2 rounded-full ${s.dot}`} />
+                    <p className={`text-xs font-semibold truncate ${stageFilter === s.key ? s.text : 'text-slate-600'}`}>{s.label}</p>
                   </div>
-                  <p className="text-sm font-semibold text-slate-800 truncate">{r.first_name} {r.last_name}</p>
-                  <p className="text-xs text-slate-400">Room {r.room_number || '—'}</p>
+                  <p className={`text-xl font-bold ${stageFilter === s.key ? s.text : 'text-slate-800'}`}>
+                    {stageCounts[s.key] || 0}
+                  </p>
                 </button>
               ))}
             </div>
-          </div>
 
-          {/* Waitlist */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-semibold text-slate-700">Waitlist</h2>
-              {isAdmin && (
-                <button onClick={openAdd} className="bg-[#185FA5] hover:bg-[#0C447C] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2">
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-                  </svg>
-                  Add Prospect
-                </button>
-              )}
-            </div>
-
-            {waitlist.length === 0 ? (
-              <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center">
-                <p className="text-slate-500 text-sm">No prospects on the waitlist</p>
+            {filteredProspects.length === 0 ? (
+              <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center">
+                <p className="text-slate-500 text-sm font-medium">No prospects in this stage</p>
+                {isAdmin && stageFilter === 'all' && (
+                  <button onClick={openAdd} className="mt-3 text-sm text-[#185FA5] font-semibold hover:underline">
+                    + Add your first prospect
+                  </button>
+                )}
               </div>
             ) : (
               <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
                 <div className="overflow-x-auto">
-                <table className="w-full text-sm min-w-[480px]">
-                  <thead>
-                    <tr className="border-b border-slate-100 bg-slate-50">
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Prospect</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Contact</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Priority</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
-                      {isAdmin && <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {waitlist.map(p => (
-                      <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-4 py-3">
-                          <p className="font-medium text-slate-800">{p.prospect_name}</p>
-                          {p.requested_room_type && <p className="text-xs text-slate-400">{p.requested_room_type}</p>}
-                          {p.notes && <p className="text-xs text-slate-400 truncate max-w-[150px]">{p.notes}</p>}
-                        </td>
-                        <td className="px-4 py-3">
-                          {p.contact_name && <p className="text-xs text-slate-600">{p.contact_name}</p>}
-                          {p.contact_phone && <p className="text-xs text-slate-400">{p.contact_phone}</p>}
-                          {p.contact_email && <p className="text-xs text-slate-400">{p.contact_email}</p>}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full capitalize ${PRIORITY_COLORS[p.priority] || PRIORITY_COLORS.medium}`}>{p.priority}</span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full capitalize ${STATUS_COLORS[p.status] || STATUS_COLORS.waiting}`}>{p.status}</span>
-                        </td>
-                        {isAdmin && (
-                          <td className="px-4 py-3">
-                            <div className="flex gap-2 flex-wrap">
-                              <button onClick={() => openEdit(p)} className="text-xs text-[#185FA5] font-medium hover:text-[#0C447C] transition-colors">Edit</button>
-                              <select
-                                value={p.status}
-                                onChange={e => updateStatus(p.id, e.target.value)}
-                                className="text-xs border border-slate-200 rounded-lg px-2 py-1"
-                              >
-                                <option value="waiting">Waiting</option>
-                                <option value="toured">Toured</option>
-                                <option value="accepted">Accepted</option>
-                                <option value="declined">Declined</option>
-                              </select>
-                              <button onClick={() => setDeleteConfirm(p)} className="text-xs text-red-400 font-medium hover:text-red-600 transition-colors">Delete</button>
-                            </div>
-                          </td>
-                        )}
+                  <table className="w-full text-sm min-w-[640px]">
+                    <thead>
+                      <tr className="border-b border-slate-100 bg-slate-50">
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Prospect</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Contact</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Care Level</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Referral</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Stage</th>
+                        {isAdmin && <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredProspects.map(p => {
+                        const stage = stageInfo(p.status)
+                        return (
+                          <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                            <td className="px-4 py-3">
+                              <p className="font-semibold text-slate-800">{p.prospect_name}</p>
+                              <div className="flex gap-2 mt-0.5 flex-wrap">
+                                {p.inquiry_date && (
+                                  <p className="text-xs text-slate-400">
+                                    Inquiry: {new Date(p.inquiry_date + 'T00:00:00').toLocaleDateString()}
+                                  </p>
+                                )}
+                                {p.tour_date && (
+                                  <p className="text-xs text-slate-400">
+                                    Tour: {new Date(p.tour_date + 'T00:00:00').toLocaleDateString()}
+                                  </p>
+                                )}
+                              </div>
+                              {p.notes && <p className="text-xs text-slate-400 truncate max-w-[180px] mt-0.5">{p.notes}</p>}
+                            </td>
+                            <td className="px-4 py-3">
+                              {p.contact_name && <p className="text-xs font-medium text-slate-700">{p.contact_name}</p>}
+                              {p.contact_phone && <p className="text-xs text-slate-400">{p.contact_phone}</p>}
+                              {p.contact_email && <p className="text-xs text-slate-400 truncate max-w-[140px]">{p.contact_email}</p>}
+                            </td>
+                            <td className="px-4 py-3">
+                              {p.care_level_interest ? (
+                                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${CARE_LEVEL_COLORS[p.care_level_interest] || 'bg-slate-100 text-slate-600'}`}>
+                                  {p.care_level_interest}
+                                </span>
+                              ) : <span className="text-xs text-slate-300">—</span>}
+                            </td>
+                            <td className="px-4 py-3">
+                              {p.referral_source
+                                ? <p className="text-xs text-slate-600">{p.referral_source}</p>
+                                : <span className="text-xs text-slate-300">—</span>
+                              }
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${stage.color} ${stage.text}`}>
+                                {stage.label}
+                              </span>
+                            </td>
+                            {isAdmin && (
+                              <td className="px-4 py-3">
+                                <div className="flex gap-2 flex-wrap items-center">
+                                  <button onClick={() => openEdit(p)} className="text-xs text-[#185FA5] font-medium hover:text-[#0C447C]">Edit</button>
+                                  {p.status !== 'accepted' && p.status !== 'declined' && (
+                                    <button
+                                      onClick={() => advanceStage(p)}
+                                      className="text-xs text-emerald-600 font-medium hover:text-emerald-800"
+                                      title="Advance to next stage"
+                                    >
+                                      Advance →
+                                    </button>
+                                  )}
+                                  <button onClick={() => setDeleteConfirm(p)} className="text-xs text-red-400 font-medium hover:text-red-600">Delete</button>
+                                </div>
+                              </td>
+                            )}
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}
@@ -252,12 +403,24 @@ export default function Occupancy() {
                 </svg>
               </button>
             </div>
+
             <div className="overflow-y-auto flex-1 px-5 py-5 space-y-4">
+              {/* Prospect name */}
               <div>
                 <label className="block text-xs font-medium text-slate-600 mb-1">Prospect Name <span className="text-red-500">*</span></label>
-                <input value={form.prospect_name} onChange={e => setForm(f => ({ ...f, prospect_name: e.target.value }))} className={inputCls} placeholder="Prospect's name" />
+                <input value={form.prospect_name} onChange={e => setForm(f => ({ ...f, prospect_name: e.target.value }))} className={inputCls} placeholder="Prospect's full name" />
               </div>
+
+              {/* Stage + Priority */}
               <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Pipeline Stage</label>
+                  <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className={inputCls}>
+                    {PIPELINE_STAGES.map(s => (
+                      <option key={s.key} value={s.key}>{s.label}</option>
+                    ))}
+                  </select>
+                </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-600 mb-1">Priority</label>
                   <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))} className={inputCls}>
@@ -266,42 +429,77 @@ export default function Occupancy() {
                     <option value="low">Low</option>
                   </select>
                 </div>
+              </div>
+
+              {/* Care level + Referral */}
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Status</label>
-                  <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className={inputCls}>
-                    <option value="waiting">Waiting</option>
-                    <option value="toured">Toured</option>
-                    <option value="accepted">Accepted</option>
-                    <option value="declined">Declined</option>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Care Level Interest</label>
+                  <select value={form.care_level_interest} onChange={e => setForm(f => ({ ...f, care_level_interest: e.target.value }))} className={inputCls}>
+                    <option value="">Not specified</option>
+                    <option value="AL">Assisted Living (AL)</option>
+                    <option value="IL">Independent Living (IL)</option>
+                    <option value="MC">Memory Care (MC)</option>
+                    <option value="SNF">Skilled Nursing (SNF)</option>
+                    <option value="Hospice">Hospice</option>
+                    <option value="Respite">Respite</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Referral Source</label>
+                  <select value={form.referral_source} onChange={e => setForm(f => ({ ...f, referral_source: e.target.value }))} className={inputCls}>
+                    <option value="">Unknown</option>
+                    {REFERRAL_SOURCES.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
               </div>
+
+              {/* Inquiry + Tour dates */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Inquiry Date</label>
+                  <input type="date" value={form.inquiry_date} onChange={e => setForm(f => ({ ...f, inquiry_date: e.target.value }))} className={inputCls} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Tour Date</label>
+                  <input type="date" value={form.tour_date} onChange={e => setForm(f => ({ ...f, tour_date: e.target.value }))} className={inputCls} />
+                </div>
+              </div>
+
+              {/* Contact info */}
               <div>
                 <label className="block text-xs font-medium text-slate-600 mb-1">Contact Name</label>
-                <input value={form.contact_name} onChange={e => setForm(f => ({ ...f, contact_name: e.target.value }))} className={inputCls} placeholder="Primary contact" />
+                <input value={form.contact_name} onChange={e => setForm(f => ({ ...f, contact_name: e.target.value }))} className={inputCls} placeholder="Primary contact (family member, etc.)" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Contact Phone</label>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Phone</label>
                   <input value={form.contact_phone} onChange={e => setForm(f => ({ ...f, contact_phone: e.target.value }))} className={inputCls} placeholder="Phone number" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Contact Email</label>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Email</label>
                   <input type="email" value={form.contact_email} onChange={e => setForm(f => ({ ...f, contact_email: e.target.value }))} className={inputCls} placeholder="email@example.com" />
                 </div>
               </div>
+
               <div>
                 <label className="block text-xs font-medium text-slate-600 mb-1">Requested Room Type</label>
                 <input value={form.requested_room_type} onChange={e => setForm(f => ({ ...f, requested_room_type: e.target.value }))} className={inputCls} placeholder="e.g. Private, Semi-Private" />
               </div>
+
               <div>
                 <label className="block text-xs font-medium text-slate-600 mb-1">Notes</label>
                 <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={3} className={inputCls + ' resize-none'} placeholder="Any notes about this prospect…" />
               </div>
             </div>
+
             <div className="sticky bottom-0 bg-white border-t border-slate-200 px-5 py-4 flex gap-3">
               <button onClick={() => setShowModal(false)} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
-              <button onClick={handleSave} disabled={!form.prospect_name.trim() || saving} className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
+              <button
+                onClick={handleSave}
+                disabled={!form.prospect_name.trim() || saving}
+                className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors"
+              >
                 {saving ? 'Saving…' : editProspect ? 'Save Changes' : 'Add Prospect'}
               </button>
             </div>
@@ -309,14 +507,15 @@ export default function Occupancy() {
         </div>
       )}
 
+      {/* Delete confirm */}
       {deleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
-            <h3 className="font-bold text-slate-800 mb-2">Delete Prospect</h3>
-            <p className="text-sm text-slate-500 mb-5">Remove <strong>{deleteConfirm.prospect_name}</strong> from the waitlist?</p>
+            <h3 className="font-bold text-slate-800 mb-2">Remove Prospect</h3>
+            <p className="text-sm text-slate-500 mb-5">Remove <strong>{deleteConfirm.prospect_name}</strong> from the pipeline?</p>
             <div className="flex gap-3">
               <button onClick={() => setDeleteConfirm(null)} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
-              <button onClick={() => handleDelete(deleteConfirm.id)} className="flex-1 bg-red-500 hover:bg-red-600 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">Delete</button>
+              <button onClick={() => handleDelete(deleteConfirm.id)} className="flex-1 bg-red-500 hover:bg-red-600 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">Remove</button>
             </div>
           </div>
         </div>

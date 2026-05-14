@@ -85,17 +85,28 @@ function StatusBadge({ reason }) {
   )
 }
 
+const CARE_LEVEL_COLORS = {
+  AL:      'bg-blue-100 text-blue-700',
+  IL:      'bg-emerald-100 text-emerald-700',
+  MC:      'bg-purple-100 text-purple-700',
+  SNF:     'bg-amber-100 text-amber-700',
+  Hospice: 'bg-slate-100 text-slate-600',
+  Respite: 'bg-orange-100 text-orange-700',
+}
+
 export default function Dashboard() {
   const [residents, setResidents] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [showFormer, setShowFormer] = useState(false)
   const [search, setSearch] = useState('')
+  const [careFilter, setCareFilter] = useState('All')
   const [medStatusMap, setMedStatusMap] = useState({})
   const [todayStr, setTodayStr] = useState(() => new Date().toISOString().split('T')[0])
   const [openIncidentCount, setOpenIncidentCount] = useState(0)
   const [highSeverityCount, setHighSeverityCount] = useState(0)
   const [apptCount, setApptCount] = useState(0)
+  const [prospectCount, setProspectCount] = useState(0)
   const navigate = useNavigate()
   const location = useLocation()
   const unauthorized = location.state?.unauthorized
@@ -121,13 +132,15 @@ export default function Dashboard() {
   useEffect(() => {
     if (!communityId || showFormer) return
     async function fetchSummaryStats() {
-      const [{ data: incidents }, { data: appts }] = await Promise.all([
+      const [{ data: incidents }, { data: appts }, { data: prospects }] = await Promise.all([
         supabase.from('incidents').select('id, severity').eq('community_id', communityId).eq('status', 'open'),
         supabase.from('calendar_events').select('id').eq('community_id', communityId).eq('start_date', todayStr),
+        supabase.from('waitlist').select('id, status').eq('community_id', communityId),
       ])
       setOpenIncidentCount((incidents ?? []).length)
       setHighSeverityCount((incidents ?? []).filter(i => i.severity === 'high').length)
       setApptCount((appts ?? []).length)
+      setProspectCount((prospects ?? []).filter(p => p.status !== 'declined' && p.status !== 'accepted').length)
     }
     fetchSummaryStats()
   }, [communityId, showFormer, todayStr])
@@ -182,7 +195,10 @@ export default function Dashboard() {
     setShowForm(false)
   }
 
+  const careOptions = ['All', 'AL', 'IL', 'MC', 'SNF', 'Hospice', 'Respite']
+
   const filtered = residents.filter(r => {
+    if (careFilter !== 'All' && r.care_level !== careFilter) return false
     if (!search.trim()) return true
     const q = search.toLowerCase()
     return getResidentFullName(r).toLowerCase().includes(q) ||
@@ -218,7 +234,7 @@ export default function Dashboard() {
           )}
 
           {/* Stats grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
             {/* Active Residents */}
             <div className="bg-white border border-slate-200 rounded-2xl px-4 py-4 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-default">
               <div className="flex items-center gap-3">
@@ -298,6 +314,27 @@ export default function Dashboard() {
                 </div>
               )
             })()}
+
+            {/* Prospects in Pipeline */}
+            {(() => {
+              const hasProspects = prospectCount > 0
+              return (
+                <div className={`rounded-2xl px-4 py-4 border hover:shadow-md hover:-translate-y-0.5 transition-all cursor-default ${hasProspects ? 'bg-purple-50 border-purple-200' : 'bg-white border-slate-200'}`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${hasProspects ? 'bg-purple-100' : 'bg-slate-100'}`}>
+                      <svg className={`w-4 h-4 ${hasProspects ? 'text-purple-600' : 'text-slate-400'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                        <line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <p className={`text-2xl font-bold leading-none ${hasProspects ? 'text-purple-700' : 'text-slate-800'}`}>{prospectCount}</p>
+                      <p className={`text-xs mt-0.5 ${hasProspects ? 'text-purple-600' : 'text-slate-500'}`}>Prospects</p>
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
           </div>
         </div>
       )}
@@ -338,7 +375,7 @@ export default function Dashboard() {
       </div>
 
       {/* Search */}
-      <div className="relative mb-4">
+      <div className="relative mb-3">
         <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
@@ -350,6 +387,27 @@ export default function Dashboard() {
           className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent"
         />
       </div>
+
+      {/* Care level filter — active residents only */}
+      {!showFormer && (
+        <div className="flex gap-1.5 overflow-x-auto scrollbar-none mb-4 pb-0.5">
+          {careOptions.map(opt => (
+            <button
+              key={opt}
+              onClick={() => setCareFilter(opt)}
+              className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                careFilter === opt
+                  ? 'bg-[#185FA5] text-white'
+                  : opt !== 'All' && CARE_LEVEL_COLORS[opt]
+                    ? `${CARE_LEVEL_COLORS[opt]} opacity-80 hover:opacity-100`
+                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
+      )}
 
       {loading && (
         <div>
@@ -458,6 +516,9 @@ export default function Dashboard() {
                   <p className="font-semibold text-slate-800 truncate">{name}</p>
                   <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                     <p className="text-sm text-slate-400">Room {r.room_number || '—'}{age !== null ? ` · ${age} yrs` : ''}</p>
+                    {r.care_level && !showFormer && (
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-semibold ${CARE_LEVEL_COLORS[r.care_level] || 'bg-slate-100 text-slate-600'}`}>{r.care_level}</span>
+                    )}
                     {showFormer && <StatusBadge reason={r.removal_reason} />}
                   </div>
                 </div>
@@ -500,7 +561,10 @@ export default function Dashboard() {
                   <p className="font-semibold text-slate-800 truncate text-sm">{getResidentFullName(r)}</p>
                   <div className="flex items-center justify-between mt-0.5">
                     <p className="text-xs text-slate-400">Room {r.room_number || '—'}</p>
-                    {age !== null && <p className="text-xs text-slate-500 font-medium">{age} yrs</p>}
+                    {r.care_level && !showFormer
+                      ? <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-semibold ${CARE_LEVEL_COLORS[r.care_level] || 'bg-slate-100 text-slate-600'}`}>{r.care_level}</span>
+                      : age !== null && <p className="text-xs text-slate-500 font-medium">{age} yrs</p>
+                    }
                   </div>
                 </div>
               </button>

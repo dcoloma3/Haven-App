@@ -129,6 +129,7 @@ export default function ResidentForm({ onClose, onSaved }) {
     last_name: '',
     date_of_birth: '',
     room_number: '',
+    care_level: '',
     move_in_date: '',
     physician: '',
     notes: '',
@@ -269,6 +270,19 @@ export default function ResidentForm({ onClose, onSaved }) {
               <label className="block text-sm font-medium text-slate-700 mb-1">Room Number</label>
               <input value={form.room_number} onChange={e => set('room_number', e.target.value)} className={inputCls} placeholder="e.g. 1" />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Care Level</label>
+            <select value={form.care_level} onChange={e => set('care_level', e.target.value)} className={inputCls}>
+              <option value="">Select care level…</option>
+              <option value="AL">Assisted Living (AL)</option>
+              <option value="IL">Independent Living (IL)</option>
+              <option value="MC">Memory Care (MC)</option>
+              <option value="SNF">Skilled Nursing (SNF)</option>
+              <option value="Hospice">Hospice</option>
+              <option value="Respite">Respite</option>
+            </select>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
