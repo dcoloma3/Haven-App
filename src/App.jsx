@@ -6,6 +6,7 @@ import { ProfileProvider, useProfile } from './context/ProfileContext'
 import { CommunityProvider, useCommunity } from './context/CommunityContext'
 import RequireAdmin from './components/auth/RequireAdmin'
 import Login from './pages/Login'
+import Marketing from './pages/Marketing'
 import Onboarding from './pages/Onboarding'
 import CommunityPicker from './pages/CommunityPicker'
 import Dashboard from './pages/Dashboard'
@@ -106,7 +107,7 @@ export default function App() {
         <ProfileProvider>
           <FacilityProvider>
             <Routes>
-              <Route path="/" element={<Navigate to={session ? '/dashboard' : '/login'} replace />} />
+              <Route path="/" element={<Marketing />} />
               <Route path="/login" element={session ? <Navigate to="/dashboard" replace /> : <Login />} />
               <Route path="/onboarding" element={session ? <Onboarding /> : <Navigate to="/login" replace />} />
               <Route path="/community" element={session ? <CommunityPicker /> : <Navigate to="/login" replace />} />
@@ -152,7 +153,7 @@ export default function App() {
               } />
 
               <Route path="/superadmin" element={session ? <SuperAdmin /> : <Navigate to="/login" replace />} />
-              <Route path="*" element={<Navigate to={session ? '/dashboard' : '/login'} replace />} />
+              <Route path="*" element={<Navigate to={session ? '/dashboard' : '/'} replace />} />
             </Routes>
           </FacilityProvider>
         </ProfileProvider>

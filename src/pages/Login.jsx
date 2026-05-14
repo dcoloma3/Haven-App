@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import HavenLogo from '../components/layout/HavenLogo'
 
@@ -139,13 +140,16 @@ export default function Login() {
       {/* Content */}
       <div className="w-full max-w-sm relative z-10">
         <div className="flex flex-col items-center mb-8">
-          <HavenLogo markHeight={44} textSize={34} variant="white" />
+          <Link to="/" className="hover:opacity-80 transition-opacity">
+            <HavenLogo markHeight={44} textSize={34} variant="white" />
+          </Link>
           <p className="text-sm mt-3 font-medium tracking-wide" style={{ color: 'rgba(147,198,255,0.85)' }}>
             {mode === 'forgot' ? 'Reset your password' : mode === 'signup' ? 'Create your Haven account' : 'Modern care, beautifully managed'}
           </p>
         </div>
 
         {mode === 'forgot' ? (
+          <>
           <div style={{ background: 'rgba(255,255,255,0.07)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', border: '1px solid rgba(255,255,255,0.15)' }} className="rounded-3xl shadow-2xl p-6 space-y-4">
             <p className="text-sm" style={{ color: 'rgba(255,255,255,0.65)' }}>Enter your email and we'll send you a link to reset your password.</p>
             <div>
@@ -159,6 +163,12 @@ export default function Login() {
             </button>
             <button onClick={() => switchMode('login')} className="w-full text-center text-sm transition-colors" style={{ color: 'rgba(255,255,255,0.45)' }}>← Back to Sign In</button>
           </div>
+          <div className="text-center mt-4">
+            <Link to="/" className="text-sm transition-colors hover:opacity-80" style={{ color: 'rgba(255,255,255,0.35)' }}>
+              ← Back to home
+            </Link>
+          </div>
+          </>
         ) : (
           <>
             <div style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }} className="flex rounded-2xl p-1 mb-4">
@@ -265,6 +275,11 @@ export default function Login() {
             </form>
 
             <p className="text-center text-xs mt-6" style={{ color: 'rgba(255,255,255,0.2)' }}>Trusted by care communities everywhere</p>
+            <div className="text-center mt-3">
+              <Link to="/" className="text-sm transition-colors hover:opacity-80" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                ← Back to home
+              </Link>
+            </div>
           </>
         )}
       </div>

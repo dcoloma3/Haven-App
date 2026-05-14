@@ -108,6 +108,16 @@ const CARE_LEVEL_COLORS = {
   Respite: 'bg-orange-100 text-orange-700',
 }
 
+const CARE_LEVEL_LABELS = {
+  All:     'All care levels',
+  AL:      'Assisted Living',
+  IL:      'Independent Living',
+  MC:      'Memory Care',
+  SNF:     'Skilled Nursing Facility',
+  Hospice: 'Hospice',
+  Respite: 'Respite',
+}
+
 export default function Dashboard() {
   const [residents, setResidents] = useState([])
   const [loading, setLoading] = useState(true)
@@ -271,16 +281,21 @@ export default function Dashboard() {
         <div className="mb-5 space-y-3">
           {/* High-severity alert banner */}
           {highSeverityCount > 0 && (
-            <div className="flex items-center justify-between bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
+            <div role="alert" className="flex items-center justify-between bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
               <span>⚠ {highSeverityCount} high-severity incident{highSeverityCount !== 1 ? 's' : ''} require attention</span>
               <Link to="/incidents" className="text-red-600 hover:text-red-800 font-semibold ml-4 flex-shrink-0 underline">View</Link>
             </div>
           )}
 
-          {/* Stats grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+          {/* Stats grid — 2 col mobile, 3 col tablet, 5 col desktop */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {/* Active Residents */}
-            <div className="bg-white border border-slate-200 rounded-2xl px-4 py-4 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer" onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}>
+            <button
+              type="button"
+              aria-label={`${residents.length} active residents — scroll to resident list`}
+              onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}
+              className="w-full text-left bg-white border border-slate-200 rounded-2xl px-4 py-4 hover:shadow-md hover:-translate-y-0.5 transition-all"
+            >
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
                   <svg className="w-4 h-4 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -293,7 +308,7 @@ export default function Dashboard() {
                   <p className="text-xs text-slate-500 mt-0.5">Active Residents</p>
                 </div>
               </div>
-            </div>
+            </button>
 
             {/* Meds Incomplete */}
             {(() => {
@@ -303,7 +318,12 @@ export default function Dashboard() {
               }).length
               const isAmber = medsIncomplete > 0
               return (
-                <div onClick={() => navigate('/dispense')} className={`rounded-2xl px-4 py-4 border hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer ${isAmber ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'}`}>
+                <button
+                  type="button"
+                  aria-label={`${medsIncomplete} resident${medsIncomplete !== 1 ? 's' : ''} with incomplete medications — go to Dispense`}
+                  onClick={() => navigate('/dispense')}
+                  className={`w-full text-left rounded-2xl px-4 py-4 border hover:shadow-md hover:-translate-y-0.5 transition-all ${isAmber ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'}`}
+                >
                   <div className="flex items-center gap-3">
                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${isAmber ? 'bg-amber-100' : 'bg-emerald-100'}`}>
                       <svg className={`w-4 h-4 ${isAmber ? 'text-amber-600' : 'text-emerald-600'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -315,7 +335,7 @@ export default function Dashboard() {
                       <p className={`text-xs mt-0.5 ${isAmber ? 'text-amber-600' : 'text-emerald-600'}`}>Meds Incomplete</p>
                     </div>
                   </div>
-                </div>
+                </button>
               )
             })()}
 
@@ -323,7 +343,12 @@ export default function Dashboard() {
             {(() => {
               const isRed = openIncidentCount > 0
               return (
-                <div onClick={() => navigate('/incidents')} className={`rounded-2xl px-4 py-4 border hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer ${isRed ? 'bg-red-50 border-red-200' : 'bg-white border-slate-200'}`}>
+                <button
+                  type="button"
+                  aria-label={`${openIncidentCount} open incident${openIncidentCount !== 1 ? 's' : ''} — go to Incidents`}
+                  onClick={() => navigate('/incidents')}
+                  className={`w-full text-left rounded-2xl px-4 py-4 border hover:shadow-md hover:-translate-y-0.5 transition-all ${isRed ? 'bg-red-50 border-red-200' : 'bg-white border-slate-200'}`}
+                >
                   <div className="flex items-center gap-3">
                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${isRed ? 'bg-red-100' : 'bg-slate-100'}`}>
                       <svg className={`w-4 h-4 ${isRed ? 'text-red-500' : 'text-slate-400'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -335,7 +360,7 @@ export default function Dashboard() {
                       <p className={`text-xs mt-0.5 ${isRed ? 'text-red-600' : 'text-slate-500'}`}>Open Incidents</p>
                     </div>
                   </div>
-                </div>
+                </button>
               )
             })()}
 
@@ -343,7 +368,12 @@ export default function Dashboard() {
             {(() => {
               const hasAppts = apptCount > 0
               return (
-                <div onClick={() => navigate('/calendar')} className={`rounded-2xl px-4 py-4 border hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer ${hasAppts ? 'border-[#185FA5] bg-[#E6F1FB]' : 'bg-white border-slate-200'}`}>
+                <button
+                  type="button"
+                  aria-label={`${apptCount} appointment${apptCount !== 1 ? 's' : ''} today — go to Calendar`}
+                  onClick={() => navigate('/calendar')}
+                  className={`w-full text-left rounded-2xl px-4 py-4 border hover:shadow-md hover:-translate-y-0.5 transition-all ${hasAppts ? 'border-[#185FA5] bg-[#E6F1FB]' : 'bg-white border-slate-200'}`}
+                >
                   <div className="flex items-center gap-3">
                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${hasAppts ? 'bg-[#185FA5]/20' : 'bg-slate-100'}`}>
                       <svg className={`w-4 h-4 ${hasAppts ? 'text-[#185FA5]' : 'text-slate-400'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -355,7 +385,7 @@ export default function Dashboard() {
                       <p className={`text-xs mt-0.5 ${hasAppts ? 'text-[#185FA5]' : 'text-slate-500'}`}>Appts Today</p>
                     </div>
                   </div>
-                </div>
+                </button>
               )
             })()}
 
@@ -363,7 +393,12 @@ export default function Dashboard() {
             {(() => {
               const hasProspects = prospectCount > 0
               return (
-                <div onClick={() => navigate('/occupancy')} className={`rounded-2xl px-4 py-4 border hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer ${hasProspects ? 'bg-purple-50 border-purple-200' : 'bg-white border-slate-200'}`}>
+                <button
+                  type="button"
+                  aria-label={`${prospectCount} prospect${prospectCount !== 1 ? 's' : ''} in pipeline — go to Prospects`}
+                  onClick={() => navigate('/occupancy')}
+                  className={`w-full text-left rounded-2xl px-4 py-4 border hover:shadow-md hover:-translate-y-0.5 transition-all ${hasProspects ? 'bg-purple-50 border-purple-200' : 'bg-white border-slate-200'}`}
+                >
                   <div className="flex items-center gap-3">
                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${hasProspects ? 'bg-purple-100' : 'bg-slate-100'}`}>
                       <svg className={`w-4 h-4 ${hasProspects ? 'text-purple-600' : 'text-slate-400'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -376,7 +411,7 @@ export default function Dashboard() {
                       <p className={`text-xs mt-0.5 ${hasProspects ? 'text-purple-600' : 'text-slate-500'}`}>Prospects</p>
                     </div>
                   </div>
-                </div>
+                </button>
               )
             })()}
           </div>
@@ -450,22 +485,26 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Header */}
+      {/* Residents header */}
       <div className="flex flex-wrap items-center justify-between mb-4 gap-2">
-        <h1 className="text-xl font-bold text-slate-800">
+        <h2 className="text-xl font-bold text-slate-800">
           {showFormer ? 'Former Residents' : 'Residents'}
-        </h1>
+        </h2>
         <div className="flex items-center gap-2">
           {/* Toggle: Active / Former */}
-          <div className="flex items-center bg-slate-100 rounded-xl p-1 gap-1">
+          <div role="group" aria-label="Resident status filter" className="flex items-center bg-slate-100 rounded-xl p-1 gap-1">
             <button
+              type="button"
               onClick={() => { setShowFormer(false); setSearch('') }}
+              aria-pressed={!showFormer}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${!showFormer ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
             >
               Active
             </button>
             <button
+              type="button"
               onClick={() => { setShowFormer(true); setSearch('') }}
+              aria-pressed={showFormer}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${showFormer ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
             >
               Former
@@ -475,11 +514,13 @@ export default function Dashboard() {
           {/* Add button — only on active tab */}
           {!showFormer && (
             <button
+              type="button"
               onClick={() => setShowForm(true)}
+              aria-label="Add new resident"
               className="text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all active:scale-95"
               style={{ background: 'linear-gradient(135deg, #185FA5 0%, #2d8fe8 100%)', boxShadow: '0 2px 12px rgba(24,95,165,0.4)' }}
             >
-              + Add
+              + Add Resident
             </button>
           )}
         </div>
@@ -487,11 +528,12 @@ export default function Dashboard() {
 
       {/* Search */}
       <div className="relative mb-3">
-        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
         <input
           type="text"
+          aria-label={showFormer ? 'Search former residents' : 'Search residents by name or room number'}
           placeholder={showFormer ? 'Search former residents…' : 'Search residents or room…'}
           value={search}
           onChange={e => setSearch(e.target.value)}
@@ -501,11 +543,14 @@ export default function Dashboard() {
 
       {/* Care level filter — active residents only */}
       {!showFormer && (
-        <div className="flex gap-1.5 overflow-x-auto scrollbar-none mb-4 pb-0.5">
+        <div role="group" aria-label="Filter by care level" className="flex gap-1.5 overflow-x-auto scrollbar-none mb-4 pb-0.5">
           {careOptions.map(opt => (
             <button
               key={opt}
+              type="button"
               onClick={() => setCareFilter(opt)}
+              aria-pressed={careFilter === opt}
+              aria-label={CARE_LEVEL_LABELS[opt] || opt}
               className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                 careFilter === opt
                   ? 'bg-[#185FA5] text-white'
@@ -522,8 +567,8 @@ export default function Dashboard() {
 
       {loading && (
         <div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-            <StatCardSkeleton /><StatCardSkeleton /><StatCardSkeleton /><StatCardSkeleton />
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
+            <StatCardSkeleton /><StatCardSkeleton /><StatCardSkeleton /><StatCardSkeleton /><StatCardSkeleton />
           </div>
           <div className="h-6 w-24 bg-slate-200 rounded-lg mb-4" style={{ animation: 'skeletonPulse 1.5s ease-in-out infinite' }} />
           {isMobile ? (
@@ -556,11 +601,12 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {/* Step 1 — Add resident */}
             <button
+              type="button"
               onClick={() => setShowForm(true)}
               className="text-left bg-white border-2 border-[#185FA5] rounded-2xl p-4 hover:bg-[#E6F1FB] transition-colors group"
             >
               <div className="w-10 h-10 bg-[#E6F1FB] rounded-xl flex items-center justify-center mb-3 group-hover:bg-white transition-colors">
-                <svg className="w-5 h-5 text-[#185FA5]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg className="w-5 h-5 text-[#185FA5]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="8.5" cy="7" r="4" /><line x1="20" y1="8" x2="20" y2="14" /><line x1="23" y1="11" x2="17" y2="11" />
                 </svg>
               </div>
@@ -571,11 +617,12 @@ export default function Dashboard() {
 
             {/* Step 2 — Invite staff */}
             <button
+              type="button"
               onClick={() => navigate('/staff')}
               className="text-left bg-white border border-slate-200 rounded-2xl p-4 hover:border-slate-300 hover:shadow-sm transition-all group"
             >
               <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center mb-3">
-                <svg className="w-5 h-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg className="w-5 h-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
                 </svg>
               </div>
@@ -587,11 +634,12 @@ export default function Dashboard() {
             {/* Step 3 — Settings (admin only) */}
             {isAdmin && (
               <button
+                type="button"
                 onClick={() => navigate('/settings')}
                 className="text-left bg-white border border-slate-200 rounded-2xl p-4 hover:border-slate-300 hover:shadow-sm transition-all group"
               >
                 <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center mb-3">
-                  <svg className="w-5 h-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg className="w-5 h-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <circle cx="12" cy="12" r="3" />
                     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
                   </svg>
@@ -619,7 +667,9 @@ export default function Dashboard() {
             return (
               <button
                 key={r.id}
+                type="button"
                 onClick={() => navigate(`/residents/${r.id}`)}
+                aria-label={`View profile for ${name}`}
                 className={`w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-slate-50 transition-colors ${i !== 0 ? 'border-t border-slate-100' : ''}`}
               >
                 <ListAvatar resident={r} medStatus={status} />
@@ -649,10 +699,13 @@ export default function Dashboard() {
           {filtered.map(r => {
             const age = getAge(r.date_of_birth)
             const status = !showFormer ? (medStatusMap[r.id] ?? 'no_meds') : undefined
+            const medStatusLabel = status === 'all' ? 'All meds given' : status === 'partial' ? 'Partially given' : status === 'none' ? 'No meds given yet' : 'No medications'
             return (
               <button
                 key={r.id}
+                type="button"
                 onClick={() => navigate(`/residents/${r.id}`)}
+                aria-label={`View profile for ${getResidentFullName(r)}`}
                 className="text-left bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-lg hover:border-[#378ADD] hover:-translate-y-1 transition-all duration-200"
               >
                 <div className="aspect-[3/4] w-full relative">
@@ -662,7 +715,9 @@ export default function Dashboard() {
                     <span
                       className="absolute bottom-2 right-2 w-4 h-4 rounded-full border-2 border-white"
                       style={{ background: RING_COLOR[status] }}
-                      title={status === 'all' ? 'All meds given' : status === 'partial' ? 'Partially given' : status === 'none' ? 'No meds given yet' : 'No medications'}
+                      title={medStatusLabel}
+                      aria-label={medStatusLabel}
+                      role="img"
                     />
                   )}
                   {showFormer && (
