@@ -25,11 +25,9 @@ import ResidentTransportation from '../components/transportation/ResidentTranspo
 import { useCommunity } from '../context/CommunityContext'
 import { useIsMobile } from '../hooks/useIsMobile'
 
-const ALL_TABS = ['Profile', 'Medications', 'Contacts', 'Health & Care', 'Lease', 'Photos', 'Appointments', 'Med History', 'Incidents', 'Documents', 'Vitals', 'Care Plan', 'ADLs', 'Dietary', 'Family', 'Billing', 'Checklist', 'Transport']
-const STAFF_TABS = ['Profile', 'Medications', 'Contacts', 'Health & Care', 'Photos', 'Appointments', 'Med History', 'Incidents', 'Documents', 'Vitals', 'Care Plan', 'ADLs', 'Dietary', 'Checklist', 'Transport']
-
-// First N tabs always visible in the bar; the rest collapse into "More ▾"
-const PRIMARY_COUNT = 7
+// Consolidated tabs — related sections are grouped within each tab
+const ALL_TABS   = ['Profile', 'Medications', 'Health', 'Contacts', 'Records', 'Billing']
+const STAFF_TABS = ['Profile', 'Medications', 'Health', 'Contacts', 'Records']
 
 const REMOVAL_REASONS = [
   'Moved Out',
@@ -119,7 +117,6 @@ export default function ResidentDetail() {
   const [loading, setLoading] = useState(true)
   const [showRemovalModal, setShowRemovalModal] = useState(false)
   const [reactivating, setReactivating] = useState(false)
-  const [showMoreTabs, setShowMoreTabs] = useState(false)
   const [medStatus, setMedStatus] = useState(null)
   const tabsRef = useRef(null)
 
@@ -137,9 +134,21 @@ export default function ResidentDetail() {
       .then(({ data }) => { setResident(data); setLoading(false) })
   }, [id])
 
+  // Map old individual tab names → new consolidated tab names
+  const TAB_MAP = {
+    'Health & Care': 'Health', 'Vitals': 'Health', 'Care Plan': 'Health', 'ADLs': 'Health',
+    'Med History': 'Medications',
+    'Photos': 'Records', 'Appointments': 'Records', 'Incidents': 'Records',
+    'Documents': 'Records', 'Transport': 'Records', 'Checklist': 'Records',
+    'Dietary': 'Profile',
+    'Family': 'Contacts',
+    'Lease': 'Billing',
+  }
+
   useEffect(() => {
     if (location.state?.openTab) {
-      setActiveTab(location.state.openTab)
+      const mapped = TAB_MAP[location.state.openTab] ?? location.state.openTab
+      setActiveTab(mapped)
     }
   }, []) // eslint-disable-line
 
@@ -242,86 +251,102 @@ export default function ResidentDetail() {
         </div>
       </div>
 
-      {/* Tabs */}
-      {(() => {
-        const primaryTabs = TABS.slice(0, PRIMARY_COUNT)
-        const moreTabs = TABS.slice(PRIMARY_COUNT)
-        const activeIsInMore = moreTabs.includes(activeTab)
-        return (
-          <div className="border-b border-slate-200 mb-5 -mx-4 px-4 flex items-end">
-            {/* Scrollable primary tabs */}
-            <div ref={tabsRef} className="flex gap-0 overflow-x-auto scrollbar-none flex-1 min-w-0" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-              {primaryTabs.map(tab => (
-                <button
-                  key={tab}
-                  data-tab={tab}
-                  onClick={() => { handleTabClick(tab); setShowMoreTabs(false) }}
-                  className={`px-3.5 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-colors flex-shrink-0 ${
-                    activeTab === tab ? 'border-[#185FA5] text-[#185FA5]' : 'border-transparent text-slate-400 hover:text-slate-700'
-                  }`}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
+      {/* Tabs — 5 for staff, 6 for admin */}
+      <div className="border-b border-slate-200 mb-5 -mx-4 px-4">
+        <div
+          ref={tabsRef}
+          className="flex gap-0 overflow-x-auto scrollbar-none"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          {TABS.map(tab => (
+            <button
+              key={tab}
+              data-tab={tab}
+              onClick={() => handleTabClick(tab)}
+              className={`px-3.5 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-colors flex-shrink-0 ${
+                activeTab === tab
+                  ? 'border-[#185FA5] text-[#185FA5]'
+                  : 'border-transparent text-slate-400 hover:text-slate-700'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+      </div>
 
-            {/* More button — outside the scroll container so the dropdown isn't clipped */}
-            {moreTabs.length > 0 && (
-              <div className="relative flex-shrink-0">
-                <button
-                  onClick={() => setShowMoreTabs(o => !o)}
-                  className={`px-3.5 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-colors flex items-center gap-1 ${
-                    activeIsInMore ? 'border-[#185FA5] text-[#185FA5]' : 'border-transparent text-slate-400 hover:text-slate-700'
-                  }`}
-                >
-                  {activeIsInMore ? activeTab : 'More'}
-                  <svg className={`w-3 h-3 flex-shrink-0 transition-transform ${showMoreTabs ? 'rotate-180' : ''}`} viewBox="0 0 12 12" fill="currentColor">
-                    <path d="M6 8L1 3h10z" />
-                  </svg>
-                </button>
-
-                {showMoreTabs && (
-                  <>
-                    <div className="fixed inset-0 z-30" onClick={() => setShowMoreTabs(false)} />
-                    <div className="absolute right-0 top-full mt-1 z-40 bg-white rounded-xl shadow-lg border border-slate-200 w-44 overflow-hidden">
-                      {moreTabs.map(tab => (
-                        <button
-                          key={tab}
-                          onClick={() => { handleTabClick(tab); setShowMoreTabs(false) }}
-                          className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
-                            activeTab === tab ? 'bg-[#E6F1FB] text-[#185FA5] font-medium' : 'text-slate-700 hover:bg-slate-50'
-                          }`}
-                        >
-                          {tab}
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
+      {/* Tab content — multiple components grouped per tab */}
+      {activeTab === 'Profile' && (
+        <div className="space-y-8">
+          <ResidentProfile resident={resident} onUpdate={setResident} />
+          <div className="border-t border-slate-100 pt-6">
+            <DietaryProfile residentId={id} resident={resident} />
           </div>
-        )
-      })()}
+        </div>
+      )}
 
-      {activeTab === 'Profile' && <ResidentProfile resident={resident} onUpdate={setResident} />}
-      {activeTab === 'Medications' && <MedicationList residentId={id} onMedStatusChange={refreshMedStatus} />}
-      {activeTab === 'Contacts' && <ContactList residentId={id} />}
-      {activeTab === 'Lease' && <LeaseDetails residentId={id} />}
-      {activeTab === 'Health & Care' && <HealthCare residentId={id} />}
-      {activeTab === 'Photos' && <PhotoGallery residentId={id} />}
-      {activeTab === 'Appointments' && <ResidentAppointments residentId={id} communityId={communityId} />}
-      {activeTab === 'Med History' && <ResidentMedHistory residentId={id} resident={resident} />}
-      {activeTab === 'Incidents' && <ResidentIncidents residentId={id} resident={resident} />}
-      {activeTab === 'Documents' && <DocumentVault residentId={id} resident={resident} />}
-      {activeTab === 'Vitals' && <VitalsLog residentId={id} resident={resident} />}
-      {activeTab === 'Care Plan' && <CarePlanList residentId={id} resident={resident} />}
-      {activeTab === 'ADLs' && <ADLTracker residentId={id} resident={resident} />}
-      {activeTab === 'Dietary' && <DietaryProfile residentId={id} resident={resident} />}
-      {activeTab === 'Family' && <FamilyAccess residentId={id} resident={resident} />}
-      {activeTab === 'Billing' && <BillingHistory residentId={id} resident={resident} />}
-      {activeTab === 'Checklist' && <MoveChecklist residentId={id} resident={resident} />}
-      {activeTab === 'Transport' && <ResidentTransportation residentId={id} resident={resident} />}
+      {activeTab === 'Medications' && (
+        <div className="space-y-8">
+          <MedicationList residentId={id} onMedStatusChange={refreshMedStatus} />
+          <div className="border-t border-slate-100 pt-6">
+            <ResidentMedHistory residentId={id} resident={resident} />
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'Health' && (
+        <div className="space-y-8">
+          <HealthCare residentId={id} />
+          <div className="border-t border-slate-100 pt-6">
+            <VitalsLog residentId={id} resident={resident} />
+          </div>
+          <div className="border-t border-slate-100 pt-6">
+            <CarePlanList residentId={id} resident={resident} />
+          </div>
+          <div className="border-t border-slate-100 pt-6">
+            <ADLTracker residentId={id} resident={resident} />
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'Contacts' && (
+        <div className="space-y-8">
+          <ContactList residentId={id} />
+          <div className="border-t border-slate-100 pt-6">
+            <FamilyAccess residentId={id} resident={resident} />
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'Records' && (
+        <div className="space-y-8">
+          <DocumentVault residentId={id} resident={resident} />
+          <div className="border-t border-slate-100 pt-6">
+            <PhotoGallery residentId={id} />
+          </div>
+          <div className="border-t border-slate-100 pt-6">
+            <ResidentAppointments residentId={id} communityId={communityId} />
+          </div>
+          <div className="border-t border-slate-100 pt-6">
+            <ResidentIncidents residentId={id} resident={resident} />
+          </div>
+          <div className="border-t border-slate-100 pt-6">
+            <ResidentTransportation residentId={id} resident={resident} />
+          </div>
+          <div className="border-t border-slate-100 pt-6">
+            <MoveChecklist residentId={id} resident={resident} />
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'Billing' && isAdmin && (
+        <div className="space-y-8">
+          <LeaseDetails residentId={id} />
+          <div className="border-t border-slate-100 pt-6">
+            <BillingHistory residentId={id} resident={resident} />
+          </div>
+        </div>
+      )}
 
       {/* Remove Resident — admin only, active residents only */}
       {isAdmin && !isInactive && (

@@ -5,6 +5,7 @@ import { FacilityProvider } from './context/FacilityContext'
 import { ProfileProvider, useProfile } from './context/ProfileContext'
 import { CommunityProvider, useCommunity } from './context/CommunityContext'
 import RequireAdmin from './components/auth/RequireAdmin'
+import AppLoader from './components/ui/AppLoader'
 import Login from './pages/Login'
 import Marketing from './pages/Marketing'
 import Onboarding from './pages/Onboarding'
@@ -33,6 +34,9 @@ import FamilyView from './pages/FamilyView'
 import MedicationHistory from './pages/MedicationHistory'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import TermsOfService from './pages/TermsOfService'
+import Signup from './pages/Signup'
+import TrialExpired from './pages/TrialExpired'
+import TrialLockedFeature from './pages/TrialLockedFeature'
 
 function NoMembershipScreen() {
   return (
@@ -58,11 +62,11 @@ function NoMembershipScreen() {
   )
 }
 
-function ProtectedRoute({ children }) {
+function ProtectedRoute({ children, trialLocked, featureName }) {
   const { profile, loading: profileLoading } = useProfile()
-  const { memberships, communityId, loading: communityLoading, isSuperAdmin } = useCommunity()
+  const { memberships, communityId, community, loading: communityLoading, isSuperAdmin } = useCommunity()
 
-  if (profileLoading || communityLoading) return null
+  if (profileLoading || communityLoading) return <AppLoader />
 
   // Needs onboarding
   if (profile !== null && profile?.onboarding_complete === false) {
@@ -87,6 +91,17 @@ function ProtectedRoute({ children }) {
     return <Navigate to="/community" replace />
   }
 
+  // Trial expired — lock everything except sign-out
+  if (community?.plan === 'trial' && community?.trial_end_date) {
+    const expired = new Date(community.trial_end_date) <= new Date()
+    if (expired) return <TrialExpired />
+  }
+
+  // Feature locked during trial
+  if (trialLocked && community?.plan === 'trial') {
+    return <TrialLockedFeature featureName={featureName} />
+  }
+
   return children
 }
 
@@ -101,7 +116,7 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  if (session === undefined) return null
+  if (session === undefined) return <AppLoader />
 
   return (
     <BrowserRouter>
@@ -111,6 +126,7 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Marketing />} />
               <Route path="/login" element={session ? <Navigate to="/dashboard" replace /> : <Login />} />
+              <Route path="/signup" element={session ? <Navigate to="/dashboard" replace /> : <Signup />} />
               <Route path="/onboarding" element={session ? <Onboarding /> : <Navigate to="/login" replace />} />
               <Route path="/community" element={session ? <CommunityPicker /> : <Navigate to="/login" replace />} />
               <Route path="/complete-profile" element={session ? <ProfileCompletion /> : <Navigate to="/login" replace />} />
@@ -134,26 +150,26 @@ export default function App() {
               <Route path="/medication-history" element={session ? <ProtectedRoute><MedicationHistory /></ProtectedRoute> : <Navigate to="/login" replace />} />
 
               <Route path="/staff" element={
-                session ? <ProtectedRoute><StaffDirectory /></ProtectedRoute> : <Navigate to="/login" replace />
+                session ? <ProtectedRoute trialLocked featureName="Staff Directory"><StaffDirectory /></ProtectedRoute> : <Navigate to="/login" replace />
               } />
 
               <Route path="/settings" element={
-                session ? <ProtectedRoute><RequireAdmin><FacilitySettings /></RequireAdmin></ProtectedRoute> : <Navigate to="/login" replace />
+                session ? <ProtectedRoute trialLocked featureName="Facility Settings"><RequireAdmin><FacilitySettings /></RequireAdmin></ProtectedRoute> : <Navigate to="/login" replace />
               } />
               <Route path="/schedule" element={
-                session ? <ProtectedRoute><RequireAdmin><Schedule /></RequireAdmin></ProtectedRoute> : <Navigate to="/login" replace />
+                session ? <ProtectedRoute trialLocked featureName="Staff Scheduling"><RequireAdmin><Schedule /></RequireAdmin></ProtectedRoute> : <Navigate to="/login" replace />
               } />
               <Route path="/billing" element={
-                session ? <ProtectedRoute><RequireAdmin><Billing /></RequireAdmin></ProtectedRoute> : <Navigate to="/login" replace />
+                session ? <ProtectedRoute trialLocked featureName="Billing"><RequireAdmin><Billing /></RequireAdmin></ProtectedRoute> : <Navigate to="/login" replace />
               } />
               <Route path="/occupancy" element={
-                session ? <ProtectedRoute><RequireAdmin><Occupancy /></RequireAdmin></ProtectedRoute> : <Navigate to="/login" replace />
+                session ? <ProtectedRoute trialLocked featureName="Occupancy & Prospects"><RequireAdmin><Occupancy /></RequireAdmin></ProtectedRoute> : <Navigate to="/login" replace />
               } />
               <Route path="/certifications" element={
-                session ? <ProtectedRoute><RequireAdmin><Certifications /></RequireAdmin></ProtectedRoute> : <Navigate to="/login" replace />
+                session ? <ProtectedRoute trialLocked featureName="Certifications"><RequireAdmin><Certifications /></RequireAdmin></ProtectedRoute> : <Navigate to="/login" replace />
               } />
               <Route path="/notifications" element={
-                session ? <ProtectedRoute><RequireAdmin><NotificationLog /></RequireAdmin></ProtectedRoute> : <Navigate to="/login" replace />
+                session ? <ProtectedRoute trialLocked featureName="Notification Log"><RequireAdmin><NotificationLog /></RequireAdmin></ProtectedRoute> : <Navigate to="/login" replace />
               } />
 
               <Route path="/superadmin" element={session ? <SuperAdmin /> : <Navigate to="/login" replace />} />

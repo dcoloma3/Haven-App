@@ -10,7 +10,6 @@ import { useIsMobile } from '../hooks/useIsMobile'
 import { adminKey, computeResidentStatus, ringBoxShadow, RING_COLOR } from '../lib/medStatus'
 import { StatCardSkeleton, ResidentCardSkeleton, ResidentRowSkeleton } from '../components/ui/Skeleton'
 import WelcomeModal from '../components/onboarding/WelcomeModal'
-import GettingStartedChecklist from '../components/onboarding/GettingStartedChecklist'
 
 function fmtUpdated(dateStr) {
   if (!dateStr) return null
@@ -266,219 +265,102 @@ export default function Dashboard() {
 
       {/* Welcome */}
       {community?.name && !showFormer && (
-        <div className="mb-6">
-          <p className="text-sm font-medium text-slate-400 uppercase tracking-widest mb-1">Welcome to</p>
-          <h1 className="text-3xl font-bold text-slate-800 leading-tight">{community.name}</h1>
+        <div className="mb-3 sm:mb-6">
+          <p className="text-xs sm:text-sm font-medium text-slate-400 uppercase tracking-widest mb-0.5 sm:mb-1">Welcome to</p>
+          <h1 className="text-xl sm:text-3xl font-bold text-slate-800 leading-tight">{community.name}</h1>
         </div>
       )}
 
-      {!showFormer && communityId && (
-        <GettingStartedChecklist communityId={communityId} />
-      )}
-
-      {/* Summary stats bar — active residents only */}
+      {/* Summary stats bar — compact pill row */}
       {!showFormer && !loading && residents.length > 0 && (
-        <div className="mb-5 space-y-3">
+        <div className="mb-3">
           {/* High-severity alert banner */}
           {highSeverityCount > 0 && (
-            <div role="alert" className="flex items-center justify-between bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
+            <div role="alert" className="flex items-center justify-between bg-red-50 border border-red-200 text-red-700 rounded-xl px-3 py-2 text-xs mb-2">
               <span>⚠ {highSeverityCount} high-severity incident{highSeverityCount !== 1 ? 's' : ''} require attention</span>
-              <Link to="/incidents" className="text-red-600 hover:text-red-800 font-semibold ml-4 flex-shrink-0 underline">View</Link>
+              <Link to="/incidents" className="text-red-600 hover:text-red-800 font-semibold ml-3 flex-shrink-0 underline">View</Link>
             </div>
           )}
 
-          {/* Stats grid — 2 col mobile, 3 col tablet, 5 col desktop */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {/* Active Residents */}
-            <button
-              type="button"
-              aria-label={`${residents.length} active residents — scroll to resident list`}
-              onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}
-              className="w-full text-left bg-white border border-slate-200 rounded-2xl px-4 py-4 hover:shadow-md hover:-translate-y-0.5 transition-all"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-4 h-4 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-slate-800 leading-none">{residents.length}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">Active Residents</p>
-                </div>
-              </div>
-            </button>
-
-            {/* Meds Incomplete */}
-            {(() => {
-              const medsIncomplete = residents.filter(r => {
-                const s = medStatusMap[r.id]
-                return s === 'none' || s === 'partial'
-              }).length
-              const isAmber = medsIncomplete > 0
-              return (
-                <button
-                  type="button"
-                  aria-label={`${medsIncomplete} resident${medsIncomplete !== 1 ? 's' : ''} with incomplete medications — go to Dispense`}
-                  onClick={() => navigate('/dispense')}
-                  className={`w-full text-left rounded-2xl px-4 py-4 border hover:shadow-md hover:-translate-y-0.5 transition-all ${isAmber ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${isAmber ? 'bg-amber-100' : 'bg-emerald-100'}`}>
-                      <svg className={`w-4 h-4 ${isAmber ? 'text-amber-600' : 'text-emerald-600'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v11m0 0H5a2 2 0 0 1-2-2V9m6 5h4m0 0v-3m0 3v3"/>
-                      </svg>
-                    </div>
-                    <div>
-                      <p className={`text-2xl font-bold leading-none ${isAmber ? 'text-amber-700' : 'text-emerald-700'}`}>{medsIncomplete}</p>
-                      <p className={`text-xs mt-0.5 ${isAmber ? 'text-amber-600' : 'text-emerald-600'}`}>Meds Incomplete</p>
-                    </div>
-                  </div>
-                </button>
-              )
-            })()}
-
-            {/* Open Incidents */}
-            {(() => {
-              const isRed = openIncidentCount > 0
-              return (
-                <button
-                  type="button"
-                  aria-label={`${openIncidentCount} open incident${openIncidentCount !== 1 ? 's' : ''} — go to Incidents`}
-                  onClick={() => navigate('/incidents')}
-                  className={`w-full text-left rounded-2xl px-4 py-4 border hover:shadow-md hover:-translate-y-0.5 transition-all ${isRed ? 'bg-red-50 border-red-200' : 'bg-white border-slate-200'}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${isRed ? 'bg-red-100' : 'bg-slate-100'}`}>
-                      <svg className={`w-4 h-4 ${isRed ? 'text-red-500' : 'text-slate-400'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                      </svg>
-                    </div>
-                    <div>
-                      <p className={`text-2xl font-bold leading-none ${isRed ? 'text-red-700' : 'text-slate-800'}`}>{openIncidentCount}</p>
-                      <p className={`text-xs mt-0.5 ${isRed ? 'text-red-600' : 'text-slate-500'}`}>Open Incidents</p>
-                    </div>
-                  </div>
-                </button>
-              )
-            })()}
-
-            {/* Appointments Today */}
-            {(() => {
-              const hasAppts = apptCount > 0
-              return (
-                <button
-                  type="button"
-                  aria-label={`${apptCount} appointment${apptCount !== 1 ? 's' : ''} today — go to Calendar`}
-                  onClick={() => navigate('/calendar')}
-                  className={`w-full text-left rounded-2xl px-4 py-4 border hover:shadow-md hover:-translate-y-0.5 transition-all ${hasAppts ? 'border-[#185FA5] bg-[#E6F1FB]' : 'bg-white border-slate-200'}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${hasAppts ? 'bg-[#185FA5]/20' : 'bg-slate-100'}`}>
-                      <svg className={`w-4 h-4 ${hasAppts ? 'text-[#185FA5]' : 'text-slate-400'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-                      </svg>
-                    </div>
-                    <div>
-                      <p className={`text-2xl font-bold leading-none ${hasAppts ? 'text-[#185FA5]' : 'text-slate-800'}`}>{apptCount}</p>
-                      <p className={`text-xs mt-0.5 ${hasAppts ? 'text-[#185FA5]' : 'text-slate-500'}`}>Appts Today</p>
-                    </div>
-                  </div>
-                </button>
-              )
-            })()}
-
-            {/* Prospects in Pipeline */}
-            {(() => {
-              const hasProspects = prospectCount > 0
-              return (
-                <button
-                  type="button"
-                  aria-label={`${prospectCount} prospect${prospectCount !== 1 ? 's' : ''} in pipeline — go to Prospects`}
-                  onClick={() => navigate('/occupancy')}
-                  className={`w-full text-left rounded-2xl px-4 py-4 border hover:shadow-md hover:-translate-y-0.5 transition-all ${hasProspects ? 'bg-purple-50 border-purple-200' : 'bg-white border-slate-200'}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${hasProspects ? 'bg-purple-100' : 'bg-slate-100'}`}>
-                      <svg className={`w-4 h-4 ${hasProspects ? 'text-purple-600' : 'text-slate-400'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-                        <line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>
-                      </svg>
-                    </div>
-                    <div>
-                      <p className={`text-2xl font-bold leading-none ${hasProspects ? 'text-purple-700' : 'text-slate-800'}`}>{prospectCount}</p>
-                      <p className={`text-xs mt-0.5 ${hasProspects ? 'text-purple-600' : 'text-slate-500'}`}>Prospects</p>
-                    </div>
-                  </div>
-                </button>
-              )
-            })()}
-          </div>
-
-          {/* ── Needs Attention panel ── */}
+          {/* Compact stat chips — single scrollable row */}
           {(() => {
             const medsIncomplete = residents.filter(r => {
               const s = medStatusMap[r.id]
               return s === 'none' || s === 'partial'
             }).length
-            const items = []
-            if (medsIncomplete > 0) items.push({
-              key: 'meds',
-              icon: (
-                <svg className="w-4 h-4 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v11m0 0H5a2 2 0 0 1-2-2V9m6 5h4m0 0v-3m0 3v3"/>
-                </svg>
-              ),
-              iconBg: 'bg-amber-100',
-              label: `${medsIncomplete} resident${medsIncomplete !== 1 ? 's' : ''} with incomplete medications today`,
-              link: '/dispense',
-            })
-            if (highSeverityCount > 0) items.push({
-              key: 'incidents',
-              icon: (
-                <svg className="w-4 h-4 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-                </svg>
-              ),
-              iconBg: 'bg-red-100',
-              label: `${highSeverityCount} high-severity incident${highSeverityCount !== 1 ? 's' : ''} open — review required`,
-              link: '/incidents',
-            })
-            if (expiringCertCount > 0) items.push({
-              key: 'certs',
-              icon: (
-                <svg className="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/>
-                </svg>
-              ),
-              iconBg: 'bg-orange-100',
-              label: `${expiringCertCount} staff certification${expiringCertCount !== 1 ? 's' : ''} expiring within 30 days`,
-              link: '/certifications',
-            })
-            if (items.length === 0) return null
+            const isAmber = medsIncomplete > 0
+            const isRed = openIncidentCount > 0
+            const hasAppts = apptCount > 0
+            const hasProspects = prospectCount > 0
+
             return (
-              <div className="bg-white border border-amber-200 rounded-2xl overflow-hidden mt-3">
-                <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border-b border-amber-100">
-                  <svg className="w-4 h-4 text-amber-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+              <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-0.5">
+                {/* Active Residents */}
+                <button
+                  type="button"
+                  onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}
+                  className="flex-shrink-0 flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-3 py-1.5 hover:border-blue-300 hover:bg-blue-50 transition-all"
+                >
+                  <svg className="w-3.5 h-3.5 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
                   </svg>
-                  <p className="text-sm font-semibold text-amber-800">Needs Attention</p>
-                  <span className="ml-auto text-xs font-medium text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">{items.length} item{items.length !== 1 ? 's' : ''}</span>
-                </div>
-                <div className="divide-y divide-slate-100">
-                  {items.map(item => (
-                    <button key={item.key} onClick={() => navigate(item.link)} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-left">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${item.iconBg}`}>
-                        {item.icon}
-                      </div>
-                      <p className="flex-1 text-sm text-slate-700">{item.label}</p>
-                      <svg className="w-4 h-4 text-slate-300 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="9 18 15 12 9 6" />
-                      </svg>
-                    </button>
-                  ))}
-                </div>
+                  <span className="text-sm font-bold text-slate-800">{residents.length}</span>
+                  <span className="text-xs text-slate-500">Residents</span>
+                </button>
+
+                {/* Meds */}
+                <button
+                  type="button"
+                  onClick={() => navigate('/dispense')}
+                  className={`flex-shrink-0 flex items-center gap-1.5 border rounded-xl px-3 py-1.5 transition-all ${isAmber ? 'bg-amber-50 border-amber-200 hover:bg-amber-100' : 'bg-emerald-50 border-emerald-200 hover:bg-emerald-100'}`}
+                >
+                  <svg className={`w-3.5 h-3.5 ${isAmber ? 'text-amber-500' : 'text-emerald-500'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v11m0 0H5a2 2 0 0 1-2-2V9m6 5h4m0 0v-3m0 3v3"/>
+                  </svg>
+                  <span className={`text-sm font-bold ${isAmber ? 'text-amber-700' : 'text-emerald-700'}`}>{medsIncomplete}</span>
+                  <span className={`text-xs ${isAmber ? 'text-amber-600' : 'text-emerald-600'}`}>Meds</span>
+                </button>
+
+                {/* Incidents */}
+                <button
+                  type="button"
+                  onClick={() => navigate('/incidents')}
+                  className={`flex-shrink-0 flex items-center gap-1.5 border rounded-xl px-3 py-1.5 transition-all ${isRed ? 'bg-red-50 border-red-200 hover:bg-red-100' : 'bg-white border-slate-200 hover:bg-slate-50'}`}
+                >
+                  <svg className={`w-3.5 h-3.5 ${isRed ? 'text-red-500' : 'text-slate-400'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  </svg>
+                  <span className={`text-sm font-bold ${isRed ? 'text-red-700' : 'text-slate-800'}`}>{openIncidentCount}</span>
+                  <span className={`text-xs ${isRed ? 'text-red-600' : 'text-slate-500'}`}>Incidents</span>
+                </button>
+
+                {/* Appointments */}
+                <button
+                  type="button"
+                  onClick={() => navigate('/calendar')}
+                  className={`flex-shrink-0 flex items-center gap-1.5 border rounded-xl px-3 py-1.5 transition-all ${hasAppts ? 'bg-[#E6F1FB] border-[#185FA5] hover:bg-[#d0e6f7]' : 'bg-white border-slate-200 hover:bg-slate-50'}`}
+                >
+                  <svg className={`w-3.5 h-3.5 ${hasAppts ? 'text-[#185FA5]' : 'text-slate-400'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                  </svg>
+                  <span className={`text-sm font-bold ${hasAppts ? 'text-[#185FA5]' : 'text-slate-800'}`}>{apptCount}</span>
+                  <span className={`text-xs ${hasAppts ? 'text-[#185FA5]' : 'text-slate-500'}`}>Appts</span>
+                </button>
+
+                {/* Prospects */}
+                <button
+                  type="button"
+                  onClick={() => navigate('/occupancy')}
+                  className={`flex-shrink-0 flex items-center gap-1.5 border rounded-xl px-3 py-1.5 transition-all ${hasProspects ? 'bg-purple-50 border-purple-200 hover:bg-purple-100' : 'bg-white border-slate-200 hover:bg-slate-50'}`}
+                >
+                  <svg className={`w-3.5 h-3.5 ${hasProspects ? 'text-purple-500' : 'text-slate-400'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                    <line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>
+                  </svg>
+                  <span className={`text-sm font-bold ${hasProspects ? 'text-purple-700' : 'text-slate-800'}`}>{prospectCount}</span>
+                  <span className={`text-xs ${hasProspects ? 'text-purple-600' : 'text-slate-500'}`}>Prospects</span>
+                </button>
               </div>
             )
           })()}
@@ -511,18 +393,29 @@ export default function Dashboard() {
             </button>
           </div>
 
-          {/* Add button — only on active tab */}
-          {!showFormer && (
-            <button
-              type="button"
-              onClick={() => setShowForm(true)}
-              aria-label="Add new resident"
-              className="text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all active:scale-95"
-              style={{ background: 'linear-gradient(135deg, #185FA5 0%, #2d8fe8 100%)', boxShadow: '0 2px 12px rgba(24,95,165,0.4)' }}
-            >
-              + Add Resident
-            </button>
-          )}
+          {/* Add button — only on active tab; cap at 6 during trial */}
+          {!showFormer && (() => {
+            const isTrial = community?.plan === 'trial'
+            const atCap = isTrial && residents.length >= 6
+            return atCap ? (
+              <div className="flex items-center gap-2 border border-amber-200 bg-amber-50 text-amber-700 text-xs font-medium px-3 py-2 rounded-xl">
+                <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+                Trial limit: 6 residents
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowForm(true)}
+                aria-label="Add new resident"
+                className="text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all active:scale-95"
+                style={{ background: 'linear-gradient(135deg, #185FA5 0%, #2d8fe8 100%)', boxShadow: '0 2px 12px rgba(24,95,165,0.4)' }}
+              >
+                + Add Resident
+              </button>
+            )
+          })()}
         </div>
       </div>
 
@@ -543,7 +436,7 @@ export default function Dashboard() {
 
       {/* Care level filter — active residents only */}
       {!showFormer && (
-        <div role="group" aria-label="Filter by care level" className="flex gap-1.5 overflow-x-auto scrollbar-none mb-4 pb-0.5">
+        <div role="group" aria-label="Filter by care level" className="flex gap-1.5 overflow-x-auto scrollbar-none mb-4 pb-0.5 pr-4">
           {careOptions.map(opt => (
             <button
               key={opt}
@@ -657,45 +550,9 @@ export default function Dashboard() {
         <p className="text-center text-slate-400 text-sm py-8">No residents match "{search}"</p>
       )}
 
-      {/* Mobile: list view */}
-      {isMobile && !loading && filtered.length > 0 && (
-        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-          {filtered.map((r, i) => {
-            const age = getAge(r.date_of_birth)
-            const name = getResidentFullName(r)
-            const status = !showFormer ? (medStatusMap[r.id] ?? 'no_meds') : undefined
-            return (
-              <button
-                key={r.id}
-                type="button"
-                onClick={() => navigate(`/residents/${r.id}`)}
-                aria-label={`View profile for ${name}`}
-                className={`w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-slate-50 transition-colors ${i !== 0 ? 'border-t border-slate-100' : ''}`}
-              >
-                <ListAvatar resident={r} medStatus={status} />
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-slate-800 truncate">{name}</p>
-                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                    <p className="text-sm text-slate-400">Room {r.room_number || '—'}{age !== null ? ` · ${age} yrs` : ''}</p>
-                    {r.care_level && !showFormer && (
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-semibold ${CARE_LEVEL_COLORS[r.care_level] || 'bg-slate-100 text-slate-600'}`}>{r.care_level}</span>
-                    )}
-                    {showFormer && <StatusBadge reason={r.removal_reason} />}
-                  </div>
-                  {!showFormer && r.updated_at && (
-                    <p className="text-[10px] text-slate-300 mt-0.5">{fmtUpdated(r.updated_at)}</p>
-                  )}
-                </div>
-                <ChevronRight />
-              </button>
-            )
-          })}
-        </div>
-      )}
-
-      {/* Desktop: grid view */}
-      {!isMobile && !loading && filtered.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+      {/* Card grid view — same layout on mobile and desktop */}
+      {!loading && filtered.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
           {filtered.map(r => {
             const age = getAge(r.date_of_birth)
             const status = !showFormer ? (medStatusMap[r.id] ?? 'no_meds') : undefined

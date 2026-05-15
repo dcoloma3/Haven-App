@@ -53,7 +53,7 @@ function InviteAdminModal({ currentUserId, onClose }) {
             <p className="text-sm text-slate-500 mb-1">Share the app link with <strong>{email}</strong>.</p>
             <p className="text-sm text-slate-500 mb-4">When they sign up, they'll go through admin onboarding and set up their community.</p>
             <p className="text-xs bg-slate-100 rounded-lg px-3 py-2 text-slate-600 font-mono break-all">{window.location.origin}</p>
-            <button onClick={onClose} className="mt-4 bg-[#185FA5] text-white text-sm font-medium px-5 py-2 rounded-lg hover:bg-[#0C447C] transition-colors">
+            <button onClick={onClose} className="mt-4 bg-[#042C53] text-white text-sm font-medium px-5 py-2 rounded-lg hover:bg-[#0B3D6E] transition-colors">
               Done
             </button>
           </div>
@@ -69,7 +69,7 @@ function InviteAdminModal({ currentUserId, onClose }) {
             {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
             <div className="flex gap-3">
               <button onClick={onClose} className="flex-1 border border-slate-300 text-slate-700 rounded-lg py-2 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
-              <button onClick={handleInvite} disabled={saving} className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-lg py-2 text-sm font-medium transition-colors">
+              <button onClick={handleInvite} disabled={saving} className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-lg py-2 text-sm font-medium transition-colors">
                 {saving ? 'Creating…' : 'Create Invite'}
               </button>
             </div>
@@ -112,7 +112,7 @@ function AddSuperAdminModal({ onClose, onAdded }) {
           {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
           <div className="flex gap-3">
             <button onClick={onClose} className="flex-1 border border-slate-300 text-slate-700 rounded-lg py-2 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
-            <button onClick={handleAdd} disabled={saving} className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-lg py-2 text-sm font-medium transition-colors">
+            <button onClick={handleAdd} disabled={saving} className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-lg py-2 text-sm font-medium transition-colors">
               {saving ? 'Adding…' : 'Add'}
             </button>
           </div>
@@ -170,7 +170,7 @@ function CommunityRow({ c, s, isMine, onEnter }) {
         className={`flex-shrink-0 text-sm font-medium px-4 py-2 rounded-xl transition-colors flex items-center gap-1.5 ${
           isMine
             ? 'bg-amber-400 hover:bg-amber-500 text-[#042C53]'
-            : 'bg-[#185FA5] hover:bg-[#0C447C] text-white'
+            : 'bg-[#042C53] hover:bg-[#0B3D6E] text-white'
         }`}
       >
         Enter
@@ -178,6 +178,120 @@ function CommunityRow({ c, s, isMine, onEnter }) {
           <polyline points="9 18 15 12 9 6" />
         </svg>
       </button>
+    </div>
+  )
+}
+
+// ─── Trial Extension Modal ─────────────────────────────────────────────────────
+
+function ExtendTrialModal({ community, onClose, onSaved }) {
+  const [newDate, setNewDate] = useState(
+    community.trial_end_date
+      ? new Date(community.trial_end_date).toISOString().split('T')[0]
+      : ''
+  )
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleSave() {
+    if (!newDate) { setError('Please choose a date.'); return }
+    setSaving(true)
+    const { error: err } = await supabase
+      .from('communities')
+      .update({ trial_end_date: new Date(newDate).toISOString() })
+      .eq('id', community.id)
+    setSaving(false)
+    if (err) { setError(err.message); return }
+    onSaved()
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="font-semibold text-slate-800">Extend Trial</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
+        </div>
+        <p className="text-sm text-slate-500 mb-4">Set a new trial end date for <strong>{community.name}</strong>.</p>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">New trial end date</label>
+            <input
+              type="date"
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5]"
+              value={newDate}
+              onChange={e => setNewDate(e.target.value)}
+              min={new Date().toISOString().split('T')[0]}
+            />
+          </div>
+          {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
+          <div className="flex gap-3">
+            <button onClick={onClose} className="flex-1 border border-slate-300 text-slate-700 rounded-lg py-2 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
+            <button onClick={handleSave} disabled={saving} className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-lg py-2 text-sm font-medium transition-colors">
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Convert to Active Modal ───────────────────────────────────────────────────
+
+function ConvertPlanModal({ community, onClose, onSaved }) {
+  const [plan, setPlan] = useState('starter')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleSave() {
+    setSaving(true)
+    const { error: err } = await supabase
+      .from('communities')
+      .update({ plan, trial_end_date: null, trial_start_date: null })
+      .eq('id', community.id)
+    setSaving(false)
+    if (err) { setError(err.message); return }
+    onSaved()
+    onClose()
+  }
+
+  const plans = [
+    { value: 'starter',    label: 'Starter',    desc: 'Up to 6 residents · $129/mo' },
+    { value: 'pro',        label: 'Pro',         desc: 'Up to 18 residents · $249/mo' },
+    { value: 'enterprise', label: 'Enterprise',  desc: 'Unlimited residents · $499+/mo' },
+  ]
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="font-semibold text-slate-800">Convert to Active</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
+        </div>
+        <p className="text-sm text-slate-500 mb-4">Select a plan for <strong>{community.name}</strong>. This unlocks the full app.</p>
+        <div className="space-y-2 mb-4">
+          {plans.map(p => (
+            <button
+              key={p.value}
+              type="button"
+              onClick={() => setPlan(p.value)}
+              className={`w-full text-left border rounded-xl px-4 py-3 transition-all ${plan === p.value ? 'border-[#185FA5] bg-[#E6F1FB]' : 'border-slate-200 hover:border-slate-300'}`}
+            >
+              <p className={`text-sm font-semibold ${plan === p.value ? 'text-[#185FA5]' : 'text-slate-800'}`}>{p.label}</p>
+              <p className="text-xs text-slate-500 mt-0.5">{p.desc}</p>
+            </button>
+          ))}
+        </div>
+        {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-3">{error}</p>}
+        <div className="flex gap-3">
+          <button onClick={onClose} className="flex-1 border border-slate-300 text-slate-700 rounded-lg py-2 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
+          <button onClick={handleSave} disabled={saving} className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-lg py-2 text-sm font-medium transition-colors">
+            {saving ? 'Converting…' : 'Mark as Active'}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -191,6 +305,8 @@ export default function SuperAdmin() {
   const [showInvite, setShowInvite] = useState(false)
   const [showAddSA, setShowAddSA] = useState(false)
   const [search, setSearch] = useState('')
+  const [extendTarget, setExtendTarget] = useState(null)
+  const [convertTarget, setConvertTarget] = useState(null)
 
   // Communities the owner is personally a member of
   const myMembershipIds = new Set(memberships.map(m => m.communities?.id).filter(Boolean))
@@ -265,7 +381,7 @@ export default function SuperAdmin() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setShowInvite(true)}
-            className="bg-[#185FA5] hover:bg-[#0C447C] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+            className="bg-[#042C53] hover:bg-[#0B3D6E] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
           >
             + Invite Admin
           </button>
@@ -343,6 +459,99 @@ export default function SuperAdmin() {
           )}
         </div>
 
+        {/* Trials Dashboard */}
+        {(() => {
+          const trialCommunities = allCommunities.filter(c => c.plan === 'trial')
+          const now = new Date()
+          return (
+            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden mb-8">
+              <div className="flex items-center gap-2 px-5 py-3.5 border-b border-slate-100">
+                <svg className="w-4 h-4 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15 15" />
+                </svg>
+                <h2 className="font-semibold text-slate-700 text-sm">Trials</h2>
+                <span className="ml-auto text-xs text-slate-400 font-medium">{trialCommunities.length} active trial{trialCommunities.length !== 1 ? 's' : ''}</span>
+              </div>
+
+              {trialCommunities.length === 0 ? (
+                <div className="px-5 py-10 text-center">
+                  <p className="text-sm text-slate-400">No communities on trial right now.</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  {trialCommunities.map(c => {
+                    const trialEnd = c.trial_end_date ? new Date(c.trial_end_date) : null
+                    const daysLeft = trialEnd ? Math.ceil((trialEnd - now) / (1000 * 60 * 60 * 24)) : null
+                    const isExpired = daysLeft !== null && daysLeft <= 0
+                    const isUrgent  = !isExpired && daysLeft !== null && daysLeft <= 2
+                    const isWarning = !isExpired && daysLeft !== null && daysLeft <= 5 && daysLeft > 2
+                    const s = stats[c.id]
+                    return (
+                      <div key={c.id} className="px-5 py-4">
+                        <div className="flex items-start justify-between gap-4 flex-wrap">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-semibold text-slate-800">{c.name}</p>
+                              {isExpired ? (
+                                <span className="text-xs font-semibold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">Expired</span>
+                              ) : isUrgent ? (
+                                <span className="text-xs font-semibold bg-red-50 text-red-600 px-2 py-0.5 rounded-full">Ending in {daysLeft}d</span>
+                              ) : isWarning ? (
+                                <span className="text-xs font-semibold bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full">Ending in {daysLeft}d</span>
+                              ) : (
+                                <span className="text-xs font-semibold bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">{daysLeft}d left</span>
+                              )}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
+                              <span className="text-xs text-slate-500">Manager: <span className="text-slate-700 font-medium">{s?.adminName ?? '—'}</span></span>
+                              <span className="text-xs text-slate-400">·</span>
+                              <span className="text-xs text-slate-500"><span className="text-slate-700 font-medium">{s?.residentCount ?? 0}</span> resident{s?.residentCount !== 1 ? 's' : ''}</span>
+                              {c.resident_count_at_signup && (
+                                <>
+                                  <span className="text-xs text-slate-400">·</span>
+                                  <span className="text-xs text-slate-500">Reported: <span className="text-slate-700 font-medium">{c.resident_count_at_signup}</span></span>
+                                </>
+                              )}
+                            </div>
+                            <div className="flex flex-wrap gap-x-3 mt-0.5">
+                              {c.trial_start_date && (
+                                <span className="text-xs text-slate-400">Started: {new Date(c.trial_start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                              )}
+                              {trialEnd && (
+                                <span className="text-xs text-slate-400">Ends: {trialEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <button
+                              onClick={() => setExtendTarget(c)}
+                              className="text-xs font-medium border border-slate-200 text-slate-600 hover:bg-slate-50 px-3 py-1.5 rounded-lg transition-colors"
+                            >
+                              Extend
+                            </button>
+                            <button
+                              onClick={() => setConvertTarget(c)}
+                              className="text-xs font-medium bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg transition-colors"
+                            >
+                              Mark Active
+                            </button>
+                            <button
+                              onClick={() => enterCommunity(c.id)}
+                              className="text-xs font-medium bg-[#042C53] hover:bg-[#0B3D6E] text-white px-3 py-1.5 rounded-lg transition-colors"
+                            >
+                              Enter
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )
+        })()}
+
         {/* Super admins */}
         <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
@@ -386,6 +595,22 @@ export default function SuperAdmin() {
         <AddSuperAdminModal
           onClose={() => setShowAddSA(false)}
           onAdded={loadSuperAdmins}
+        />
+      )}
+
+      {extendTarget && (
+        <ExtendTrialModal
+          community={extendTarget}
+          onClose={() => setExtendTarget(null)}
+          onSaved={reloadAllCommunities}
+        />
+      )}
+
+      {convertTarget && (
+        <ConvertPlanModal
+          community={convertTarget}
+          onClose={() => setConvertTarget(null)}
+          onSaved={reloadAllCommunities}
         />
       )}
     </div>

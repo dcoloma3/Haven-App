@@ -31,6 +31,13 @@ const SHIFT_COLORS = {
   Evening: 'bg-indigo-100 text-indigo-700',
 }
 
+function currentShift() {
+  const h = new Date().getHours()
+  if (h >= 6 && h < 14) return 'Morning'
+  if (h >= 14 && h < 22) return 'Afternoon'
+  return 'Evening'
+}
+
 export default function ShiftLog() {
   const { communityId, isAdmin } = useCommunity()
   const { profile } = useProfile()
@@ -40,12 +47,13 @@ export default function ShiftLog() {
   const [loading, setLoading] = useState(true)
   const [residents, setResidents] = useState([])
   const [showModal, setShowModal] = useState(false)
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null)
 
   useEffect(() => { if (location.state?.quickAdd) setShowModal(true) }, [])
   const [saving, setSaving] = useState(false)
   const [filterShift, setFilterShift] = useState('All')
   const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0])
-  const [form, setForm] = useState({ shift: 'Morning', content: '', resident_id: '', is_pinned: false })
+  const [form, setForm] = useState({ shift: currentShift(), content: '', resident_id: '', is_pinned: false })
   const [residentSearch, setResidentSearch] = useState('')
 
   const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
@@ -89,7 +97,7 @@ export default function ShiftLog() {
     })
     setSaving(false)
     setShowModal(false)
-    setForm({ shift: 'Morning', content: '', resident_id: '', is_pinned: false })
+    setForm({ shift: currentShift(), content: '', resident_id: '', is_pinned: false })
     setResidentSearch('')
     await fetchNotes()
   }
@@ -152,12 +160,12 @@ export default function ShiftLog() {
 
   return (
     <Layout>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Shift Log</h1>
           <p className="text-sm text-slate-500 mt-1">Team communications and handoff notes</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 self-start sm:self-auto">
           {notes.length > 0 && (
             <button
               onClick={exportPDF}
@@ -175,7 +183,7 @@ export default function ShiftLog() {
           )}
           <button
             onClick={() => setShowModal(true)}
-            className="bg-[#185FA5] hover:bg-[#0C447C] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2"
+            className="bg-[#042C53] hover:bg-[#0B3D6E] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
@@ -186,42 +194,34 @@ export default function ShiftLog() {
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-wrap gap-3 mb-5">
-        <div className="flex gap-1 bg-white border border-slate-200 rounded-xl p-1">
+      <div className="flex items-center gap-2 mb-5 flex-wrap">
+        {/* Shift filter */}
+        <div className="flex gap-1 bg-slate-100 rounded-xl p-1 flex-shrink-0">
           {['All', 'Morning', 'Afternoon', 'Evening'].map(s => (
             <button
               key={s}
               onClick={() => setFilterShift(s)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filterShift === s ? 'bg-[#185FA5] text-white' : 'text-slate-600 hover:bg-slate-100'}`}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${filterShift === s ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
             >
               {s}
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2">
+
+        {/* Date: Today shortcut + date picker */}
+        <div className="flex items-center gap-1.5 ml-auto flex-shrink-0">
           <button
             onClick={() => setFilterDate(new Date().toISOString().split('T')[0])}
-            className={`px-3 py-2 text-xs font-medium rounded-xl border transition-colors ${filterDate === new Date().toISOString().split('T')[0] ? 'bg-[#185FA5] text-white border-[#185FA5]' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+            className={`px-3 py-2 text-xs font-semibold rounded-xl border transition-colors ${filterDate === new Date().toISOString().split('T')[0] ? 'bg-[#185FA5] text-white border-[#185FA5]' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
           >
             Today
-          </button>
-          <button
-            onClick={() => { const d = new Date(); d.setDate(d.getDate() - 1); setFilterDate(d.toISOString().split('T')[0]) }}
-            className="px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
-          >
-            Yesterday
           </button>
           <input
             type="date"
             value={filterDate}
             onChange={e => setFilterDate(e.target.value)}
-            className="border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#185FA5]"
+            className="border border-slate-200 bg-white rounded-xl px-3 py-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#185FA5]"
           />
-          {filterDate && (
-            <button onClick={() => setFilterDate('')} className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
-              All dates
-            </button>
-          )}
         </div>
       </div>
 
@@ -271,7 +271,7 @@ export default function ShiftLog() {
                     </button>
                   )}
                   {(isAdmin) && (
-                    <button onClick={() => handleDelete(note.id)} className="text-slate-300 hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-red-50 min-w-[36px] min-h-[36px] flex items-center justify-center">
+                    <button onClick={() => setDeleteConfirmId(note.id)} className="text-slate-300 hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-red-50 min-w-[36px] min-h-[36px] flex items-center justify-center">
                       <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
                         <path d="M10 11v6M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
@@ -287,8 +287,8 @@ export default function ShiftLog() {
 
       {/* New Note Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
-          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-2xl max-h-[92vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50" onClick={() => setShowModal(false)}>
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-2xl max-h-[92vh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="sticky top-0 bg-white border-b border-slate-200 px-5 py-4 flex items-center justify-between rounded-t-2xl">
               <h2 className="font-bold text-slate-800 text-lg">New Shift Note</h2>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">
@@ -342,9 +342,22 @@ export default function ShiftLog() {
             </div>
             <div className="sticky bottom-0 bg-white border-t border-slate-200 px-5 py-4 flex gap-3">
               <button onClick={() => setShowModal(false)} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
-              <button onClick={handleSave} disabled={!form.content.trim() || saving} className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
+              <button onClick={handleSave} disabled={!form.content.trim() || saving} className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
                 {saving ? 'Saving…' : 'Post Note'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteConfirmId && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" onClick={() => setDeleteConfirmId(null)}>
+          <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full" onClick={e => e.stopPropagation()}>
+            <h3 className="font-semibold text-slate-800 mb-2">Delete this note?</h3>
+            <p className="text-sm text-slate-500 mb-5">This cannot be undone.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setDeleteConfirmId(null)} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
+              <button onClick={() => { handleDelete(deleteConfirmId); setDeleteConfirmId(null) }} className="flex-1 bg-red-600 hover:bg-red-700 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">Delete</button>
             </div>
           </div>
         </div>

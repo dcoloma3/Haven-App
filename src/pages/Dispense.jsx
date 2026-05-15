@@ -492,7 +492,7 @@ function PRNTab({ communityId }) {
               <button
                 onClick={handleLog}
                 disabled={saving}
-                className="w-full bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white font-medium rounded-lg py-2.5 text-sm transition-colors"
+                className="w-full bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white font-medium rounded-lg py-2.5 text-sm transition-colors"
               >
                 {saving ? 'Logging…' : 'Log PRN Medication'}
               </button>
@@ -731,15 +731,27 @@ export default function Dispense() {
     setNotGiven(prev => { const n = new Map(prev); n.delete(key); return n })
   }
 
+  // Auto-expand all time slots when data loads
+  useEffect(() => {
+    if (sortedTimes.length > 0) {
+      setExpandedTimes(new Set(sortedTimes))
+    }
+  }, [sortedTimes.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
+
   function prevDay() { setDate(d => { const n = new Date(d); n.setDate(n.getDate() - 1); return n }) }
   function nextDay() { setDate(d => { const n = new Date(d); n.setDate(n.getDate() + 1); return n }) }
+
+  const allExpanded = sortedTimes.length > 0 && sortedTimes.every(t => expandedTimes.has(t))
+  function toggleAllTimes() {
+    setExpandedTimes(allExpanded ? new Set() : new Set(sortedTimes))
+  }
 
   return (
     <Layout>
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between mb-1">
-        <h1 className="text-xl font-bold text-slate-800">Dispense</h1>
+        <h1 className="text-2xl font-bold text-slate-800">Dispense</h1>
       </div>
 
       {/* ── Routine / PRN tabs ── */}
@@ -763,40 +775,40 @@ export default function Dispense() {
 
       {dispenseTab === 'routine' && (<>
 
-      {/* ── Pass Progress stat cards ── */}
+      {/* ── Pass progress bar ── */}
       {!loading && totalMeds > 0 && (() => {
         const pct = Math.round(totalDone / totalMeds * 100)
         const allDone = totalDone === totalMeds
+        const pending = totalMeds - totalDone
         return (
-          <div className="grid grid-cols-4 gap-2 sm:gap-3 mb-5">
-            <div className="bg-white rounded-xl p-3 sm:p-3.5 border border-slate-200">
-              <p className="text-slate-400 mb-0.5 text-[11px] sm:text-xs">Total Doses</p>
-              <p className="font-bold text-slate-800 text-lg sm:text-xl">{totalMeds}</p>
+          <div className="mb-5 bg-white border border-slate-200 rounded-2xl px-4 py-3.5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-slate-800">
+                  {totalDone} <span className="font-normal text-slate-400">of</span> {totalMeds} doses given
+                </span>
+                {pending > 0 && (
+                  <span className="text-xs bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full">
+                    {pending} pending
+                  </span>
+                )}
+              </div>
+              <span className={`text-sm font-bold ${allDone ? 'text-emerald-600' : 'text-amber-600'}`}>
+                {pct}%
+              </span>
             </div>
-            <div className="bg-white rounded-xl p-3 sm:p-3.5 border border-slate-200">
-              <p className="text-slate-400 mb-0.5 text-[11px] sm:text-xs">Given</p>
-              <p className="font-bold text-lg sm:text-xl" style={{ color: '#22c55e' }}>{totalDone}</p>
-            </div>
-            <div className="bg-white rounded-xl p-3 sm:p-3.5 border border-slate-200">
-              <p className="text-slate-400 mb-0.5 text-[11px] sm:text-xs">Pending</p>
-              <p className="font-bold text-lg sm:text-xl" style={{ color: totalMeds - totalDone > 0 ? '#f59e0b' : '#94a3b8' }}>{totalMeds - totalDone}</p>
-            </div>
-            <div
-              className="rounded-xl p-3 sm:p-3.5"
-              style={{
-                backgroundColor: allDone ? '#dcfce7' : '#fef9c3',
-                border: `1px solid ${allDone ? '#86efac' : '#fde047'}`,
-              }}
-            >
-              <p className="mb-0.5 text-[11px] sm:text-xs" style={{ color: allDone ? '#15803d' : '#a16207' }}>Pass Progress</p>
-              <p className="font-bold text-lg sm:text-xl" style={{ color: allDone ? '#15803d' : '#a16207' }}>{pct}%</p>
+            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${allDone ? 'bg-emerald-400' : 'bg-amber-400'}`}
+                style={{ width: `${pct}%` }}
+              />
             </div>
           </div>
         )
       })()}
 
-      {/* ── Date navigation — arrows flanking the date ── */}
-      <div className="flex items-center gap-2 mb-6">
+      {/* ── Date navigation ── */}
+      <div className="flex items-center gap-2 mb-5">
         <button onClick={prevDay} className="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-500 active:bg-slate-100 flex-shrink-0">
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
         </button>
@@ -808,6 +820,21 @@ export default function Dispense() {
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
         </button>
       </div>
+
+      {/* ── Expand / Collapse all ── */}
+      {!loading && sortedTimes.length > 1 && (
+        <div className="flex justify-end mb-3">
+          <button
+            onClick={toggleAllTimes}
+            className="text-xs text-slate-400 hover:text-[#185FA5] font-medium transition-colors flex items-center gap-1"
+          >
+            <svg className={`w-3 h-3 transition-transform ${allExpanded ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+            {allExpanded ? 'Collapse all' : 'Expand all'}
+          </button>
+        </div>
+      )}
 
       {/* ── All-done completion banner ── */}
       {!loading && isToday && totalMeds > 0 && totalDone === totalMeds && (

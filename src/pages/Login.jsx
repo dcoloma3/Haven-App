@@ -18,49 +18,18 @@ function EyeIcon({ open }) {
   )
 }
 
-function GoogleIcon() {
-  return (
-    <svg className="w-5 h-5" viewBox="0 0 24 24">
-      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
-      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-    </svg>
-  )
-}
-
-function AppleIcon() {
-  return (
-    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
-    </svg>
-  )
-}
-
 export default function Login() {
-  const [mode, setMode] = useState('login')
+  const [mode, setMode] = useState('login') // 'login' | 'forgot'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [showConfirm, setShowConfirm] = useState(false)
   const [rememberMe, setRememberMe] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
-  const [oauthLoading, setOauthLoading] = useState('')
 
-  function switchMode(m) {
-    setMode(m)
-    setError('')
-    setSuccess('')
-    setPassword('')
-    setConfirmPassword('')
-    setShowPassword(false)
-    setShowConfirm(false)
-  }
+  function goToForgot() { setMode('forgot'); setError(''); setSuccess('') }
+  function goToLogin()  { setMode('login');  setError(''); setSuccess('') }
 
   async function handleForgot(e) {
     e.preventDefault()
@@ -71,51 +40,17 @@ export default function Login() {
       redirectTo: `${window.location.origin}/reset-password`,
     })
     setLoading(false)
-    if (error) {
-      setError(error.message)
-    } else {
-      setSuccess('Password reset email sent! Check your inbox.')
-    }
-  }
-
-  async function handleOAuth(provider) {
-    setOauthLoading(provider)
-    setError('')
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: window.location.origin },
-    })
-    if (error) { setError(error.message); setOauthLoading('') }
-    // On success, Supabase redirects to origin — loading stays true until redirect
+    if (error) { setError(error.message) }
+    else { setSuccess('Password reset email sent! Check your inbox.') }
   }
 
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
     setSuccess('')
-    if (mode === 'signup') {
-      if (password !== confirmPassword) { setError('Passwords do not match.'); return }
-      if (password.length < 6) { setError('Password must be at least 6 characters.'); return }
-      setLoading(true)
-      const fullName = [firstName, lastName].filter(Boolean).join(' ')
-      const { data, error } = await supabase.auth.signUp({
-        email, password,
-        options: { data: { first_name: firstName, last_name: lastName, full_name: fullName } },
-      })
-      if (!error && data?.user) {
-        await supabase.from('profiles').upsert({
-          user_id: data.user.id, email, full_name: fullName,
-          first_name: firstName, last_name: lastName, profile_completed: false,
-        }, { onConflict: 'user_id' })
-      }
-      setLoading(false)
-      if (error) { setError(error.message) } else { setSuccess('Account created! Check your email to confirm, then sign in.'); switchMode('login') }
-      return
-    }
     setLoading(true)
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (!error && !rememberMe) {
-      // Clear the persisted session so it expires when the browser closes
       try { sessionStorage.setItem('haven_session_only', '1') } catch {}
     }
     if (error) setError(error.message)
@@ -139,146 +74,89 @@ export default function Login() {
 
       {/* Content */}
       <div className="w-full max-w-sm relative z-10">
+
+        {/* Logo + tagline */}
         <div className="flex flex-col items-center mb-8">
           <Link to="/" className="hover:opacity-80 transition-opacity">
             <HavenLogo markHeight={44} textSize={34} variant="white" />
           </Link>
           <p className="text-sm mt-3 font-medium tracking-wide" style={{ color: 'rgba(147,198,255,0.85)' }}>
-            {mode === 'forgot' ? 'Reset your password' : mode === 'signup' ? 'Create your Haven account' : 'Modern care, beautifully managed'}
+            {mode === 'forgot' ? 'Reset your password' : 'Your community, beautifully managed'}
           </p>
         </div>
 
+        {/* Forgot password */}
         {mode === 'forgot' ? (
           <>
-          <div style={{ background: 'rgba(255,255,255,0.07)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', border: '1px solid rgba(255,255,255,0.15)' }} className="rounded-3xl shadow-2xl p-6 space-y-4">
-            <p className="text-sm" style={{ color: 'rgba(255,255,255,0.65)' }}>Enter your email and we'll send you a link to reset your password.</p>
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'rgba(255,255,255,0.5)' }}>Email</label>
-              <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className={inputCls} placeholder="you@example.com" autoFocus />
+            <div style={{ background: 'rgba(255,255,255,0.07)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', border: '1px solid rgba(255,255,255,0.15)' }} className="rounded-3xl shadow-2xl p-6 space-y-4">
+              <p className="text-sm" style={{ color: 'rgba(255,255,255,0.65)' }}>Enter your email and we'll send you a link to reset your password.</p>
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'rgba(255,255,255,0.5)' }}>Email</label>
+                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className={inputCls} placeholder="you@example.com" autoFocus />
+              </div>
+              {error   && <p className="text-sm text-red-300 bg-red-500/20 border border-red-400/30 rounded-xl px-3 py-2">{error}</p>}
+              {success && <p className="text-sm text-emerald-300 bg-emerald-500/20 border border-emerald-400/30 rounded-xl px-3 py-2">{success}</p>}
+              <button onClick={handleForgot} disabled={loading} className="w-full font-semibold rounded-xl py-3 text-sm text-white transition-all active:scale-95 disabled:opacity-50" style={{ background: 'linear-gradient(135deg, #185FA5 0%, #2d8fe8 100%)', boxShadow: '0 4px 20px rgba(24,95,165,0.5)' }}>
+                {loading ? 'Sending…' : 'Send Reset Link'}
+              </button>
+              <button onClick={goToLogin} className="w-full text-center text-sm transition-colors" style={{ color: 'rgba(255,255,255,0.45)' }}>← Back to Sign In</button>
             </div>
-            {error && <p className="text-sm text-red-300 bg-red-500/20 border border-red-400/30 rounded-xl px-3 py-2">{error}</p>}
-            {success && <p className="text-sm text-emerald-300 bg-emerald-500/20 border border-emerald-400/30 rounded-xl px-3 py-2">{success}</p>}
-            <button onClick={handleForgot} disabled={loading} className="w-full font-semibold rounded-xl py-3 text-sm text-white transition-all active:scale-95 disabled:opacity-50" style={{ background: 'linear-gradient(135deg, #185FA5 0%, #2d8fe8 100%)', boxShadow: '0 4px 20px rgba(24,95,165,0.5)' }}>
-              {loading ? 'Sending…' : 'Send Reset Link'}
-            </button>
-            <button onClick={() => switchMode('login')} className="w-full text-center text-sm transition-colors" style={{ color: 'rgba(255,255,255,0.45)' }}>← Back to Sign In</button>
-          </div>
-          <div className="text-center mt-4">
-            <Link to="/" className="text-sm transition-colors hover:opacity-80" style={{ color: 'rgba(255,255,255,0.35)' }}>
-              ← Back to home
-            </Link>
-          </div>
+            <div className="text-center mt-4">
+              <Link to="/" className="text-sm transition-colors hover:opacity-80" style={{ color: 'rgba(255,255,255,0.35)' }}>← Back to home</Link>
+            </div>
           </>
         ) : (
+          /* Sign in */
           <>
-            <div style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }} className="flex rounded-2xl p-1 mb-4">
-              <button onClick={() => switchMode('login')} className={`flex-1 py-2 text-sm font-semibold rounded-xl transition-all ${mode === 'login' ? 'bg-white text-[#042C53] shadow-lg' : 'text-white/60 hover:text-white/90'}`}>Sign In</button>
-              <button onClick={() => switchMode('signup')} className={`flex-1 py-2 text-sm font-semibold rounded-xl transition-all ${mode === 'signup' ? 'bg-white text-[#042C53] shadow-lg' : 'text-white/60 hover:text-white/90'}`}>Create Account</button>
-            </div>
-
             <form onSubmit={handleSubmit} style={{ background: 'rgba(255,255,255,0.07)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', border: '1px solid rgba(255,255,255,0.15)' }} className="rounded-3xl shadow-2xl p-6 space-y-4">
-
-              {mode === 'signup' && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'rgba(255,255,255,0.5)' }}>First Name</label>
-                    <input type="text" required value={firstName} onChange={e => setFirstName(e.target.value)} className={inputCls} placeholder="Alex" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'rgba(255,255,255,0.5)' }}>Last Name</label>
-                    <input type="text" required value={lastName} onChange={e => setLastName(e.target.value)} className={inputCls} placeholder="Smith" />
-                  </div>
-                </div>
-              )}
 
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'rgba(255,255,255,0.5)' }}>Email</label>
-                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className={inputCls} placeholder="you@example.com" />
+                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className={inputCls} placeholder="you@example.com" autoComplete="email" />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'rgba(255,255,255,0.5)' }}>Password</label>
                 <div className="relative">
-                  <input type={showPassword ? 'text' : 'password'} required value={password} onChange={e => setPassword(e.target.value)} className={inputCls + ' pr-10'} placeholder="••••••••" />
+                  <input type={showPassword ? 'text' : 'password'} required value={password} onChange={e => setPassword(e.target.value)} className={inputCls + ' pr-10'} placeholder="••••••••" autoComplete="current-password" />
                   <button type="button" onClick={() => setShowPassword(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors" style={{ color: 'rgba(255,255,255,0.4)' }} tabIndex={-1}>
                     <EyeIcon open={showPassword} />
                   </button>
                 </div>
               </div>
 
-              {mode === 'signup' && (
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'rgba(255,255,255,0.5)' }}>Confirm Password</label>
-                  <div className="relative">
-                    <input type={showConfirm ? 'text' : 'password'} required value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className={inputCls + ' pr-10'} placeholder="••••••••" />
-                    <button type="button" onClick={() => setShowConfirm(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors" style={{ color: 'rgba(255,255,255,0.4)' }} tabIndex={-1}>
-                      <EyeIcon open={showConfirm} />
-                    </button>
-                  </div>
-                </div>
-              )}
-
               {error && <p className="text-sm text-red-300 bg-red-500/20 border border-red-400/30 rounded-xl px-3 py-2">{error}</p>}
-              {success && <p className="text-sm text-emerald-300 bg-emerald-500/20 border border-emerald-400/30 rounded-xl px-3 py-2">{success}</p>}
 
-              {mode === 'login' && (
-                <div className="flex items-center justify-between">
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={rememberMe}
-                      onChange={e => setRememberMe(e.target.checked)}
-                      className="w-4 h-4 rounded accent-[#185FA5] cursor-pointer"
-                    />
-                    <span className="text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>Remember me</span>
-                  </label>
-                  <button type="button" onClick={() => switchMode('forgot')} className="text-sm transition-colors" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                    Forgot password?
-                  </button>
-                </div>
-              )}
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={e => setRememberMe(e.target.checked)}
+                    className="w-4 h-4 rounded accent-[#185FA5] cursor-pointer"
+                  />
+                  <span className="text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>Remember me</span>
+                </label>
+                <button type="button" onClick={goToForgot} className="text-sm transition-colors" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  Forgot password?
+                </button>
+              </div>
 
-              <button type="submit" disabled={loading} className="w-full font-semibold rounded-xl py-3 text-sm text-white transition-all active:scale-95 disabled:opacity-50 mt-1" style={{ background: 'linear-gradient(135deg, #185FA5 0%, #2d8fe8 100%)', boxShadow: '0 4px 24px rgba(24,95,165,0.55)' }}>
-                {loading ? (mode === 'signup' ? 'Creating account…' : 'Signing in…') : (mode === 'signup' ? 'Create Account' : 'Sign In')}
+              <button type="submit" disabled={loading} className="w-full font-semibold rounded-xl py-3 text-sm text-white transition-all active:scale-95 disabled:opacity-50" style={{ background: 'linear-gradient(135deg, #185FA5 0%, #2d8fe8 100%)', boxShadow: '0 4px 24px rgba(24,95,165,0.55)' }}>
+                {loading ? 'Signing in…' : 'Sign In'}
               </button>
-
-              {/* OAuth divider */}
-              <div className="flex items-center gap-3 my-1">
-                <div className="flex-1 h-px" style={{ backgroundColor: 'rgba(255,255,255,0.12)' }} />
-                <span className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.35)' }}>or continue with</span>
-                <div className="flex-1 h-px" style={{ backgroundColor: 'rgba(255,255,255,0.12)' }} />
-              </div>
-
-              {/* Google + Apple OAuth buttons */}
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => handleOAuth('google')}
-                  disabled={!!oauthLoading}
-                  className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all active:scale-95 disabled:opacity-50"
-                  style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.85)' }}
-                >
-                  <GoogleIcon />
-                  {oauthLoading === 'google' ? '…' : 'Google'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleOAuth('apple')}
-                  disabled={!!oauthLoading}
-                  className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all active:scale-95 disabled:opacity-50"
-                  style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.85)' }}
-                >
-                  <AppleIcon />
-                  {oauthLoading === 'apple' ? '…' : 'Apple'}
-                </button>
-              </div>
             </form>
 
-            <p className="text-center text-xs mt-6" style={{ color: 'rgba(255,255,255,0.2)' }}>Trusted by care communities everywhere</p>
-            <div className="text-center mt-3">
-              <Link to="/" className="text-sm transition-colors hover:opacity-80" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                ← Back to home
+            {/* Free trial CTA */}
+            <p className="text-center text-sm mt-5" style={{ color: 'rgba(255,255,255,0.4)' }}>
+              Don't have an account?{' '}
+              <Link to="/signup" className="font-semibold transition-colors hover:opacity-80" style={{ color: 'rgba(147,198,255,0.9)' }}>
+                Start your free trial →
               </Link>
+            </p>
+
+            <div className="text-center mt-3">
+              <Link to="/" className="text-sm transition-colors hover:opacity-80" style={{ color: 'rgba(255,255,255,0.25)' }}>← Back to home</Link>
             </div>
           </>
         )}

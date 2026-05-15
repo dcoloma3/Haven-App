@@ -159,7 +159,7 @@ function MarketingNav({ scrollTo }) {
             Sign in
           </Link>
           <Link
-            to="/login"
+            to="/signup"
             className="text-sm font-semibold px-4 py-2 rounded-lg bg-white hover:bg-white/90 transition-colors"
             style={{ color: C.bg }}
           >
@@ -261,7 +261,7 @@ function HeroSection({ scrollTo }) {
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
           <Link
-            to="/login"
+            to="/signup"
             className="w-full sm:w-auto px-7 py-3.5 rounded-lg text-sm font-semibold bg-white hover:bg-white/90 transition-colors text-center"
             style={{ color: C.bg }}
           >
@@ -925,7 +925,7 @@ function Footer({ scrollTo }) {
         <p className="flex-1 text-center text-xs order-last md:order-none" style={{ color: 'rgba(255,255,255,0.3)' }}>
           © {new Date().getFullYear()} Haven. All rights reserved.
         </p>
-        <nav aria-label="Footer links" className="flex items-center gap-6">
+        <nav aria-label="Footer links" className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
           <button
             type="button"
             onClick={() => scrollTo('faq')}
