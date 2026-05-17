@@ -222,6 +222,15 @@ function Checkbox({ done, toggling, onToggle }) {
   )
 }
 
+function ChevronIcon({ open }) {
+  return (
+    <svg className={`w-4 h-4 text-slate-400 flex-shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+      viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  )
+}
+
 function GivenByLine({ record, staffMap }) {
   if (!record) return null
   const t = record.administered_at
@@ -503,6 +512,7 @@ export default function Dispense() {
   const [notGiven, setNotGiven] = useState(new Map())   // adminKey → not_given record
   const [notGivenModal, setNotGivenModal] = useState(null) // { med, time }
   const [savingNotGiven, setSavingNotGiven] = useState(false)
+  const [expandedTimes, setExpandedTimes] = useState(new Set())
   const { communityId } = useCommunity()
   const [dispenseTab, setDispenseTab] = useState('routine')
   // Medication IDs scoped to this community (for scoping administration queries)
@@ -597,6 +607,19 @@ export default function Dispense() {
     })
     return { totalMeds, totalDone }
   }, [timeGroups, sortedTimes, administered])
+
+  function toggleTime(time) {
+    setExpandedTimes(prev => {
+      const n = new Set(prev)
+      n.has(time) ? n.delete(time) : n.add(time)
+      return n
+    })
+  }
+
+  // Auto-expand all time slots when data loads
+  useEffect(() => {
+    if (sortedTimes.length > 0) setExpandedTimes(new Set(sortedTimes))
+  }, [sortedTimes.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Called after the user confirms undoing a dose
   async function confirmUndoDose() {
@@ -786,6 +809,7 @@ export default function Dispense() {
               const doneAtTime = allMedsAtTime.filter(m => administered.has(adminKey(m.id, time))).length
               const totalAtTime = allMedsAtTime.length
               const timeStatus = calcStatus(allMedsAtTime, time, administered)
+              const isOpen = expandedTimes.has(time)
 
               const residentList = Object.entries(residentGroups)
                 .sort(([, a], [, b]) => residentName(a.resident ?? {}).localeCompare(residentName(b.resident ?? {})))
@@ -804,29 +828,35 @@ export default function Dispense() {
                   {/* ── Card ── */}
                   <div className={`flex-1 min-w-0 border rounded-2xl overflow-hidden bg-white ${cardBorderCls(timeStatus)}`}>
 
-                    {/* Static header */}
-                    <div className={`px-4 pt-4 pb-3 ${
-                      timeStatus === 'all' ? 'bg-emerald-50' :
-                      timeStatus === 'partial' ? 'bg-amber-50/60' :
-                      'bg-slate-50/60'
-                    }`}>
+                    {/* Clickable header */}
+                    <button
+                      onClick={() => toggleTime(time)}
+                      className={`w-full text-left px-4 pt-4 pb-3 ${
+                        timeStatus === 'all' ? 'bg-emerald-50' :
+                        timeStatus === 'partial' ? 'bg-amber-50/60' :
+                        'bg-slate-50/60'
+                      }`}
+                    >
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-2xl font-bold text-slate-800 tracking-tight">{fmt12(time)}</p>
-                        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0 ${
-                          timeStatus === 'all' ? 'bg-emerald-100 text-emerald-700' :
-                          timeStatus === 'partial' ? 'bg-amber-100 text-amber-700' :
-                          'bg-slate-100 text-slate-500'
-                        }`}>
-                          {doneAtTime}/{totalAtTime} given
-                        </span>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                            timeStatus === 'all' ? 'bg-emerald-100 text-emerald-700' :
+                            timeStatus === 'partial' ? 'bg-amber-100 text-amber-700' :
+                            'bg-slate-100 text-slate-500'
+                          }`}>
+                            {doneAtTime}/{totalAtTime} given
+                          </span>
+                          <ChevronIcon open={isOpen} />
+                        </div>
                       </div>
                       <p className="text-xs text-slate-400 mt-1">
                         {totalResidents} {totalResidents === 1 ? 'resident' : 'residents'} · {totalMedsAtTime} {totalMedsAtTime === 1 ? 'medication' : 'medications'}
                       </p>
-                    </div>
+                    </button>
 
-                    {/* ── Flat medication rows — always visible ── */}
-                    <div className={`border-t ${dividerCls(timeStatus)}`}>
+                    {/* ── Flat medication rows — collapsible ── */}
+                    {isOpen && <div className={`border-t ${dividerCls(timeStatus)}`}>
                         {residentList
                           .flatMap(([rid, { resident, meds }]) =>
                             meds.map(med => ({ rid, resident, med }))
@@ -902,7 +932,7 @@ export default function Dispense() {
                               </div>
                             )
                           })}
-                      </div>
+                      </div>}
                   </div>
                 </div>
               )
