@@ -239,7 +239,34 @@ function MedicationModal({ residentId, medication, onClose, onSaved }) {
 
           {freqType !== 'prn' && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Schedule Times</label>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Scheduled Times</label>
+
+              {/* Quick-pick preset times */}
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {[
+                  ['06:00', '6 AM'], ['08:00', '8 AM'], ['09:00', '9 AM'],
+                  ['12:00', '12 PM'], ['14:00', '2 PM'], ['16:00', '4 PM'],
+                  ['18:00', '6 PM'], ['20:00', '8 PM'], ['21:00', '9 PM'], ['22:00', '10 PM'],
+                ].map(([val, label]) => {
+                  const already = (form.scheduled_times ?? []).includes(val)
+                  return (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => already ? removeTime(val) : (setForm(f => ({ ...f, scheduled_times: [...(f.scheduled_times ?? []), val].sort() })))}
+                      className={`px-2.5 py-1 text-xs font-medium rounded-full border transition-colors ${
+                        already
+                          ? 'bg-[#185FA5] text-white border-[#185FA5]'
+                          : 'bg-white text-slate-600 border-slate-300 hover:border-[#185FA5] hover:text-[#185FA5]'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Custom time picker */}
               <div className="flex gap-2">
                 <input
                   type="time"
@@ -254,15 +281,18 @@ function MedicationModal({ residentId, medication, onClose, onSaved }) {
                   disabled={!newTime}
                   className="px-3 py-2 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-40 text-white text-sm rounded-lg transition-colors"
                 >
-                  Add
+                  + Add
                 </button>
               </div>
+              <p className="text-xs text-slate-400 mt-1.5">Tap preset times above or enter a custom time — add as many as needed.</p>
+
+              {/* Selected times */}
               {(form.scheduled_times ?? []).length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
+                <div className="flex flex-wrap gap-2 mt-3">
                   {form.scheduled_times.map(t => (
-                    <span key={t} className="inline-flex items-center gap-1 bg-[#E6F1FB] text-[#185FA5] text-xs font-medium px-2.5 py-1 rounded-full">
+                    <span key={t} className="inline-flex items-center gap-1 bg-[#E6F1FB] text-[#185FA5] text-xs font-semibold px-2.5 py-1.5 rounded-full">
                       {fmt12(t)}
-                      <button type="button" onClick={() => removeTime(t)} className="hover:text-[#0C447C] leading-none">&times;</button>
+                      <button type="button" onClick={() => removeTime(t)} className="hover:text-[#0C447C] leading-none ml-0.5">&times;</button>
                     </span>
                   ))}
                 </div>
