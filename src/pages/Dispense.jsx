@@ -85,13 +85,6 @@ function timelineDotCls(status) {
   return 'bg-white border-slate-300'
 }
 
-// Resident photo dot color
-function residentDotCls(status) {
-  if (status === 'all') return 'bg-emerald-400'
-  if (status === 'partial') return 'bg-amber-400'
-  return 'bg-white border-2 border-slate-300'
-}
-
 // Card border color
 function cardBorderCls(status) {
   if (status === 'all') return 'border-emerald-200'
@@ -548,7 +541,6 @@ export default function Dispense() {
   const [loading, setLoading] = useState(true)
   const [toggling, setToggling] = useState(new Set())
   const [expandedTimes, setExpandedTimes] = useState(new Set())
-  const [expandedResidents, setExpandedResidents] = useState(new Set())
   const [confirmUndo, setConfirmUndo] = useState(null) // { med, time, record }
   const [notGiven, setNotGiven] = useState(new Map())   // adminKey → not_given record
   const [notGivenModal, setNotGivenModal] = useState(null) // { med, time }
@@ -652,15 +644,6 @@ export default function Dispense() {
     setExpandedTimes(prev => {
       const n = new Set(prev)
       n.has(time) ? n.delete(time) : n.add(time)
-      return n
-    })
-  }
-
-  function toggleResident(time, rid) {
-    const key = `${time}::${rid}`
-    setExpandedResidents(prev => {
-      const n = new Set(prev)
-      n.has(key) ? n.delete(key) : n.add(key)
       return n
     })
   }
@@ -935,29 +918,27 @@ export default function Dispense() {
                       />
                     </button>
 
-                    {/* ── Expanded: resident rows ── */}
+                    {/* ── Expanded: flat medication rows ── */}
                     {isOpen && (
                       <div className={`border-t ${dividerCls(timeStatus)}`}>
-                        {residentList.map(([rid, { resident, meds }], idx) => {
-                          if (!resident) return null
-                          const resStatus = calcStatus(meds, time, administered)
-                          const resKey = `${time}::${rid}`
-                          const isResOpen = expandedResidents.has(resKey)
-                          const hasMultiple = meds.length > 1
-                          const singleMed = hasMultiple ? null : meds[0]
-                          const singleKey = singleMed ? adminKey(singleMed.id, time) : null
-                          const singleDone = singleKey ? administered.has(singleKey) : false
-                          const singleToggling = singleKey ? toggling.has(singleKey) : false
-
-                          return (
-                            <div key={rid} className={idx !== 0 ? `border-t ${dividerCls(timeStatus)}` : ''}>
-
-                              {/* Resident row */}
+                        {residentList
+                          .flatMap(([rid, { resident, meds }]) =>
+                            meds.map(med => ({ rid, resident, med }))
+                          )
+                          .map(({ rid, resident, med }, idx) => {
+                            if (!resident) return null
+                            const mKey = adminKey(med.id, time)
+                            const isDone = administered.has(mKey)
+                            const isTogg = toggling.has(mKey)
+                            const isNotGiven = notGiven.has(mKey)
+                            const ngRecord = isNotGiven ? notGiven.get(mKey) : null
+                            const ngLabel = ngRecord ? (NOT_GIVEN_REASONS.find(r => r.value === ngRecord.reason)?.label ?? ngRecord.reason) : ''
+                            return (
                               <div
-                                onClick={() => hasMultiple && toggleResident(time, rid)}
-                                className={`flex items-center gap-3 px-4 py-3.5 ${hasMultiple ? 'cursor-pointer active:bg-slate-50' : ''} ${singleDone && !hasMultiple ? 'bg-emerald-50/40' : ''}`}
+                                key={mKey}
+                                className={`flex items-center gap-3 px-4 py-3.5 ${idx !== 0 ? `border-t ${dividerCls(timeStatus)}` : ''} ${isDone ? 'bg-emerald-50/40' : isNotGiven ? 'bg-amber-50/40' : ''}`}
                               >
-                                <ResidentAvatar resident={resident} />
+                                <ResidentAvatar resident={resident} size="sm" />
 
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2">
@@ -972,43 +953,23 @@ export default function Dispense() {
                                       <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded flex-shrink-0">Rm {resident.room_number}</span>
                                     )}
                                   </div>
-                                  {singleMed && (
-                                    <div className="mt-0.5">
-                                      <p className="text-xs text-slate-500 truncate">
-                                        {singleMed.medication_name}{singleMed.dose ? ` · ${singleMed.dose}` : ''}
-                                      </p>
-                                      {singleMed.notes && (
-                                        <p className="text-xs text-amber-700 bg-amber-50 rounded px-1.5 py-0.5 mt-1 leading-relaxed">
-                                          {singleMed.notes}
-                                        </p>
-                                      )}
-                                    </div>
+                                  <p className={`text-xs mt-0.5 truncate ${isDone ? 'text-slate-400 line-through' : 'text-slate-500'}`}>
+                                    {med.medication_name}{med.dose ? ` · ${med.dose}` : ''}
+                                  </p>
+                                  {med.notes && (
+                                    <p className="text-xs text-amber-700 bg-amber-50 rounded px-1.5 py-0.5 mt-1 leading-relaxed">
+                                      {med.notes}
+                                    </p>
                                   )}
-                                  {hasMultiple && (
-                                    <p className="text-xs text-slate-400 mt-0.5">{meds.length} medications</p>
+                                  {isDone && <GivenByLine record={administered.get(mKey)} staffMap={staffMap} />}
+                                  {isNotGiven && (
+                                    <p className="text-xs text-amber-600 mt-0.5 font-medium">Not given · {ngLabel}</p>
                                   )}
-                                  {singleMed && singleDone && (
-                                    <GivenByLine record={administered.get(singleKey)} staffMap={staffMap} />
-                                  )}
-                                  {singleMed && !singleDone && notGiven.has(singleKey) && (() => {
-                                    const ng = notGiven.get(singleKey)
-                                    const label = NOT_GIVEN_REASONS.find(r => r.value === ng.reason)?.label ?? ng.reason
-                                    return (
-                                      <p className="text-xs text-amber-600 mt-0.5 font-medium">
-                                        Not given · {label}
-                                      </p>
-                                    )
-                                  })()}
                                 </div>
 
-                                {hasMultiple ? (
-                                  <div className="flex items-center gap-2 flex-shrink-0">
-                                    <span className={`w-2.5 h-2.5 rounded-full ${residentDotCls(resStatus)}`} />
-                                    <ChevronIcon open={isResOpen} />
-                                  </div>
-                                ) : notGiven.has(singleKey) ? (
+                                {isNotGiven ? (
                                   <button
-                                    onClick={e => { e.stopPropagation(); handleUndoNotGiven(singleMed, time) }}
+                                    onClick={e => { e.stopPropagation(); handleUndoNotGiven(med, time) }}
                                     title="Undo Not Given"
                                     className="flex-shrink-0 w-7 h-7 rounded-full border-2 border-amber-300 bg-amber-50 flex items-center justify-center text-amber-500 hover:bg-amber-100 transition-colors"
                                   >
@@ -1018,9 +979,9 @@ export default function Dispense() {
                                   </button>
                                 ) : (
                                   <div className="flex items-center gap-1.5 flex-shrink-0">
-                                    {!singleDone && (
+                                    {!isDone && (
                                       <button
-                                        onClick={e => { e.stopPropagation(); setNotGivenModal({ med: singleMed, time }) }}
+                                        onClick={e => { e.stopPropagation(); setNotGivenModal({ med, time }) }}
                                         title="Record as Not Given"
                                         className="w-6 h-6 rounded-full flex items-center justify-center text-slate-300 hover:text-amber-500 hover:bg-amber-50 transition-colors"
                                       >
@@ -1029,70 +990,12 @@ export default function Dispense() {
                                         </svg>
                                       </button>
                                     )}
-                                    <Checkbox done={singleDone} toggling={singleToggling} onToggle={() => handleToggle(singleMed, time)} />
+                                    <Checkbox done={isDone} toggling={isTogg} onToggle={() => handleToggle(med, time)} />
                                   </div>
                                 )}
                               </div>
-
-                              {/* Expanded med list */}
-                              {hasMultiple && isResOpen && (
-                                <div className={`border-t ${dividerCls(timeStatus)} bg-slate-50/70`}>
-                                  {meds.map((med, mIdx) => {
-                                    const mKey = adminKey(med.id, time)
-                                    const isDone = administered.has(mKey)
-                                    const isTogg = toggling.has(mKey)
-                                    const isNotGiven = notGiven.has(mKey)
-                                    const ngRecord = isNotGiven ? notGiven.get(mKey) : null
-                                    const ngLabel = ngRecord ? (NOT_GIVEN_REASONS.find(r => r.value === ngRecord.reason)?.label ?? ngRecord.reason) : ''
-                                    return (
-                                      <div key={med.id} className={`flex items-center gap-3 pl-16 pr-4 py-3 ${mIdx !== 0 ? 'border-t border-slate-100' : ''} ${isDone ? 'bg-emerald-50/50' : isNotGiven ? 'bg-amber-50/40' : ''}`}>
-                                        <div className="flex-1 min-w-0">
-                                          <p className={`text-sm font-medium truncate ${isDone ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
-                                            {med.medication_name}
-                                          </p>
-                                          {med.dose && <p className="text-xs text-slate-400 mt-0.5">{med.dose}</p>}
-                                          {med.notes && (
-                                            <p className="text-xs text-amber-700 bg-amber-50 rounded px-1.5 py-0.5 mt-1 leading-relaxed">
-                                              {med.notes}
-                                            </p>
-                                          )}
-                                          {isDone && <GivenByLine record={administered.get(mKey)} staffMap={staffMap} />}
-                                          {isNotGiven && <p className="text-xs text-amber-600 mt-0.5 font-medium">Not given · {ngLabel}</p>}
-                                        </div>
-                                        {isNotGiven ? (
-                                          <button
-                                            onClick={() => handleUndoNotGiven(med, time)}
-                                            title="Undo Not Given"
-                                            className="flex-shrink-0 w-7 h-7 rounded-full border-2 border-amber-300 bg-amber-50 flex items-center justify-center text-amber-500 hover:bg-amber-100 transition-colors"
-                                          >
-                                            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                                            </svg>
-                                          </button>
-                                        ) : (
-                                          <div className="flex items-center gap-1.5 flex-shrink-0">
-                                            {!isDone && (
-                                              <button
-                                                onClick={() => setNotGivenModal({ med, time })}
-                                                title="Record as Not Given"
-                                                className="w-6 h-6 rounded-full flex items-center justify-center text-slate-300 hover:text-amber-500 hover:bg-amber-50 transition-colors"
-                                              >
-                                                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                                                </svg>
-                                              </button>
-                                            )}
-                                            <Checkbox done={isDone} toggling={isTogg} onToggle={() => handleToggle(med, time)} />
-                                          </div>
-                                        )}
-                                      </div>
-                                    )
-                                  })}
-                                </div>
-                              )}
-                            </div>
-                          )
-                        })}
+                            )
+                          })}
                       </div>
                     )}
                   </div>
