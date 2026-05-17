@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import Layout from '../components/layout/Layout'
 import { useCommunity } from '../context/CommunityContext'
-import { RING_COLOR } from '../lib/medStatus'
 import { HelpIcon } from '../components/ui/Tooltip'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -223,15 +222,6 @@ function Checkbox({ done, toggling, onToggle }) {
   )
 }
 
-function ChevronIcon({ open }) {
-  return (
-    <svg className={`w-4 h-4 text-slate-400 flex-shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
-      viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="6 9 12 15 18 9" />
-    </svg>
-  )
-}
-
 function GivenByLine({ record, staffMap }) {
   if (!record) return null
   const t = record.administered_at
@@ -243,37 +233,6 @@ function GivenByLine({ record, staffMap }) {
     <p className="text-xs text-emerald-600 mt-0.5">
       {t ? `Given at ${t}` : ''}{t && by ? ' · ' : ''}{by || ''}
     </p>
-  )
-}
-
-// Row of resident photos shown inside collapsed card — with status ring
-function ResidentPhotoRow({ residentList, time, administered }) {
-  const MAX_SHOW = 6
-  const shown = residentList.slice(0, MAX_SHOW)
-  const extra = residentList.length - MAX_SHOW
-
-  return (
-    <div className="flex items-center gap-2 mt-3 flex-wrap">
-      {shown.map(([rid, { resident, meds }]) => {
-        const status = calcStatus(meds, time, administered)
-        // Map Dispense status ('none'/'partial'/'all') to RING_COLOR keys
-        const ringKey = status === 'all' ? 'all' : status === 'partial' ? 'partial' : 'none'
-        return (
-          <div
-            key={rid}
-            className="rounded-full"
-            style={{ boxShadow: `0 0 0 2.5px ${RING_COLOR[ringKey]}` }}
-          >
-            <ResidentAvatar resident={resident} size="sm" />
-          </div>
-        )
-      })}
-      {extra > 0 && (
-        <div className="w-9 h-9 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-xs font-semibold text-slate-500">
-          +{extra}
-        </div>
-      )}
-    </div>
   )
 }
 
@@ -540,7 +499,6 @@ export default function Dispense() {
   const [staffMap, setStaffMap] = useState({})
   const [loading, setLoading] = useState(true)
   const [toggling, setToggling] = useState(new Set())
-  const [expandedTimes, setExpandedTimes] = useState(new Set())
   const [confirmUndo, setConfirmUndo] = useState(null) // { med, time, record }
   const [notGiven, setNotGiven] = useState(new Map())   // adminKey → not_given record
   const [notGivenModal, setNotGivenModal] = useState(null) // { med, time }
@@ -640,14 +598,6 @@ export default function Dispense() {
     return { totalMeds, totalDone }
   }, [timeGroups, sortedTimes, administered])
 
-  function toggleTime(time) {
-    setExpandedTimes(prev => {
-      const n = new Set(prev)
-      n.has(time) ? n.delete(time) : n.add(time)
-      return n
-    })
-  }
-
   // Called after the user confirms undoing a dose
   async function confirmUndoDose() {
     if (!confirmUndo) return
@@ -714,20 +664,8 @@ export default function Dispense() {
     setNotGiven(prev => { const n = new Map(prev); n.delete(key); return n })
   }
 
-  // Auto-expand all time slots when data loads
-  useEffect(() => {
-    if (sortedTimes.length > 0) {
-      setExpandedTimes(new Set(sortedTimes))
-    }
-  }, [sortedTimes.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
-
   function prevDay() { setDate(d => { const n = new Date(d); n.setDate(n.getDate() - 1); return n }) }
   function nextDay() { setDate(d => { const n = new Date(d); n.setDate(n.getDate() + 1); return n }) }
-
-  const allExpanded = sortedTimes.length > 0 && sortedTimes.every(t => expandedTimes.has(t))
-  function toggleAllTimes() {
-    setExpandedTimes(allExpanded ? new Set() : new Set(sortedTimes))
-  }
 
   return (
     <Layout>
@@ -804,21 +742,6 @@ export default function Dispense() {
         </button>
       </div>
 
-      {/* ── Expand / Collapse all ── */}
-      {!loading && sortedTimes.length > 1 && (
-        <div className="flex justify-end mb-3">
-          <button
-            onClick={toggleAllTimes}
-            className="text-xs text-slate-400 hover:text-[#185FA5] font-medium transition-colors flex items-center gap-1"
-          >
-            <svg className={`w-3 h-3 transition-transform ${allExpanded ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-            {allExpanded ? 'Collapse all' : 'Expand all'}
-          </button>
-        </div>
-      )}
-
       {/* ── All-done completion banner ── */}
       {!loading && isToday && totalMeds > 0 && totalDone === totalMeds && (
         <div className="flex items-center gap-4 bg-emerald-50 border border-emerald-200 rounded-2xl px-5 py-4 mb-5">
@@ -863,7 +786,6 @@ export default function Dispense() {
               const doneAtTime = allMedsAtTime.filter(m => administered.has(adminKey(m.id, time))).length
               const totalAtTime = allMedsAtTime.length
               const timeStatus = calcStatus(allMedsAtTime, time, administered)
-              const isOpen = expandedTimes.has(time)
 
               const residentList = Object.entries(residentGroups)
                 .sort(([, a], [, b]) => residentName(a.resident ?? {}).localeCompare(residentName(b.resident ?? {})))
@@ -882,45 +804,27 @@ export default function Dispense() {
                   {/* ── Card ── */}
                   <div className={`flex-1 min-w-0 border rounded-2xl overflow-hidden bg-white ${cardBorderCls(timeStatus)}`}>
 
-                    {/* Collapsed header — always visible */}
-                    <button
-                      onClick={() => toggleTime(time)}
-                      className="w-full text-left px-4 pt-4 pb-3"
-                    >
+                    {/* Static header */}
+                    <div className="px-4 pt-4 pb-3">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
-                          {/* Status label */}
                           <p className={`font-bold text-sm ${
                             timeStatus === 'all' ? 'text-emerald-700' :
                             timeStatus === 'partial' ? 'text-amber-700' :
                             'text-slate-800'
                           }`}>
-                            {timeStatus === 'all' ? 'All medications given' : 'Medication to dispense'}
+                            {timeStatus === 'all' ? 'All medications given' : 'Medications to dispense'}
                           </p>
-                          {/* Sub-label */}
                           <p className="text-xs text-slate-400 mt-0.5">
                             {totalResidents} {totalResidents === 1 ? 'resident' : 'residents'} · {totalMedsAtTime} {totalMedsAtTime === 1 ? 'medication' : 'medications'}
                           </p>
                         </div>
-
-                        {/* Time + chevron */}
-                        <div className="flex items-center gap-1.5 flex-shrink-0 mt-0.5">
-                          <span className="text-sm font-semibold text-slate-400">{fmtShort(time)}</span>
-                          <ChevronIcon open={isOpen} />
-                        </div>
+                        <span className="text-sm font-semibold text-slate-400 flex-shrink-0 mt-0.5">{fmtShort(time)}</span>
                       </div>
+                    </div>
 
-                      {/* Resident photo row */}
-                      <ResidentPhotoRow
-                        residentList={residentList}
-                        time={time}
-                        administered={administered}
-                      />
-                    </button>
-
-                    {/* ── Expanded: flat medication rows ── */}
-                    {isOpen && (
-                      <div className={`border-t ${dividerCls(timeStatus)}`}>
+                    {/* ── Flat medication rows — always visible ── */}
+                    <div className={`border-t ${dividerCls(timeStatus)}`}>
                         {residentList
                           .flatMap(([rid, { resident, meds }]) =>
                             meds.map(med => ({ rid, resident, med }))
@@ -997,7 +901,6 @@ export default function Dispense() {
                             )
                           })}
                       </div>
-                    )}
                   </div>
                 </div>
               )
