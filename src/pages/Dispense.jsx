@@ -805,22 +805,24 @@ export default function Dispense() {
                   <div className={`flex-1 min-w-0 border rounded-2xl overflow-hidden bg-white ${cardBorderCls(timeStatus)}`}>
 
                     {/* Static header */}
-                    <div className="px-4 pt-4 pb-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <p className={`font-bold text-sm ${
-                            timeStatus === 'all' ? 'text-emerald-700' :
-                            timeStatus === 'partial' ? 'text-amber-700' :
-                            'text-slate-800'
-                          }`}>
-                            {timeStatus === 'all' ? 'All medications given' : 'Medications to dispense'}
-                          </p>
-                          <p className="text-xs text-slate-400 mt-0.5">
-                            {totalResidents} {totalResidents === 1 ? 'resident' : 'residents'} · {totalMedsAtTime} {totalMedsAtTime === 1 ? 'medication' : 'medications'}
-                          </p>
-                        </div>
-                        <span className="text-sm font-semibold text-slate-400 flex-shrink-0 mt-0.5">{fmtShort(time)}</span>
+                    <div className={`px-4 pt-4 pb-3 ${
+                      timeStatus === 'all' ? 'bg-emerald-50' :
+                      timeStatus === 'partial' ? 'bg-amber-50/60' :
+                      'bg-slate-50/60'
+                    }`}>
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-2xl font-bold text-slate-800 tracking-tight">{fmt12(time)}</p>
+                        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0 ${
+                          timeStatus === 'all' ? 'bg-emerald-100 text-emerald-700' :
+                          timeStatus === 'partial' ? 'bg-amber-100 text-amber-700' :
+                          'bg-slate-100 text-slate-500'
+                        }`}>
+                          {doneAtTime}/{totalAtTime} given
+                        </span>
                       </div>
+                      <p className="text-xs text-slate-400 mt-1">
+                        {totalResidents} {totalResidents === 1 ? 'resident' : 'residents'} · {totalMedsAtTime} {totalMedsAtTime === 1 ? 'medication' : 'medications'}
+                      </p>
                     </div>
 
                     {/* ── Flat medication rows — always visible ── */}
