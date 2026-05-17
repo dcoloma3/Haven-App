@@ -1,3 +1,9 @@
+/*
+-- Run in Supabase SQL editor to enable PRN medications:
+alter table medications add column if not exists indication text;
+alter table medications add column if not exists min_interval_hours integer;
+*/
+
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { adminKey, isMedDueOnDate } from '../../lib/medStatus'
@@ -27,6 +33,7 @@ const FREQ_TYPES = [
   { value: 'daily',         label: 'Every Day' },
   { value: 'specific_days', label: 'Specific Days' },
   { value: 'every_x_days',  label: 'Every X Days' },
+  { value: 'prn',           label: 'As Needed (PRN)' },
 ]
 
 function describeFrequency(med) {
@@ -55,6 +62,8 @@ const EMPTY_FORM = {
   frequency_interval: 2,
   start_date: '',
   end_date: '',
+  indication: '',
+  min_interval_hours: '',
 }
 
 // ─── Medication Modal (Add / Edit) ────────────────────────────────────────────
@@ -115,12 +124,14 @@ function MedicationModal({ residentId, medication, onClose, onSaved }) {
       dose: form.dose || null,
       frequency: form.frequency || null,
       notes: form.notes || null,
-      scheduled_times: finalTimes,
+      scheduled_times: freqType === 'prn' ? [] : finalTimes,
       frequency_type: form.frequency_type || 'daily',
       frequency_days: form.frequency_type === 'specific_days' ? (form.frequency_days ?? []) : [],
       frequency_interval: form.frequency_type === 'every_x_days' ? (parseInt(form.frequency_interval) || null) : null,
       start_date: form.start_date || null,
       end_date: form.end_date || null,
+      indication: form.frequency_type === 'prn' ? (form.indication?.trim() || null) : null,
+      min_interval_hours: form.frequency_type === 'prn' && form.min_interval_hours ? parseInt(form.min_interval_hours) : null,
     }
 
     let data, err
@@ -226,36 +237,70 @@ function MedicationModal({ residentId, medication, onClose, onSaved }) {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Schedule Times</label>
-            <div className="flex gap-2">
-              <input
-                type="time"
-                value={newTime}
-                onChange={e => setNewTime(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTime() } }}
-                className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent"
-              />
-              <button
-                type="button"
-                onClick={addTime}
-                disabled={!newTime}
-                className="px-3 py-2 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-40 text-white text-sm rounded-lg transition-colors"
-              >
-                Add
-              </button>
-            </div>
-            {(form.scheduled_times ?? []).length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {form.scheduled_times.map(t => (
-                  <span key={t} className="inline-flex items-center gap-1 bg-[#E6F1FB] text-[#185FA5] text-xs font-medium px-2.5 py-1 rounded-full">
-                    {fmt12(t)}
-                    <button type="button" onClick={() => removeTime(t)} className="hover:text-[#0C447C] leading-none">&times;</button>
-                  </span>
-                ))}
+          {freqType !== 'prn' && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Schedule Times</label>
+              <div className="flex gap-2">
+                <input
+                  type="time"
+                  value={newTime}
+                  onChange={e => setNewTime(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTime() } }}
+                  className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent"
+                />
+                <button
+                  type="button"
+                  onClick={addTime}
+                  disabled={!newTime}
+                  className="px-3 py-2 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-40 text-white text-sm rounded-lg transition-colors"
+                >
+                  Add
+                </button>
               </div>
-            )}
-          </div>
+              {(form.scheduled_times ?? []).length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {form.scheduled_times.map(t => (
+                    <span key={t} className="inline-flex items-center gap-1 bg-[#E6F1FB] text-[#185FA5] text-xs font-medium px-2.5 py-1 rounded-full">
+                      {fmt12(t)}
+                      <button type="button" onClick={() => removeTime(t)} className="hover:text-[#0C447C] leading-none">&times;</button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {freqType === 'prn' && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Indication <span className="text-slate-400 font-normal">(what it's for)</span></label>
+                <input
+                  className={inputCls}
+                  value={form.indication ?? ''}
+                  onChange={e => set('indication', e.target.value)}
+                  placeholder="e.g. Pain, Anxiety, Nausea, Agitation, Insomnia"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Minimum interval between doses <span className="text-slate-400 font-normal">(optional)</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="1"
+                    max="24"
+                    className="w-24 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent"
+                    value={form.min_interval_hours ?? ''}
+                    onChange={e => set('min_interval_hours', e.target.value)}
+                    placeholder="—"
+                  />
+                  <span className="text-sm text-slate-600">hours</span>
+                </div>
+                <p className="text-xs text-slate-400 mt-1">Staff will see a warning if given sooner than this.</p>
+              </div>
+            </>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Special Instructions</label>
@@ -266,7 +311,7 @@ function MedicationModal({ residentId, medication, onClose, onSaved }) {
 
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className="flex-1 border border-slate-300 text-slate-700 rounded-lg py-2 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
-            <button type="submit" disabled={saving} className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-lg py-2 text-sm font-medium transition-colors">
+            <button type="submit" disabled={saving} className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-lg py-2 text-sm font-medium transition-colors">
               {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Medication'}
             </button>
           </div>
@@ -421,7 +466,7 @@ function DoseRow({ med, time, record, toggling, onSet }) {
             <button
               onClick={handleSaveNote}
               disabled={savingNote}
-              className="bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+              className="bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
             >
               {savingNote ? '…' : 'Save'}
             </button>
@@ -585,6 +630,189 @@ function TodayMedications({ residentId, medications, onStatusChange }) {
   )
 }
 
+// ─── PRN / As-Needed Medications Section ─────────────────────────────────────
+
+function PRNMedications({ residentId, medications }) {
+  const prnMeds = medications.filter(m => m.frequency_type === 'prn')
+
+  const [todayDoses, setTodayDoses] = useState([]) // array of medication_administrations records
+  const [loadingDoses, setLoadingDoses] = useState(true)
+  const [givingId, setGivingId] = useState(null) // which med has "Give Now" open
+  const [reason, setReason] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
+
+  const todayStr = new Date().toISOString().split('T')[0]
+
+  useEffect(() => {
+    if (prnMeds.length === 0) { setLoadingDoses(false); return }
+    loadDoses()
+  }, [residentId, prnMeds.length]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function loadDoses() {
+    const prnIds = prnMeds.map(m => m.id)
+    const { data } = await supabase
+      .from('medication_administrations')
+      .select('*')
+      .in('medication_id', prnIds)
+      .eq('administered_date', todayStr)
+      .order('administered_at', { ascending: false })
+    setTodayDoses(data ?? [])
+    setLoadingDoses(false)
+  }
+
+  async function handleGiveNow(med) {
+    if (!reason.trim()) { setSaveError('Please enter a reason.'); return }
+    setSaving(true)
+    setSaveError('')
+
+    // Use current HH:MM as the scheduled_time to avoid unique constraint issues
+    const now = new Date()
+    const hh = String(now.getHours()).padStart(2, '0')
+    const mm = String(now.getMinutes()).padStart(2, '0')
+    const timeKey = `${hh}:${mm}`
+
+    const { data: { session } } = await supabase.auth.getSession()
+    const { data, error } = await supabase
+      .from('medication_administrations')
+      .insert([{
+        medication_id: med.id,
+        resident_id: residentId,
+        scheduled_time: timeKey,
+        administered_date: todayStr,
+        administered_at: now.toISOString(),
+        administered_by: session?.user?.id ?? null,
+        admin_status: 'given',
+        admin_notes: reason.trim(),
+      }])
+      .select()
+      .single()
+
+    setSaving(false)
+    if (error) { setSaveError(error.message); return }
+    setTodayDoses(prev => [data, ...prev])
+    setGivingId(null)
+    setReason('')
+  }
+
+  if (prnMeds.length === 0) return null
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden mb-4">
+      <div className="px-5 py-4 border-b border-slate-100">
+        <h2 className="font-semibold text-slate-800">PRN / As Needed</h2>
+        <p className="text-xs text-slate-400 mt-0.5">Given on demand — tap Give Now and record the reason</p>
+      </div>
+
+      {loadingDoses && <p className="text-slate-400 text-sm px-5 py-4">Loading…</p>}
+
+      {!loadingDoses && (
+        <div className="divide-y divide-slate-100">
+          {prnMeds.map(med => {
+            const medDoses = todayDoses.filter(d => d.medication_id === med.id)
+            const lastDose = medDoses[0] ?? null
+            const isGiving = givingId === med.id
+
+            // Check min interval warning
+            let intervalWarning = null
+            if (lastDose && med.min_interval_hours) {
+              const lastAt = new Date(lastDose.administered_at)
+              const hoursAgo = (Date.now() - lastAt.getTime()) / 3600000
+              if (hoursAgo < med.min_interval_hours) {
+                const remaining = Math.ceil(med.min_interval_hours - hoursAgo)
+                intervalWarning = `Min interval: ${remaining}h remaining`
+              }
+            }
+
+            return (
+              <div key={med.id} className="px-5 py-4">
+                {/* Med header row */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-800">{med.medication_name}</p>
+                    <div className="flex flex-wrap items-center gap-x-2 mt-0.5">
+                      {med.dose && <span className="text-xs text-slate-500">{med.dose}</span>}
+                      {med.indication && (
+                        <>
+                          {med.dose && <span className="text-xs text-slate-300">·</span>}
+                          <span className="text-xs text-slate-500">{med.indication}</span>
+                        </>
+                      )}
+                    </div>
+                    {intervalWarning && (
+                      <p className="text-xs text-amber-600 font-medium mt-1">⚠ {intervalWarning}</p>
+                    )}
+                    {/* Today's dose history */}
+                    {medDoses.length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        {medDoses.map(dose => (
+                          <div key={dose.id} className="flex items-start gap-1.5">
+                            <svg className="w-3 h-3 text-emerald-500 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                            <p className="text-xs text-emerald-700">
+                              Given at {new Date(dose.administered_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                              {dose.admin_notes && <span className="text-slate-500"> · {dose.admin_notes}</span>}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {medDoses.length === 0 && (
+                      <p className="text-xs text-slate-400 mt-0.5">Not given today</p>
+                    )}
+                  </div>
+
+                  {!isGiving && (
+                    <button
+                      onClick={() => { setGivingId(med.id); setReason(''); setSaveError('') }}
+                      className="flex-shrink-0 bg-[#042C53] hover:bg-[#0B3D6E] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      Give Now
+                    </button>
+                  )}
+                </div>
+
+                {/* Inline Give Now form */}
+                {isGiving && (
+                  <div className="mt-3 bg-slate-50 rounded-xl p-3">
+                    <p className="text-xs font-semibold text-slate-600 mb-2">Reason given <span className="text-red-500">*</span></p>
+                    <input
+                      autoFocus
+                      type="text"
+                      value={reason}
+                      onChange={e => setReason(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') handleGiveNow(med) }}
+                      placeholder={med.indication ? `e.g. ${med.indication} — describe severity` : 'e.g. Patient reported pain 6/10'}
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent mb-2"
+                    />
+                    {saveError && <p className="text-xs text-red-600 mb-2">{saveError}</p>}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => { setGivingId(null); setReason(''); setSaveError('') }}
+                        className="flex-1 border border-slate-300 text-slate-600 text-xs font-medium py-1.5 rounded-lg hover:bg-white transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => handleGiveNow(med)}
+                        disabled={saving || !reason.trim()}
+                        className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-semibold py-1.5 rounded-lg transition-colors"
+                      >
+                        {saving ? 'Recording…' : 'Record Administration'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Main MedicationList ──────────────────────────────────────────────────────
 
 export default function MedicationList({ residentId, onMedStatusChange }) {
@@ -623,8 +851,16 @@ export default function MedicationList({ residentId, onMedStatusChange }) {
       {!loading && (
         <TodayMedications
           residentId={residentId}
-          medications={medications}
+          medications={medications.filter(m => m.frequency_type !== 'prn')}
           onStatusChange={onMedStatusChange}
+        />
+      )}
+
+      {/* ── PRN / As-Needed Section ── */}
+      {!loading && (
+        <PRNMedications
+          residentId={residentId}
+          medications={medications}
         />
       )}
 
@@ -668,8 +904,18 @@ export default function MedicationList({ residentId, onMedStatusChange }) {
                           ))}
                         </div>
                       )}
+                      {med.frequency_type === 'prn' && med.indication && (
+                        <p className="text-xs text-violet-600 mt-1">PRN · {med.indication}</p>
+                      )}
                       {med.frequency && <p className="text-xs text-slate-500 mt-1.5">{med.frequency}</p>}
-                      {med.notes && <p className="text-xs text-slate-500 mt-1 italic leading-relaxed">{med.notes}</p>}
+                      {med.notes && (
+                        <div className="flex items-start gap-1.5 mt-2 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-2">
+                          <svg className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-px" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                          </svg>
+                          <p className="text-xs text-amber-800 leading-relaxed font-medium">{med.notes}</p>
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center gap-3 flex-shrink-0 mt-0.5">
                       <button onClick={() => setEditing(med)} className="text-xs text-[#185FA5] hover:text-[#0C447C] transition-colors">Edit</button>

@@ -111,7 +111,7 @@ export default function GlobalSearch() {
     : 0
 
   // Switch to light mode when the input is active so results are readable
-  const light = focused || open
+  const light = true // navbar is always light (white bg)
 
   return (
     <div ref={containerRef} className="relative w-full">
@@ -125,11 +125,10 @@ export default function GlobalSearch() {
           onBlur={() => setFocused(false)}
           onKeyDown={e => { if (e.key === 'Escape') { setOpen(false); e.currentTarget.blur() } }}
           placeholder="Search residents, medications, events…"
-          className={`w-full pl-10 pr-4 py-2 text-sm rounded-xl border transition-colors focus:outline-none ${
-            light
-              ? 'bg-white text-slate-800 placeholder:text-slate-400 border-slate-300 focus:border-[#185FA5]'
-              : 'bg-white/10 text-white placeholder:text-white/50 border-white/15'
-          }`}
+          className="w-full pl-10 pr-4 py-2 text-sm rounded-xl border transition-colors focus:outline-none bg-[#F3F8FD] text-slate-800 placeholder:text-slate-400 border-slate-200 focus:border-[#185FA5] focus:bg-white"
+          style={{ boxShadow: 'none' }}
+          onFocus={e => { e.currentTarget.style.boxShadow = 'var(--haven-shadow-focus)' }}
+          onBlurCapture={e => { e.currentTarget.style.boxShadow = 'none' }}
         />
       </div>
 

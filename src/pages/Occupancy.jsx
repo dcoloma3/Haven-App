@@ -7,7 +7,7 @@ alter table waitlist add column if not exists tour_date date;
 */
 
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useCommunity } from '../context/CommunityContext'
 import Layout from '../components/layout/Layout'
@@ -174,7 +174,7 @@ export default function Occupancy() {
   return (
     <Layout>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Occupancy & Prospects</h1>
           <p className="text-sm text-slate-500 mt-1">Track your rooms and incoming prospects</p>
@@ -182,7 +182,7 @@ export default function Occupancy() {
         {isAdmin && (
           <button
             onClick={openAdd}
-            className="text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all active:scale-95 flex items-center gap-2"
+            className="self-start sm:self-auto whitespace-nowrap text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all active:scale-95 flex items-center gap-2"
             style={{ background: 'linear-gradient(135deg, #185FA5 0%, #2d8fe8 100%)', boxShadow: '0 2px 12px rgba(24,95,165,0.4)' }}
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -198,9 +198,9 @@ export default function Occupancy() {
 
           {/* ── Occupancy Overview ── */}
           <div>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
               <h2 className="text-base font-semibold text-slate-700">Occupancy Overview</h2>
-              <div className="flex gap-4 items-center">
+              <div className="flex gap-3 items-center">
                 <div className="text-center">
                   <p className="text-xl font-bold text-[#185FA5]">{occupiedRooms.length}</p>
                   <p className="text-xs text-slate-500">Occupied</p>
@@ -227,7 +227,7 @@ export default function Occupancy() {
                 )}
                 {totalBeds == null && (
                   <p className="text-xs text-slate-400 italic">
-                    Set total beds in <a href="/settings" className="text-[#185FA5] hover:underline">Settings</a>
+                    Set total beds in <Link to="/settings" className="text-[#185FA5] hover:underline">Settings</Link>
                   </p>
                 )}
               </div>
@@ -273,20 +273,20 @@ export default function Occupancy() {
             </div>
 
             {/* Pipeline stage bar */}
-            <div className="grid grid-cols-5 gap-2 mb-5">
+            <div className="flex gap-2 mb-5 overflow-x-auto pb-1 scrollbar-none">
               {PIPELINE_STAGES.map(s => (
                 <button
                   key={s.key}
                   onClick={() => setStageFilter(stageFilter === s.key ? 'all' : s.key)}
-                  className={`border rounded-xl p-3 text-left transition-all ${
+                  className={`flex-shrink-0 min-w-[110px] border rounded-xl p-3 text-left transition-all ${
                     stageFilter === s.key
                       ? `${s.color} border-2`
                       : 'bg-white border-slate-200 hover:border-slate-300'
                   }`}
                 >
                   <div className="flex items-center gap-1.5 mb-1">
-                    <div className={`w-2 h-2 rounded-full ${s.dot}`} />
-                    <p className={`text-xs font-semibold truncate ${stageFilter === s.key ? s.text : 'text-slate-600'}`}>{s.label}</p>
+                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${s.dot}`} />
+                    <p className={`text-xs font-semibold whitespace-nowrap ${stageFilter === s.key ? s.text : 'text-slate-600'}`}>{s.label}</p>
                   </div>
                   <p className={`text-xl font-bold ${stageFilter === s.key ? s.text : 'text-slate-800'}`}>
                     {stageCounts[s.key] || 0}
@@ -375,6 +375,14 @@ export default function Occupancy() {
                                       Advance →
                                     </button>
                                   )}
+                                  {p.status === 'accepted' && (
+                                    <button
+                                      onClick={() => navigate('/dashboard?openAddResident=true')}
+                                      className="bg-[#042C53] hover:bg-[#0B3D6E] text-white text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+                                    >
+                                      Convert to Resident
+                                    </button>
+                                  )}
                                   <button onClick={() => setDeleteConfirm(p)} className="text-xs text-red-400 font-medium hover:text-red-600">Delete</button>
                                 </div>
                               </td>
@@ -393,8 +401,8 @@ export default function Occupancy() {
 
       {/* Add/Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
-          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-2xl max-h-[92vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50" onClick={() => setShowModal(false)}>
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-2xl max-h-[92vh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="sticky top-0 bg-white border-b border-slate-200 px-5 py-4 flex items-center justify-between rounded-t-2xl">
               <h2 className="font-bold text-slate-800 text-lg">{editProspect ? 'Edit Prospect' : 'Add Prospect'}</h2>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">
@@ -498,7 +506,7 @@ export default function Occupancy() {
               <button
                 onClick={handleSave}
                 disabled={!form.prospect_name.trim() || saving}
-                className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors"
+                className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors"
               >
                 {saving ? 'Saving…' : editProspect ? 'Save Changes' : 'Add Prospect'}
               </button>
@@ -509,8 +517,8 @@ export default function Occupancy() {
 
       {/* Delete confirm */}
       {deleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4" onClick={() => setDeleteConfirm(null)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
             <h3 className="font-bold text-slate-800 mb-2">Remove Prospect</h3>
             <p className="text-sm text-slate-500 mb-5">Remove <strong>{deleteConfirm.prospect_name}</strong> from the pipeline?</p>
             <div className="flex gap-3">

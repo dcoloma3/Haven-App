@@ -57,7 +57,7 @@ function NoteModal({ file, onSave, onCancel, saving }) {
             <button
               onClick={() => onSave(note.trim())}
               disabled={saving}
-              className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-xl py-2 text-sm font-semibold transition-colors"
+              className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-xl py-2 text-sm font-semibold transition-colors"
             >
               {saving ? 'Saving…' : 'Add Photo'}
             </button>
@@ -197,7 +197,7 @@ export default function PhotoGallery({ residentId }) {
           {({ openMenu }) => (
             <button
               onClick={openMenu}
-              className="flex items-center gap-2 bg-[#185FA5] hover:bg-[#0C447C] text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
+              className="flex items-center gap-2 bg-[#042C53] hover:bg-[#0B3D6E] text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />

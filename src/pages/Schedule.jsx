@@ -171,8 +171,8 @@ function ShiftModal({ shift, defaultDate, staff, communityId, onClose, onSaved, 
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
           <h2 className="font-semibold text-slate-800">{isEditing ? 'Edit Shift' : 'Add Shift'}</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
@@ -263,7 +263,7 @@ function ShiftModal({ shift, defaultDate, staff, communityId, onClose, onSaved, 
             <button
               onClick={handleSave}
               disabled={saving}
-              className="bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+              className="bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors"
             >
               {saving ? 'Saving…' : isEditing ? 'Save Changes' : 'Add Shift'}
             </button>
@@ -418,7 +418,7 @@ function DailyView({ date, shifts, colorMap, onAddShift, onEditShift }) {
       <div className="flex justify-end mb-5">
         <button
           onClick={() => onAddShift(dateStr)}
-          className="bg-[#185FA5] hover:bg-[#0C447C] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          className="bg-[#042C53] hover:bg-[#0B3D6E] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
         >
           + Add Shift
         </button>

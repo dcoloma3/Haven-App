@@ -126,13 +126,23 @@ export default function ResidentDetail() {
   const isInactive = resident?.status === 'inactive'
 
   useEffect(() => {
+    if (!communityId) return
     supabase
       .from('residents')
       .select('*')
       .eq('id', id)
+      .eq('community_id', communityId)
       .single()
-      .then(({ data }) => { setResident(data); setLoading(false) })
-  }, [id])
+      .then(({ data, error }) => {
+        if (error || !data) {
+          // Resident doesn't exist or doesn't belong to this community
+          navigate('/dashboard', { replace: true })
+          return
+        }
+        setResident(data)
+        setLoading(false)
+      })
+  }, [id, communityId])
 
   // Map old individual tab names → new consolidated tab names
   const TAB_MAP = {

@@ -95,7 +95,7 @@ export default function ResidentTransportation({ residentId, resident }) {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-slate-700">Transportation Log</h3>
-        <button onClick={openAdd} className="bg-[#185FA5] hover:bg-[#0C447C] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2">
+        <button onClick={openAdd} className="bg-[#042C53] hover:bg-[#0B3D6E] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2">
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
           </svg>
@@ -189,7 +189,7 @@ export default function ResidentTransportation({ residentId, resident }) {
             </div>
             <div className="sticky bottom-0 bg-white border-t border-slate-200 px-5 py-4 flex gap-3">
               <button onClick={() => setShowModal(false)} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
-              <button onClick={handleSave} disabled={!form.destination.trim() || !form.trip_date || saving} className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
+              <button onClick={handleSave} disabled={!form.destination.trim() || !form.trip_date || saving} className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
                 {saving ? 'Saving…' : editTrip ? 'Save Changes' : 'Schedule Trip'}
               </button>
             </div>

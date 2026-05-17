@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './lib/supabase'
+import { completeTrial } from './lib/trial'
 import { FacilityProvider } from './context/FacilityContext'
 import { ProfileProvider, useProfile } from './context/ProfileContext'
 import { CommunityProvider, useCommunity } from './context/CommunityContext'
 import RequireAdmin from './components/auth/RequireAdmin'
+import RequireSuperAdmin from './components/auth/RequireSuperAdmin'
 import AppLoader from './components/ui/AppLoader'
 import Login from './pages/Login'
 import Marketing from './pages/Marketing'
@@ -37,6 +39,7 @@ import TermsOfService from './pages/TermsOfService'
 import Signup from './pages/Signup'
 import TrialExpired from './pages/TrialExpired'
 import TrialLockedFeature from './pages/TrialLockedFeature'
+import ResetPassword from './pages/ResetPassword'
 
 function NoMembershipScreen() {
   return (
@@ -63,10 +66,41 @@ function NoMembershipScreen() {
 }
 
 function ProtectedRoute({ children, trialLocked, featureName }) {
-  const { profile, loading: profileLoading } = useProfile()
-  const { memberships, communityId, community, loading: communityLoading, isSuperAdmin } = useCommunity()
+  const { profile, loading: profileLoading, profileError } = useProfile()
+  const { memberships, communityId, community, loading: communityLoading, isSuperAdmin, loadError, reload } = useCommunity()
 
   if (profileLoading || communityLoading) return <AppLoader />
+
+  // Show a recoverable error screen if context loads fail (network blips, etc.)
+  if (loadError || profileError) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm max-w-md w-full p-8 text-center">
+          <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-slate-800 mb-2">Something went wrong</h2>
+          <p className="text-sm text-slate-500 mb-6">We couldn't load your account data. Check your connection and try again.</p>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={() => reload()}
+              className="w-full bg-[#042C53] hover:bg-[#0B3D6E] text-white rounded-xl py-2.5 text-sm font-medium transition-colors"
+            >
+              Try Again
+            </button>
+            <button
+              onClick={() => supabase.auth.signOut()}
+              className="w-full border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm font-medium hover:bg-slate-50 transition-colors"
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   // Needs onboarding
   if (profile !== null && profile?.onboarding_complete === false) {
@@ -110,9 +144,37 @@ export default function App() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session)
+
+      // After email confirmation, complete the trial setup if pending data exists
+      if (session?.user && (event === 'SIGNED_IN' || event === 'USER_UPDATED')) {
+        const raw = localStorage.getItem('haven_trial_pending')
+        if (raw) {
+          try {
+            const pending = JSON.parse(raw)
+            // Guard: only consume pending data if it belongs to this user
+            if (pending.email && session.user.email !== pending.email) {
+              // Wrong user signed in — leave pending data for the right user
+              return
+            }
+            localStorage.removeItem('haven_trial_pending')
+            await completeTrial({
+              userId: session.user.id,
+              email: pending.email ?? session.user.email,
+              firstName: pending.firstName ?? '',
+              lastName: pending.lastName ?? '',
+              communityName: pending.communityName,
+              residentCount: pending.residentCount ?? 6,
+            })
+          } catch (err) {
+            console.error('Trial setup after email confirmation failed:', err)
+          }
+        }
+      }
     })
+
     return () => subscription.unsubscribe()
   }, [])
 
@@ -132,6 +194,7 @@ export default function App() {
               <Route path="/complete-profile" element={session ? <ProfileCompletion /> : <Navigate to="/login" replace />} />
 
               {/* Public routes — no auth required */}
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/terms" element={<TermsOfService />} />
               <Route path="/family/:token" element={<FamilyView />} />
@@ -172,7 +235,7 @@ export default function App() {
                 session ? <ProtectedRoute trialLocked featureName="Notification Log"><RequireAdmin><NotificationLog /></RequireAdmin></ProtectedRoute> : <Navigate to="/login" replace />
               } />
 
-              <Route path="/superadmin" element={session ? <SuperAdmin /> : <Navigate to="/login" replace />} />
+              <Route path="/superadmin" element={session ? <ProtectedRoute><RequireSuperAdmin><SuperAdmin /></RequireSuperAdmin></ProtectedRoute> : <Navigate to="/login" replace />} />
               <Route path="*" element={<Navigate to={session ? '/dashboard' : '/'} replace />} />
             </Routes>
           </FacilityProvider>

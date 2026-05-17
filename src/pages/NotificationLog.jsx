@@ -48,6 +48,8 @@ export default function NotificationLog() {
   const [settings, setSettings] = useState(null)
   const [loading, setLoading] = useState(true)
   const [savingSettings, setSavingSettings] = useState(false)
+  const [saveMsg, setSaveMsg] = useState('')
+  const [saveMsgType, setSaveMsgType] = useState('success')
   const [filterType, setFilterType] = useState('all')
   const [filterStatus, setFilterStatus] = useState('all')
   const [showManualModal, setShowManualModal] = useState(false)
@@ -83,11 +85,15 @@ export default function NotificationLog() {
     }
     if (error) {
       console.error(error)
-      alert('Something went wrong. Please try again.')
+      setSaveMsgType('error')
+      setSaveMsg('Something went wrong. Please try again.')
       setSavingSettings(false)
       return
     }
     setSavingSettings(false)
+    setSaveMsgType('success')
+    setSaveMsg('Settings saved.')
+    setTimeout(() => setSaveMsg(''), 3000)
     await load()
   }
 
@@ -106,12 +112,16 @@ export default function NotificationLog() {
     })
     if (error) {
       console.error(error)
-      alert('Something went wrong. Please try again.')
+      setSaveMsgType('error')
+      setSaveMsg('Something went wrong. Please try again.')
       setSavingLog(false)
       return
     }
     setSavingLog(false)
     setShowManualModal(false)
+    setSaveMsgType('success')
+    setSaveMsg('Notification logged.')
+    setTimeout(() => setSaveMsg(''), 3000)
     setManualForm({ notification_type: 'Call', recipient_name: '', recipient_contact: '', message: '', status: 'sent' })
     await load()
   }
@@ -140,12 +150,19 @@ export default function NotificationLog() {
         </div>
       </div>
 
+      {saveMsg && (
+        <div className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm mb-4 ${saveMsgType === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
+          <span>{saveMsg}</span>
+          <button onClick={() => setSaveMsg('')} className="ml-4 opacity-60 hover:opacity-100">✕</button>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Notification Log</h1>
           <p className="text-sm text-slate-500 mt-1">Manual communication records</p>
         </div>
-        <button onClick={() => setShowManualModal(true)} className="bg-[#185FA5] hover:bg-[#0C447C] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2">
+        <button onClick={() => setShowManualModal(true)} className="bg-[#042C53] hover:bg-[#0B3D6E] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2">
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
           </svg>
@@ -175,7 +192,7 @@ export default function NotificationLog() {
               <span className="text-sm text-slate-700">{label}</span>
             </label>
           ))}
-          <button onClick={saveSettings} disabled={savingSettings} className="bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors">
+          <button onClick={saveSettings} disabled={savingSettings} className="bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors">
             {savingSettings ? 'Saving…' : 'Save Settings'}
           </button>
         </div>
@@ -237,8 +254,8 @@ export default function NotificationLog() {
 
       {/* Manual Log Modal */}
       {showManualModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
-          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-md flex flex-col">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50" onClick={() => setShowManualModal(false)}>
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-md flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="sticky top-0 bg-white border-b border-slate-200 px-5 py-4 flex items-center justify-between rounded-t-2xl">
               <h2 className="font-bold text-slate-800 text-lg">Log Manual Notification</h2>
               <button onClick={() => setShowManualModal(false)} className="text-slate-400 hover:text-slate-600">
@@ -281,7 +298,7 @@ export default function NotificationLog() {
             </div>
             <div className="px-5 pb-5 flex gap-3">
               <button onClick={() => setShowManualModal(false)} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
-              <button onClick={logManual} disabled={!manualForm.recipient_name.trim() || savingLog} className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
+              <button onClick={logManual} disabled={!manualForm.recipient_name.trim() || savingLog} className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
                 {savingLog ? 'Saving…' : 'Log Notification'}
               </button>
             </div>

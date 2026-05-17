@@ -63,11 +63,13 @@ export default function DocumentVault({ residentId, resident }) {
   const [documents, setDocuments] = useState([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState('')
   const [category, setCategory] = useState('Other')
   const [notes, setNotes] = useState('')
   const [showUploadForm, setShowUploadForm] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
   const fileInputRef = useRef(null)
   const [selectedFile, setSelectedFile] = useState(null)
 
@@ -88,6 +90,7 @@ export default function DocumentVault({ residentId, resident }) {
   async function handleUpload() {
     if (!selectedFile) return
     setUploading(true)
+    setUploadError('')
     try {
       const timestamp = Date.now()
       const path = `${communityId}/${residentId}/${timestamp}_${selectedFile.name}`
@@ -117,7 +120,7 @@ export default function DocumentVault({ residentId, resident }) {
       if (fileInputRef.current) fileInputRef.current.value = ''
       await fetchDocuments()
     } catch (err) {
-      alert('Upload failed: ' + err.message)
+      setUploadError('Upload failed: ' + err.message)
     } finally {
       setUploading(false)
     }
@@ -125,6 +128,7 @@ export default function DocumentVault({ residentId, resident }) {
 
   async function handleDelete(doc) {
     setDeleting(true)
+    setDeleteError('')
     try {
       // Extract path from URL
       const url = new URL(doc.file_url)
@@ -136,7 +140,7 @@ export default function DocumentVault({ residentId, resident }) {
       setDeleteConfirm(null)
       await fetchDocuments()
     } catch (err) {
-      alert('Delete failed: ' + err.message)
+      setDeleteError('Delete failed: ' + err.message)
     } finally {
       setDeleting(false)
     }
@@ -158,7 +162,7 @@ export default function DocumentVault({ residentId, resident }) {
         <h3 className="text-sm font-semibold text-slate-700">Document Vault</h3>
         <button
           onClick={() => setShowUploadForm(v => !v)}
-          className="bg-[#185FA5] hover:bg-[#0C447C] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2"
+          className="bg-[#042C53] hover:bg-[#0B3D6E] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2"
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
@@ -197,15 +201,18 @@ export default function DocumentVault({ residentId, resident }) {
               className={inputCls + ' resize-none'}
             />
           </div>
+          {uploadError && (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{uploadError}</p>
+          )}
           <div className="flex gap-3 pt-1">
             <button
-              onClick={() => { setShowUploadForm(false); setSelectedFile(null); if (fileInputRef.current) fileInputRef.current.value = '' }}
+              onClick={() => { setShowUploadForm(false); setSelectedFile(null); setUploadError(''); if (fileInputRef.current) fileInputRef.current.value = '' }}
               className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors"
             >Cancel</button>
             <button
               onClick={handleUpload}
               disabled={!selectedFile || uploading}
-              className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors"
+              className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors"
             >
               {uploading ? 'Uploading…' : 'Upload'}
             </button>
@@ -280,8 +287,11 @@ export default function DocumentVault({ residentId, resident }) {
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
             <h3 className="font-bold text-slate-800 mb-2">Delete Document</h3>
             <p className="text-sm text-slate-500 mb-5">Are you sure you want to delete <strong>{deleteConfirm.file_name}</strong>? This cannot be undone.</p>
+            {deleteError && (
+              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2 mb-4">{deleteError}</p>
+            )}
             <div className="flex gap-3">
-              <button onClick={() => setDeleteConfirm(null)} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
+              <button onClick={() => { setDeleteConfirm(null); setDeleteError('') }} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
               <button
                 onClick={() => handleDelete(deleteConfirm)}
                 disabled={deleting}

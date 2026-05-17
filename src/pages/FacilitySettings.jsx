@@ -69,6 +69,12 @@ export default function FacilitySettings() {
 
   return (
     <Layout>
+      <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors mb-4">
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M19 12H5M12 5l-7 7 7 7" />
+        </svg>
+        Back
+      </button>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Community Settings</h1>
@@ -95,7 +101,7 @@ export default function FacilitySettings() {
             <textarea className={`${inputCls} resize-none`} rows={2} value={form.address} onChange={e => set('address', e.target.value)} placeholder="123 Main St, City, CA 90000" />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
               <input type="tel" className={inputCls} value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="(555) 000-0000" />
@@ -111,7 +117,7 @@ export default function FacilitySettings() {
             <input type="url" className={inputCls} value={form.website} onChange={e => set('website', e.target.value)} placeholder="https://facility.com" />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Total Beds</label>
               <input type="number" min="0" step="1" className={inputCls} value={form.total_beds} onChange={e => set('total_beds', e.target.value)} placeholder="e.g. 20" />
@@ -127,7 +133,7 @@ export default function FacilitySettings() {
           {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
           {saved && <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">Settings saved.</p>}
 
-          <button type="submit" disabled={saving} className="w-full bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white font-medium rounded-lg py-2 text-sm transition-colors">
+          <button type="submit" disabled={saving} className="w-full bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white font-medium rounded-lg py-2 text-sm transition-colors">
             {saving ? 'Saving…' : 'Save Changes'}
           </button>
         </form>

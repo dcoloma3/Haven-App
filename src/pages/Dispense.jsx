@@ -973,9 +973,16 @@ export default function Dispense() {
                                     )}
                                   </div>
                                   {singleMed && (
-                                    <p className="text-xs text-slate-500 mt-0.5 truncate">
-                                      {singleMed.medication_name}{singleMed.dose ? ` · ${singleMed.dose}` : ''}
-                                    </p>
+                                    <div className="mt-0.5">
+                                      <p className="text-xs text-slate-500 truncate">
+                                        {singleMed.medication_name}{singleMed.dose ? ` · ${singleMed.dose}` : ''}
+                                      </p>
+                                      {singleMed.notes && (
+                                        <p className="text-xs text-amber-700 bg-amber-50 rounded px-1.5 py-0.5 mt-1 leading-relaxed">
+                                          {singleMed.notes}
+                                        </p>
+                                      )}
+                                    </div>
                                   )}
                                   {hasMultiple && (
                                     <p className="text-xs text-slate-400 mt-0.5">{meds.length} medications</p>
@@ -1044,6 +1051,11 @@ export default function Dispense() {
                                             {med.medication_name}
                                           </p>
                                           {med.dose && <p className="text-xs text-slate-400 mt-0.5">{med.dose}</p>}
+                                          {med.notes && (
+                                            <p className="text-xs text-amber-700 bg-amber-50 rounded px-1.5 py-0.5 mt-1 leading-relaxed">
+                                              {med.notes}
+                                            </p>
+                                          )}
                                           {isDone && <GivenByLine record={administered.get(mKey)} staffMap={staffMap} />}
                                           {isNotGiven && <p className="text-xs text-amber-600 mt-0.5 font-medium">Not given · {ngLabel}</p>}
                                         </div>

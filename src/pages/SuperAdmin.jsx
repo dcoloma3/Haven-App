@@ -16,22 +16,20 @@ function StatCard({ label, value }) {
   )
 }
 
-function InviteAdminModal({ currentUserId, onClose }) {
-  const [email, setEmail] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [success, setSuccess] = useState(false)
-  const [error, setError] = useState('')
+// Fix 6 — Simplified Invite Admin modal with copy-to-clipboard message
+function InviteAdminModal({ onClose }) {
+  const [copied, setCopied] = useState(false)
 
-  async function handleInvite() {
-    if (!email.trim()) { setError('Email is required.'); return }
-    setSaving(true)
-    setError('')
-    const { error: err } = await supabase
-      .from('admin_invites')
-      .upsert([{ email: email.trim().toLowerCase(), invited_by: currentUserId }], { onConflict: 'email' })
-    setSaving(false)
-    if (err) { setError(err.message); return }
-    setSuccess(true)
+  const message = `I'd like to invite you to try Haven, a senior living management platform.
+
+Sign up at: ${window.location.origin}/signup
+
+Once you create your account, you'll be guided through setting up your community.`
+
+  async function handleCopy() {
+    await navigator.clipboard.writeText(message)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2500)
   }
 
   return (
@@ -42,39 +40,23 @@ function InviteAdminModal({ currentUserId, onClose }) {
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
         </div>
 
-        {success ? (
-          <div className="text-center py-4">
-            <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <svg className="w-6 h-6 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            </div>
-            <p className="font-medium text-slate-800 mb-1">Invite created!</p>
-            <p className="text-sm text-slate-500 mb-1">Share the app link with <strong>{email}</strong>.</p>
-            <p className="text-sm text-slate-500 mb-4">When they sign up, they'll go through admin onboarding and set up their community.</p>
-            <p className="text-xs bg-slate-100 rounded-lg px-3 py-2 text-slate-600 font-mono break-all">{window.location.origin}</p>
-            <button onClick={onClose} className="mt-4 bg-[#042C53] text-white text-sm font-medium px-5 py-2 rounded-lg hover:bg-[#0B3D6E] transition-colors">
-              Done
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Admin Email Address</label>
-              <input type="email" className={inputCls} value={email} onChange={e => setEmail(e.target.value)} placeholder="client@example.com" />
-            </div>
-            <p className="text-xs text-slate-400 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
-              Share the app URL with this person. When they sign up using this email, they'll be guided through creating their community as an admin.
-            </p>
-            {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
-            <div className="flex gap-3">
-              <button onClick={onClose} className="flex-1 border border-slate-300 text-slate-700 rounded-lg py-2 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
-              <button onClick={handleInvite} disabled={saving} className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-lg py-2 text-sm font-medium transition-colors">
-                {saving ? 'Creating…' : 'Create Invite'}
-              </button>
-            </div>
-          </div>
-        )}
+        <p className="text-sm text-slate-500 mb-3">Share this message with your client to get them started:</p>
+
+        <pre className="text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 whitespace-pre-wrap font-sans mb-4 leading-relaxed">
+          {message}
+        </pre>
+
+        <div className="flex gap-3">
+          <button onClick={onClose} className="flex-1 border border-slate-300 text-slate-700 rounded-lg py-2 text-sm hover:bg-slate-50 transition-colors">
+            Close
+          </button>
+          <button
+            onClick={handleCopy}
+            className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] text-white rounded-lg py-2 text-sm font-medium transition-colors"
+          >
+            {copied ? 'Copied!' : 'Copy Invite Message'}
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -122,7 +104,80 @@ function AddSuperAdminModal({ onClose, onAdded }) {
   )
 }
 
-function CommunityRow({ c, s, isMine, onEnter }) {
+// Fix 3 — Plan badge helper
+const PLAN_BADGE = {
+  trial:      'bg-amber-100 text-amber-700',
+  starter:    'bg-blue-100 text-blue-700',
+  pro:        'bg-purple-100 text-purple-700',
+  enterprise: 'bg-emerald-100 text-emerald-700',
+}
+
+// Fix 4 — Delete Community Modal
+function DeleteCommunityModal({ community, onClose, onDeleted, reloadAllCommunities }) {
+  const [confirmText, setConfirmText] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleDelete() {
+    if (confirmText !== community.name) {
+      setError('Community name does not match.')
+      return
+    }
+    setDeleting(true)
+    const { error: err } = await supabase
+      .from('communities')
+      .delete()
+      .eq('id', community.id)
+    setDeleting(false)
+    if (err) { setError(err.message); return }
+    onDeleted()
+    reloadAllCommunities()
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold text-red-700">Delete Community</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
+        </div>
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">
+          <p className="text-sm text-red-700 font-medium mb-1">This action cannot be undone.</p>
+          <p className="text-sm text-red-600">Deleting <strong>{community.name}</strong> will permanently remove all residents, medications, and staff records associated with this community.</p>
+        </div>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Type <strong>{community.name}</strong> to confirm
+            </label>
+            <input
+              type="text"
+              className={inputCls}
+              value={confirmText}
+              onChange={e => setConfirmText(e.target.value)}
+              placeholder={community.name}
+            />
+          </div>
+          {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
+          <div className="flex gap-3">
+            <button onClick={onClose} className="flex-1 border border-slate-300 text-slate-700 rounded-lg py-2 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
+            <button
+              onClick={handleDelete}
+              disabled={deleting || confirmText !== community.name}
+              className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white rounded-lg py-2 text-sm font-medium transition-colors"
+            >
+              {deleting ? 'Deleting…' : 'Delete Community'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Fix 3 & 4 — Updated CommunityRow with plan badge and delete link
+function CommunityRow({ c, s, isMine, onEnter, onDelete }) {
   return (
     <div className={`flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors ${isMine ? 'bg-amber-50/40' : ''}`}>
       {/* Icon */}
@@ -145,6 +200,12 @@ function CommunityRow({ c, s, isMine, onEnter }) {
           {isMine && (
             <span className="text-xs font-semibold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">My Community</span>
           )}
+          {/* Fix 3 — Plan badge on customer rows */}
+          {!isMine && c.plan && PLAN_BADGE[c.plan] && (
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${PLAN_BADGE[c.plan]}`}>
+              {c.plan}
+            </span>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
           {!isMine && (
@@ -162,6 +223,15 @@ function CommunityRow({ c, s, isMine, onEnter }) {
           )}
         </div>
         {c.address && <p className="text-xs text-slate-400 mt-0.5 truncate">{c.address}</p>}
+        {/* Fix 4 — Delete link (customer rows only) */}
+        {!isMine && onDelete && (
+          <button
+            onClick={() => onDelete(c)}
+            className="text-xs text-red-400 hover:text-red-600 mt-0.5 transition-colors"
+          >
+            Delete
+          </button>
+        )}
       </div>
 
       {/* Enter button */}
@@ -296,6 +366,43 @@ function ConvertPlanModal({ community, onClose, onSaved }) {
   )
 }
 
+// Fix 5 — Revenue summary
+const PLAN_PRICE = { starter: 129, pro: 249, enterprise: 499 }
+
+function RevenueSummary({ communities }) {
+  const counts = { trial: 0, starter: 0, pro: 0, enterprise: 0 }
+  communities.forEach(c => { if (counts[c.plan] !== undefined) counts[c.plan]++ })
+
+  const mrr = Object.entries(PLAN_PRICE).reduce((sum, [plan, price]) => sum + (counts[plan] ?? 0) * price, 0)
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 mb-6">
+      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Plan Breakdown</p>
+      <div className="flex flex-wrap gap-x-6 gap-y-2 items-end">
+        <div className="text-sm text-slate-600">
+          <span className="font-semibold text-amber-600">{counts.trial}</span> on trial
+        </div>
+        <div className="text-sm text-slate-600">
+          <span className="font-semibold text-blue-600">{counts.starter}</span> on starter
+          <span className="text-slate-400 text-xs ml-1">($129/mo · ${counts.starter * 129} MRR)</span>
+        </div>
+        <div className="text-sm text-slate-600">
+          <span className="font-semibold text-purple-600">{counts.pro}</span> on pro
+          <span className="text-slate-400 text-xs ml-1">($249/mo · ${counts.pro * 249} MRR)</span>
+        </div>
+        <div className="text-sm text-slate-600">
+          <span className="font-semibold text-emerald-600">{counts.enterprise}</span> on enterprise
+          <span className="text-slate-400 text-xs ml-1">($499/mo · ${counts.enterprise * 499} MRR)</span>
+        </div>
+        <div className="ml-auto">
+          <p className="text-xs text-slate-400 uppercase tracking-wide">Est. MRR</p>
+          <p className="text-xl font-bold text-slate-800">${mrr.toLocaleString()}</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function SuperAdmin() {
   const navigate = useNavigate()
   const { allCommunities, memberships, isSuperAdmin, setCommunityId, reloadAllCommunities } = useCommunity()
@@ -307,6 +414,8 @@ export default function SuperAdmin() {
   const [search, setSearch] = useState('')
   const [extendTarget, setExtendTarget] = useState(null)
   const [convertTarget, setConvertTarget] = useState(null)
+  // Fix 4 — delete community state
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   // Communities the owner is personally a member of
   const myMembershipIds = new Set(memberships.map(m => m.communities?.id).filter(Boolean))
@@ -377,6 +486,16 @@ export default function SuperAdmin() {
           <span className="bg-amber-400 text-[#042C53] text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wide">
             Owner Panel
           </span>
+          {/* Fix 2 — Back to Dashboard button */}
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="text-white/70 hover:text-white text-sm flex items-center gap-1.5 transition-colors"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+            Back to Dashboard
+          </button>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -402,6 +521,9 @@ export default function SuperAdmin() {
           <StatCard label="Total Residents" value={totalResidents} />
           <StatCard label="Owner Accounts" value={superAdmins.length} />
         </div>
+
+        {/* Fix 5 — Revenue Summary */}
+        <RevenueSummary communities={allCommunities} />
 
         {/* Search */}
         <div className="relative mb-6">
@@ -453,7 +575,14 @@ export default function SuperAdmin() {
           ) : (
             <div className="divide-y divide-slate-100">
               {customerCommunities.map(c => (
-                <CommunityRow key={c.id} c={c} s={stats[c.id]} isMine={false} onEnter={enterCommunity} />
+                <CommunityRow
+                  key={c.id}
+                  c={c}
+                  s={stats[c.id]}
+                  isMine={false}
+                  onEnter={enterCommunity}
+                  onDelete={setDeleteTarget}
+                />
               ))}
             </div>
           )}
@@ -567,7 +696,8 @@ export default function SuperAdmin() {
             {superAdmins.map(sa => (
               <div key={sa.id} className="flex items-center justify-between px-5 py-3">
                 <p className="text-sm text-slate-700">{sa.email}</p>
-                {sa.email !== 'domcoloma@gmail.com' && (
+                {/* Fix 1 — use profile?.email instead of hardcoded email */}
+                {sa.email !== profile?.email && (
                   <button
                     onClick={async () => {
                       await supabase.from('super_admins').delete().eq('id', sa.id)
@@ -586,7 +716,6 @@ export default function SuperAdmin() {
 
       {showInvite && (
         <InviteAdminModal
-          currentUserId={profile?.user_id}
           onClose={() => setShowInvite(false)}
         />
       )}
@@ -611,6 +740,16 @@ export default function SuperAdmin() {
           community={convertTarget}
           onClose={() => setConvertTarget(null)}
           onSaved={reloadAllCommunities}
+        />
+      )}
+
+      {/* Fix 4 — Delete Community Modal */}
+      {deleteTarget && (
+        <DeleteCommunityModal
+          community={deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onDeleted={() => setDeleteTarget(null)}
+          reloadAllCommunities={reloadAllCommunities}
         />
       )}
     </div>

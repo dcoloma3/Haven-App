@@ -56,6 +56,7 @@ export default function Certifications() {
   const [editCert, setEditCert] = useState(null)
   const [saving, setSaving] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
+  const [certError, setCertError] = useState('')
   const [form, setForm] = useState({ staff_name: '', cert_name: '', issued_date: '', expiry_date: '', cert_number: '', notes: '' })
 
   const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
@@ -95,17 +96,20 @@ export default function Certifications() {
   function openAdd() {
     setEditCert(null)
     setForm({ staff_name: '', cert_name: '', issued_date: '', expiry_date: '', cert_number: '', notes: '' })
+    setCertError('')
     setShowModal(true)
   }
 
   function openEdit(c) {
     setEditCert(c)
     setForm({ staff_name: c.staff_name, cert_name: c.cert_name, issued_date: c.issued_date || '', expiry_date: c.expiry_date || '', cert_number: c.cert_number || '', notes: c.notes || '' })
+    setCertError('')
     setShowModal(true)
   }
 
   async function handleSave() {
     if (!form.staff_name.trim() || !form.cert_name.trim()) return
+    setCertError('')
     setSaving(true)
     const payload = {
       community_id: communityId,
@@ -124,7 +128,7 @@ export default function Certifications() {
     }
     if (error) {
       console.error(error)
-      alert('Something went wrong. Please try again.')
+      setCertError(error.message || 'Something went wrong.')
       setSaving(false)
       return
     }
@@ -134,10 +138,11 @@ export default function Certifications() {
   }
 
   async function handleDelete(id) {
+    setCertError('')
     const { error } = await supabase.from('staff_certifications').delete().eq('id', id)
     if (error) {
       console.error(error)
-      alert('Something went wrong. Please try again.')
+      setCertError(error.message || 'Something went wrong.')
       return
     }
     setDeleteConfirm(null)
@@ -146,12 +151,12 @@ export default function Certifications() {
 
   return (
     <Layout>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Staff Certifications</h1>
           <p className="text-sm text-slate-500 mt-1">Track licenses and certifications</p>
         </div>
-        <button onClick={openAdd} className="bg-[#185FA5] hover:bg-[#0C447C] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2">
+        <button onClick={openAdd} className="self-start sm:self-auto whitespace-nowrap bg-[#042C53] hover:bg-[#0B3D6E] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2">
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
           </svg>
@@ -193,6 +198,9 @@ export default function Certifications() {
       ) : Object.keys(grouped).length === 0 ? (
         <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center">
           <p className="text-slate-500 text-sm">No certifications found</p>
+          <button onClick={openAdd} className="mt-3 bg-[#042C53] hover:bg-[#0B3D6E] text-white rounded-xl px-4 py-2 text-sm font-semibold transition-colors">
+            + Add Certification
+          </button>
         </div>
       ) : (
         <div className="space-y-5">
@@ -230,8 +238,8 @@ export default function Certifications() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
-          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-2xl max-h-[92vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50" onClick={() => setShowModal(false)}>
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-2xl max-h-[92vh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="sticky top-0 bg-white border-b border-slate-200 px-5 py-4 flex items-center justify-between rounded-t-2xl">
               <h2 className="font-bold text-slate-800 text-lg">{editCert ? 'Edit Certification' : 'Add Certification'}</h2>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">
@@ -268,23 +276,31 @@ export default function Certifications() {
                 <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} className={inputCls + ' resize-none'} placeholder="Optional notes…" />
               </div>
             </div>
-            <div className="sticky bottom-0 bg-white border-t border-slate-200 px-5 py-4 flex gap-3">
-              <button onClick={() => setShowModal(false)} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
-              <button onClick={handleSave} disabled={!form.staff_name.trim() || !form.cert_name.trim() || saving} className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
-                {saving ? 'Saving…' : editCert ? 'Save Changes' : 'Add Certification'}
-              </button>
+            <div className="sticky bottom-0 bg-white border-t border-slate-200 px-5 py-4">
+              {certError && (
+                <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-3">{certError}</p>
+              )}
+              <div className="flex gap-3">
+                <button onClick={() => setShowModal(false)} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
+                <button onClick={handleSave} disabled={!form.staff_name.trim() || !form.cert_name.trim() || saving} className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
+                  {saving ? 'Saving…' : editCert ? 'Save Changes' : 'Add Certification'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
       {deleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4" onClick={() => setDeleteConfirm(null)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
             <h3 className="font-bold text-slate-800 mb-2">Delete Certification</h3>
             <p className="text-sm text-slate-500 mb-5">Remove <strong>{deleteConfirm.cert_name}</strong> for {deleteConfirm.staff_name}?</p>
+            {certError && (
+              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-3">{certError}</p>
+            )}
             <div className="flex gap-3">
-              <button onClick={() => setDeleteConfirm(null)} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
+              <button onClick={() => { setDeleteConfirm(null); setCertError('') }} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
               <button onClick={() => handleDelete(deleteConfirm.id)} className="flex-1 bg-red-500 hover:bg-red-600 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">Delete</button>
             </div>
           </div>

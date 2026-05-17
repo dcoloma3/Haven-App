@@ -59,6 +59,7 @@ function Badge({ cls, children }) {
 function IncidentRow({ incident, isAdmin, onEdit, onStatusChange, onDelete, onResidentClick, facilityName }) {
   const [expanded, setExpanded] = useState(false)
   const [updatingStatus, setUpdatingStatus] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
 
   const residentName = incident.resident_name || 'Unknown Resident'
   const sev = incident.severity ?? 'low'
@@ -78,7 +79,6 @@ function IncidentRow({ incident, isAdmin, onEdit, onStatusChange, onDelete, onRe
   }
 
   async function handleDelete() {
-    if (!confirm('Delete this incident report? This cannot be undone.')) return
     await supabase.from('incidents').delete().eq('id', incident.id)
     onDelete(incident.id)
   }
@@ -242,12 +242,25 @@ function IncidentRow({ incident, isAdmin, onEdit, onStatusChange, onDelete, onRe
 
             {isAdmin && (
               <button
-                onClick={handleDelete}
+                onClick={() => setDeleteConfirmOpen(true)}
                 className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-medium transition-colors"
               >
                 Delete
               </button>
             )}
+          </div>
+        </div>
+      )}
+
+      {deleteConfirmOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full">
+            <h3 className="font-semibold text-slate-800 mb-2">Delete incident report?</h3>
+            <p className="text-sm text-slate-500 mb-5">This cannot be undone.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setDeleteConfirmOpen(false)} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
+              <button onClick={() => { handleDelete(); setDeleteConfirmOpen(false) }} className="flex-1 bg-red-600 hover:bg-red-700 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">Delete</button>
+            </div>
           </div>
         </div>
       )}
@@ -336,6 +349,14 @@ export default function Incidents() {
     setShowForm(true)
   }
 
+  function clearFilters() {
+    setStatusFilter('all')
+    setTypeFilter('all')
+    setDateFrom(getThisMonthStart())
+    setDateTo(getToday())
+    setResidentSearch('')
+  }
+
   // Stats — all counts reflect the currently loaded (filtered) dataset
   const openCount = incidents.filter(i => i.status === 'open').length
   const highCount = incidents.filter(i => i.severity === 'high').length
@@ -356,7 +377,7 @@ export default function Incidents() {
         </div>
         <button
           onClick={() => { setEditingIncident(null); setShowForm(true) }}
-          className="flex items-center gap-1.5 bg-[#185FA5] hover:bg-[#0C447C] text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors flex-shrink-0"
+          className="flex items-center gap-1.5 bg-[#042C53] hover:bg-[#0B3D6E] text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors flex-shrink-0"
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
@@ -460,8 +481,18 @@ export default function Incidents() {
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             </svg>
           </div>
-          <p className="font-medium text-slate-500">No incident reports found</p>
-          <p className="text-sm mt-1">Try adjusting the date range or filters.</p>
+          <div className="flex flex-col items-center gap-3">
+            <p className="text-slate-400 text-sm">No incident reports found</p>
+            <button onClick={clearFilters} className="text-sm text-[#185FA5] hover:underline">Clear filters</button>
+            {isAdmin && (
+              <button
+                onClick={() => { setEditingIncident(null); setShowForm(true) }}
+                className="bg-[#042C53] hover:bg-[#0B3D6E] text-white rounded-xl px-4 py-2 text-sm font-semibold transition-colors"
+              >
+                + New Report
+              </button>
+            )}
+          </div>
         </div>
       )}
 

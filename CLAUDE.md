@@ -1,6 +1,7 @@
 # The Haven — Claude Briefing Document
 
 > Read this file at the start of every session. It contains everything needed to work on this project without asking repeated questions.
+> Also read `TASKS.md` at the start of every session and sync its incomplete items into the TodoWrite sidebar so Dominick can track progress.
 
 ---
 

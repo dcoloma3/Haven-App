@@ -9,7 +9,7 @@ export default function HavenLogo({ markHeight = 26, textSize = 20, variant = 'c
   const dot     = variant === 'white' ? 'rgba(255,255,255,0.65)' : '#378ADD'
 
   return (
-    <div className="flex items-center gap-2">
+    <div className={`flex items-center ${textSize > 0 ? 'gap-2' : ''}`}>
       <svg
         width={markWidth}
         height={markHeight}
@@ -31,18 +31,20 @@ export default function HavenLogo({ markHeight = 26, textSize = 20, variant = 'c
         <circle cx="12" cy="1.5" r="1.5" fill={dot} />
       </svg>
 
-      <span
-        style={{
-          fontSize: textSize,
-          fontWeight: 500,
-          letterSpacing: '-0.5px',
-          color: primary,
-          lineHeight: 1,
-          fontFamily: 'system-ui, -apple-system, sans-serif',
-        }}
-      >
-        haven
-      </span>
+      {textSize > 0 && (
+        <span
+          style={{
+            fontSize: textSize,
+            fontWeight: 500,
+            letterSpacing: '-0.5px',
+            color: primary,
+            lineHeight: 1,
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+          }}
+        >
+          haven
+        </span>
+      )}
     </div>
   )
 }

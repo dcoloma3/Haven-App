@@ -94,7 +94,7 @@ const PRESETS = [
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function ResidentMedHistory({ residentId, resident }) {
-  const { community } = useCommunity()
+  const { community, communityId } = useCommunity()
   const [rangePreset, setRangePreset] = useState('month')
   const [customFrom, setCustomFrom] = useState('')
   const [customTo, setCustomTo] = useState('')
@@ -104,19 +104,28 @@ export default function ResidentMedHistory({ residentId, resident }) {
   const [staffMap, setStaffMap] = useState({})
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
+  const [marError, setMarError] = useState('')
   const [marMode, setMarMode] = useState('administered') // 'administered' | 'clinical'
   const [selectedMed, setSelectedMed] = useState('')
 
   const { from, to } = getDateRange(rangePreset, customFrom, customTo)
 
-  // Load staff name map
+  // Load staff name map — scoped to this community only
   useEffect(() => {
-    supabase.from('profiles').select('user_id, full_name, email').then(({ data }) => {
-      const map = {}
-      ;(data ?? []).forEach(p => { map[p.user_id] = p.full_name || p.email || 'Staff' })
-      setStaffMap(map)
-    })
-  }, [])
+    if (!communityId) return
+    supabase
+      .from('community_members')
+      .select('user_id, profiles(user_id, full_name, email)')
+      .eq('community_id', communityId)
+      .then(({ data }) => {
+        const map = {}
+        ;(data ?? []).forEach(m => {
+          const p = m.profiles
+          if (p) map[p.user_id] = p.full_name || p.email || 'Staff'
+        })
+        setStaffMap(map)
+      })
+  }, [communityId])
 
   // Load all medications for this resident — needed for Full Clinical MAR
   useEffect(() => {
@@ -191,6 +200,7 @@ export default function ResidentMedHistory({ residentId, resident }) {
 
   function generateMAR() {
     setGenerating(true)
+    setMarError('')
     try {
       const doc = new jsPDF()
       const name = residentFullName(resident)
@@ -412,7 +422,7 @@ export default function ResidentMedHistory({ residentId, resident }) {
       doc.save(`${safeName}_MAR${safeMed}_${from}_to_${to}.pdf`)
     } catch (err) {
       console.error(err)
-      alert('Failed to generate MAR. Please try again.')
+      setMarError('Failed to generate MAR. Please try again.')
     } finally {
       setGenerating(false)
     }
@@ -457,7 +467,7 @@ export default function ResidentMedHistory({ residentId, resident }) {
             <button
               onClick={generateMAR}
               disabled={generating}
-              className="flex items-center gap-2 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+              className="flex items-center gap-2 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -469,6 +479,9 @@ export default function ResidentMedHistory({ residentId, resident }) {
             <p className="text-[10px] text-slate-400">
               {marMode === 'administered' ? 'Given meds only' : 'Includes missed doses'}
             </p>
+            {marError && (
+              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{marError}</p>
+            )}
           </div>
         )}
       </div>

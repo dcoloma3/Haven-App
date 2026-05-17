@@ -90,6 +90,7 @@ export default function VitalsLog({ residentId, resident }) {
   const [showModal, setShowModal] = useState(false)
   const [editRecord, setEditRecord] = useState(null) // null = new, object = editing existing
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const [form, setForm] = useState(EMPTY_FORM)
 
   const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
@@ -141,6 +142,7 @@ export default function VitalsLog({ residentId, resident }) {
 
   async function handleSave() {
     setSaving(true)
+    setSaveError('')
     const authorName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Staff'
     const payload = {
       community_id: communityId,
@@ -167,7 +169,7 @@ export default function VitalsLog({ residentId, resident }) {
 
     if (error) {
       console.error(error)
-      alert('Something went wrong. Please try again.')
+      setSaveError('Something went wrong. Please try again.')
       setSaving(false)
       return
     }
@@ -190,7 +192,7 @@ export default function VitalsLog({ residentId, resident }) {
         <h3 className="text-sm font-semibold text-slate-700">Vital Signs Log</h3>
         <button
           onClick={openNew}
-          className="bg-[#185FA5] hover:bg-[#0C447C] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2"
+          className="bg-[#042C53] hover:bg-[#0B3D6E] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2"
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
@@ -372,11 +374,16 @@ export default function VitalsLog({ residentId, resident }) {
                 <textarea value={form.notes} onChange={e => handleChange('notes', e.target.value)} rows={3} className={inputCls + ' resize-none'} placeholder="Optional notes…" />
               </div>
             </div>
-            <div className="sticky bottom-0 bg-white border-t border-slate-200 px-5 py-4 flex gap-3">
-              <button onClick={closeModal} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
-              <button onClick={handleSave} disabled={saving} className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
-                {saving ? 'Saving…' : editRecord ? 'Update Vitals' : 'Save Vitals'}
-              </button>
+            <div className="sticky bottom-0 bg-white border-t border-slate-200 px-5 py-4 space-y-3">
+              {saveError && (
+                <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{saveError}</p>
+              )}
+              <div className="flex gap-3">
+                <button onClick={closeModal} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
+                <button onClick={handleSave} disabled={saving} className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
+                  {saving ? 'Saving…' : editRecord ? 'Update Vitals' : 'Save Vitals'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

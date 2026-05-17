@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Haven — Task Board</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #1e293b; min-height: 100vh; padding: 40px 24px; }
+    .header { max-width: 860px; margin: 0 auto 32px; display: flex; align-items: center; gap: 12px; }
+    .logo { width: 36px; height: 36px; background: #042C53; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+    .logo svg { color: white; }
+    .header-text h1 { font-size: 20px; font-weight: 700; color: #0f172a; }
+    .header-text p { font-size: 13px; color: #94a3b8; margin-top: 1px; }
+    .board { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+    .section { background: white; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; }
+    .section-header { display: flex; align-items: center; gap: 8px; padding: 14px 18px; border-bottom: 1px solid #f1f5f9; }
+    .section-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .section-title { font-size: 13px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; }
+    .section-subtitle { font-size: 12px; color: #94a3b8; margin-left: 4px; font-weight: 400; text-transform: none; letter-spacing: 0; }
+    .section-count { margin-left: auto; font-size: 12px; font-weight: 500; color: #94a3b8; background: #f1f5f9; border-radius: 20px; padding: 1px 8px; }
+    .task-list { padding: 6px 0; }
+    .task { display: flex; align-items: flex-start; gap: 12px; padding: 10px 18px; transition: background 0.1s; }
+    .task:hover { background: #f8fafc; }
+    .task-check { width: 18px; height: 18px; border-radius: 5px; border: 1.5px solid #cbd5e1; flex-shrink: 0; margin-top: 2px; display: flex; align-items: center; justify-content: center; background: white; }
+    .task-check.done { background: #185FA5; border-color: #185FA5; }
+    .task-check.done svg { display: block; }
+    .task-check svg { display: none; width: 10px; height: 10px; color: white; }
+    .task-body { flex: 1; }
+    .task-text { font-size: 14px; color: #334155; line-height: 1.5; }
+    .task-text.done { text-decoration: line-through; color: #94a3b8; }
+    .task-tag { display: inline-block; font-size: 10px; font-weight: 600; border-radius: 4px; padding: 1px 6px; margin-left: 6px; vertical-align: middle; }
+    .tag-security { background: #fee2e2; color: #b91c1c; }
+    .tag-bug { background: #fef3c7; color: #92400e; }
+    .tag-ux { background: #ede9fe; color: #6d28d9; }
+    .tag-missing { background: #f1f5f9; color: #475569; }
+    .empty { padding: 16px 18px; font-size: 13px; color: #cbd5e1; font-style: italic; }
+    .footer { max-width: 860px; margin: 24px auto 0; font-size: 12px; color: #cbd5e1; text-align: center; }
+    .dot-red { background: #ef4444; }
+    .dot-orange { background: #f97316; }
+    .dot-yellow { background: #f59e0b; }
+    .dot-green { background: #22c55e; }
+    .dot-purple { background: #a855f7; }
+    .dot-blue { background: #3b82f6; }
+    .dot-slate { background: #94a3b8; }
+    .section-group-label { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; padding: 10px 18px 4px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+    </svg>
+  </div>
+  <div class="header-text">
+    <h1>Haven Task Board</h1>
+    <p>Full audit completed May 15, 2026 · Tell Claude to check things off or add tasks anytime.</p>
+  </div>
+</div>
+
+<div class="board">
+
+  <!-- SECURITY -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-dot dot-red"></div>
+      <span class="section-title">🔴 Security — Fix Before Launch</span>
+      <span class="section-count">3</span>
+    </div>
+    <div class="task-list">
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body">
+          <span class="task-text">ResidentDetail.jsx fetches resident with no community_id filter — any logged-in user can access any resident in the DB by UUID</span>
+          <span class="task-tag tag-security">SECURITY</span>
+        </div>
+      </div>
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body">
+          <span class="task-text">profiles table queried with no community scope in 3 places (MedicationHistory, ResidentMedHistory, SuperAdmin) — exposes names/emails of all users on the platform</span>
+          <span class="task-tag tag-security">SECURITY</span>
+        </div>
+      </div>
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body">
+          <span class="task-text">SuperAdmin route (/superadmin) has no routing-layer guard — non-admins briefly see the component before redirect. Needs a RequireAdmin-style wrapper in App.jsx</span>
+          <span class="task-tag tag-security">SECURITY</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BROKEN FLOWS -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-dot dot-orange"></div>
+      <span class="section-title">🟠 Broken Flows — Fix Before Any Real Users</span>
+      <span class="section-count">5</span>
+    </div>
+    <div class="task-list">
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body">
+          <span class="task-text">No /reset-password route in App.jsx — password reset emails send users to the marketing page. Password reset is completely broken</span>
+          <span class="task-tag tag-bug">BUG</span>
+        </div>
+      </div>
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body">
+          <span class="task-text">Dominick's profile corrupted to "Trial Test" / domcoloma+trial@gmail.com — showing everywhere (staff page, dispense recorder, vitals recorder, navbar initials). Fix profile in Supabase</span>
+          <span class="task-tag tag-bug">BUG</span>
+        </div>
+      </div>
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body">
+          <span class="task-text">trial.js has no rollback — if community_members or profiles insert fails after community is created, orphaned DB rows are left behind</span>
+          <span class="task-tag tag-bug">BUG</span>
+        </div>
+      </div>
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body">
+          <span class="task-text">Billing page generates statements with $0.00 — no way to set actual dollar amounts from the main Billing page. Must go to ResidentDetail → Billing tab. Disconnected workflow</span>
+          <span class="task-tag tag-bug">BUG</span>
+        </div>
+      </div>
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body">
+          <span class="task-text">Orphan resident record in DB with null name and null community_id — will cause crashes if it surfaces in the UI. Clean up in Supabase</span>
+          <span class="task-tag tag-bug">BUG</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ERROR HANDLING -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-dot dot-yellow"></div>
+      <span class="section-title">🟡 Error Handling — Silent Failures Everywhere</span>
+      <span class="section-count">3</span>
+    </div>
+    <div class="task-list">
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body">
+          <span class="task-text">Replace all alert() calls with inline error state or toast — found in: VitalsLog, ResidentMedHistory, ContactList, CarePlanList, DocumentVault, MoveChecklist, ADLTracker, BillingHistory (8 files)</span>
+          <span class="task-tag tag-bug">BUG</span>
+        </div>
+      </div>
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body">
+          <span class="task-text">Add try/catch + user-visible error messages to Supabase mutations on: Incidents, Maintenance, Occupancy, Activities, Transportation, ShiftLog, Schedule, StaffDirectory, Dispense, Vitals loads</span>
+        </div>
+      </div>
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body">
+          <span class="task-text">CommunityContext and ProfileContext have no error handling on load — if either Supabase call fails, the entire app freezes at a blank loading screen with no feedback</span>
+          <span class="task-tag tag-bug">BUG</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- UI POLISH -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-dot dot-purple"></div>
+      <span class="section-title">🟣 UX Polish — Consistent, Professional Feel</span>
+      <span class="section-count">7</span>
+    </div>
+    <div class="task-list">
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body">
+          <span class="task-text">Add skeleton loading states to every page — only Dashboard uses them. All other pages show plain "Loading..." text (Incidents, Billing, Schedule, Dispense, Maintenance, Occupancy, VitalSigns, Activities, Transportation, ShiftLog, Certifications, MedicationHistory, NotificationLog, StaffDirectory, Calendar)</span>
+          <span class="task-tag tag-ux">UX</span>
+        </div>
+      </div>
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body">
+          <span class="task-text">Fix FAB (+ button) overlapping content — it covers the last item on Dispense, ResidentDetail Health/Records tabs, and several other pages on mobile</span>
+          <span class="task-tag tag-ux">UX</span>
+        </div>
+      </div>
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body">
+          <span class="task-text">Remove dark mode toggle from Navbar or actually implement it — currently clicking it does nothing visible. The hook works but zero dark: CSS classes exist in the app</span>
+          <span class="task-tag tag-ux">UX</span>
+        </div>
+      </div>
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body">
+          <span class="task-text">Staff Directory: fix "Manager Manager" redundant role display, format phone numbers (9493102418 → (949) 310-2418), add search bar</span>
+          <span class="task-tag tag-ux">UX</span>
+        </div>
+      </div>
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body">
+          <span class="task-text">Activities page: date picker defaults to blank (mm/dd/yyyy) instead of today — add a "Today" shortcut button like Shift Log has</span>
+          <span class="task-tag tag-ux">UX</span>
+        </div>
+      </div>
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body">
+          <span class="task-text">Vitals modal: replace "—" placeholder in number inputs with real numeric placeholders (e.g. "120" for systolic). Also fix the timestamp timezone — vitals show 11:16 AM when recorded at 6:16 PM</span>
+          <span class="task-tag tag-ux">UX</span>
+        </div>
+      </div>
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body">
+          <span class="task-text">Dashboard: expiringCertCount is tracked in state but never displayed anywhere — either show it as a stat card or remove the dead code</span>
+          <span class="task-tag tag-ux">UX</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HALF-BUILT FEATURES -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-dot dot-blue"></div>
+      <span class="section-title">🔵 Half-Built Features — Needs Completion</span>
+      <span class="section-count">4</span>
+    </div>
+    <div class="task-list">
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body">
+          <span class="task-text">Notification Log: settings UI exists and saves, but no Supabase Edge Function connected — automated email/SMS notifications don't actually send. Needs Resend or Twilio integration</span>
+          <span class="task-tag tag-missing">MISSING</span>
+        </div>
+      </div>
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body">
+          <span class="task-text">Occupancy: advancing a prospect to "Move-In Ready" stage has no prompt to convert them into an actual resident record — the pipeline dead-ends</span>
+          <span class="task-tag tag-missing">MISSING</span>
+        </div>
+      </div>
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body">
+          <span class="task-text">Maintenance: "Assigned To" is a free-text field instead of a dropdown linked to real staff members from community_members</span>
+          <span class="task-tag tag-missing">MISSING</span>
+        </div>
+      </div>
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body">
+          <span class="task-text">Calendar has no list view — you have to click individual days to see what's scheduled. No "upcoming events" list below the calendar</span>
+          <span class="task-tag tag-missing">MISSING</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BUSINESS NEEDS -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-dot dot-yellow"></div>
+      <span class="section-title">🟡 Business — Before First Real Customer</span>
+      <span class="section-count">6</span>
+    </div>
+    <div class="task-list">
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body"><span class="task-text">Get a Google Voice number for customer support</span></div>
+      </div>
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body"><span class="task-text">Add real phone number to TrialExpired.jsx (replace +1 (XXX) XXX-XXXX)</span></div>
+      </div>
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body"><span class="task-text">Wire up "Get Full Access" button in trial banner and TrialLockedFeature to a real upgrade/contact flow</span></div>
+      </div>
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body"><span class="task-text">Set up support@haven.care email forwarding once domain is live</span></div>
+      </div>
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body"><span class="task-text">Set up haven.care domain and configure DNS + Vercel deployment</span></div>
+      </div>
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body"><span class="task-text">Remove hardcoded domcoloma@gmail.com from SuperAdmin.jsx source code — move to environment variable or DB config</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TECH DEBT -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-dot dot-slate"></div>
+      <span class="section-title">⚫ Tech Debt — Clean Up When Time Allows</span>
+      <span class="section-count">6</span>
+    </div>
+    <div class="task-list">
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body"><span class="task-text">Remove editMode dead code from CommunityContext — hardcoded to true, setEditMode() is a no-op, nothing reads it</span></div>
+      </div>
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body"><span class="task-text">Dispense.jsx duplicates isMedDueOnDate() and adminKey() locally instead of importing from lib/medStatus.js — two versions must be kept in sync manually</span></div>
+      </div>
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body"><span class="task-text">Move SQL migration comments out of page files — Billing, Maintenance, Occupancy, ShiftLog, Activities, Transportation, Certifications, VitalSigns all have migration SQL embedded in them</span></div>
+      </div>
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body"><span class="task-text">Clean up duplicate "test" communities (2 entries both named "test" at 3225 Spectrum) and orphan resident record (null name, null community_id) in Supabase</span></div>
+      </div>
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body"><span class="task-text">Clean up "Sunrise Test Home" trial test community in Supabase</span></div>
+      </div>
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body"><span class="task-text">Test full signup → email confirm → dashboard flow with a fresh email address end-to-end (now that email guard bug is fixed)</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- IDEAS -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-dot dot-purple"></div>
+      <span class="section-title">💡 Ideas & Future Features</span>
+      <span class="section-count">3</span>
+    </div>
+    <div class="task-list">
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body"><span class="task-text">Automated notifications via Supabase Edge Function + Resend or Twilio (family alerts for incidents, missed meds, appointments)</span></div>
+      </div>
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body"><span class="task-text">Dark mode — the toggle and hook already exist, just needs dark: CSS classes added throughout</span></div>
+      </div>
+      <div class="task">
+        <div class="task-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+        <div class="task-body"><span class="task-text">Stripe integration for billing — collect actual monthly payments, not just track statement statuses</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPLETED -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-dot dot-slate"></div>
+      <span class="section-title">✅ Completed</span>
+      <span class="section-count">9</span>
+    </div>
+    <div class="task-list">
+      <div class="task"><div class="task-check done"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div><div class="task-body"><span class="task-text done">Full app audit — front of house, back of house, POS system, building (May 15, 2026)</span></div></div>
+      <div class="task"><div class="task-check done"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div><div class="task-body"><span class="task-text done">Fix email mismatch bug in App.jsx onAuthStateChange (email guard added)</span></div></div>
+      <div class="task"><div class="task-check done"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div><div class="task-body"><span class="task-text done">Trial flow verified: banner ✓, locked routes ✓, expired screen ✓</span></div></div>
+      <div class="task"><div class="task-check done"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div><div class="task-body"><span class="task-text done">Extract completeTrial() to shared src/lib/trial.js</span></div></div>
+      <div class="task"><div class="task-check done"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div><div class="task-body"><span class="task-text done">Collapsible desktop sidebar with localStorage persistence</span></div></div>
+      <div class="task"><div class="task-check done"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div><div class="task-body"><span class="task-text done">Community Picker visual polish (initials avatars, compact rows)</span></div></div>
+      <div class="task"><div class="task-check done"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div><div class="task-body"><span class="task-text done">ResidentDetail tabs consolidated from 18 → 6</span></div></div>
+      <div class="task"><div class="task-check done"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div><div class="task-body"><span class="task-text done">Dispense page: progress bar, auto-expand time slots, expand/collapse all</span></div></div>
+      <div class="task"><div class="task-check done"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div><div class="task-body"><span class="task-text done">ShiftLog: auto-detect current shift, simplified filter bar</span></div></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">Last updated: May 15, 2026 · Full audit completed · haven-app/tasks.html</div>
+</body>
+</html>

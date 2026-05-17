@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import Layout from '../components/layout/Layout'
 import EventForm from '../components/calendar/EventForm'
@@ -63,6 +63,7 @@ function dotColor(eventType) {
 export default function Calendar() {
   const now = new Date()
   const { communityId } = useCommunity()
+  const navigate = useNavigate()
 
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth())
@@ -74,6 +75,7 @@ export default function Calendar() {
   const [showAddForm, setShowAddForm] = useState(false)
   const [addFormDate, setAddFormDate] = useState('')
   const [editingEvent, setEditingEvent] = useState(null)
+  const [upcomingEvents, setUpcomingEvents] = useState([])
 
   // ── Fetch events for current month ──────────────────────────────────────────
   const fetchEvents = useCallback(async () => {
@@ -91,6 +93,21 @@ export default function Calendar() {
   }, [year, month, communityId])
 
   useEffect(() => { fetchEvents() }, [fetchEvents])
+
+  // ── Fetch upcoming events (next 5 from today) ────────────────────────────────
+  useEffect(() => {
+    if (!communityId) return
+    const today = isoDate(now.getFullYear(), now.getMonth(), now.getDate())
+    supabase
+      .from('calendar_events')
+      .select('*, residents(id, first_name, last_name, full_name)')
+      .eq('community_id', communityId)
+      .gte('event_date', today)
+      .order('event_date', { ascending: true })
+      .order('event_time', { ascending: true, nullsFirst: true })
+      .limit(5)
+      .then(({ data }) => setUpcomingEvents(data ?? []))
+  }, [communityId]) // eslint-disable-line
 
   // ── Fetch active residents for EventForm ─────────────────────────────────────
   useEffect(() => {
@@ -364,7 +381,15 @@ export default function Calendar() {
                         {!isHolidayEvent && (
                           <span className="text-xs text-slate-400">{e.event_type}</span>
                         )}
-                        {residentName && (
+                        {residentName && e.residents?.id && (
+                          <button
+                            onClick={ev => { ev.stopPropagation(); navigate(`/residents/${e.residents.id}`) }}
+                            className="text-xs text-[#185FA5] hover:text-[#0B3D6E] font-medium transition-colors hover:underline underline-offset-2"
+                          >
+                            · {residentName}
+                          </button>
+                        )}
+                        {residentName && !e.residents?.id && (
                           <span className="text-xs text-slate-500">· {residentName}</span>
                         )}
                         {e.location && (
@@ -385,6 +410,45 @@ export default function Calendar() {
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Upcoming Events list */}
+      {upcomingEvents.length > 0 && (
+        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden mt-4">
+          <div className="px-4 py-3 border-b border-slate-100">
+            <h2 className="text-sm font-semibold text-slate-700">Upcoming Events</h2>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {upcomingEvents.map(e => {
+              const residentName = e.residents
+                ? (e.residents.full_name || [e.residents.first_name, e.residents.last_name].filter(Boolean).join(' '))
+                : null
+              const dateLabel = new Date(e.event_date + 'T00:00:00').toLocaleDateString('en-US', {
+                weekday: 'long', month: 'long', day: 'numeric',
+              })
+              return (
+                <div key={e.id} className="flex items-start gap-3 px-4 py-3.5">
+                  <span
+                    className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5"
+                    style={{ backgroundColor: dotColor(e.event_type) }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-800 truncate">{e.title}</p>
+                    <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-0.5">
+                      <span className="text-xs text-slate-500">{dateLabel}</span>
+                      {e.event_time && (
+                        <span className="text-xs text-slate-500">· {formatTime(e.event_time)}</span>
+                      )}
+                      {residentName && (
+                        <span className="text-xs text-slate-500">· {residentName}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
 

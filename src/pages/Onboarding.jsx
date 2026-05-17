@@ -173,7 +173,7 @@ export default function Onboarding() {
           <div className="flex flex-col gap-3">
             <button
               onClick={() => { window.location.href = '/dashboard?openAddResident=1' }}
-              className="w-full bg-[#185FA5] hover:bg-[#0C447C] text-white font-medium py-2.5 rounded-lg text-sm transition-colors"
+              className="w-full bg-[#042C53] hover:bg-[#0B3D6E] text-white font-medium py-2.5 rounded-lg text-sm transition-colors"
             >
               Add a Resident
             </button>
@@ -320,7 +320,7 @@ export default function Onboarding() {
                 setError('')
                 setStep(s => s + 1)
               }}
-              className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] text-white font-medium py-2.5 rounded-lg text-sm transition-colors"
+              className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] text-white font-medium py-2.5 rounded-lg text-sm transition-colors"
             >
               Continue
             </button>
@@ -328,7 +328,7 @@ export default function Onboarding() {
             <button
               onClick={handleSubmit}
               disabled={saving}
-              className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white font-medium py-2.5 rounded-lg text-sm transition-colors"
+              className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white font-medium py-2.5 rounded-lg text-sm transition-colors"
             >
               {saving ? 'Setting up…' : isStaff ? 'Get Started' : 'Create Community'}
             </button>

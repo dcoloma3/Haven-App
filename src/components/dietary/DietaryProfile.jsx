@@ -132,7 +132,7 @@ export default function DietaryProfile({ residentId, resident }) {
         </div>
         <p className="text-slate-500 text-sm font-medium">No dietary profile set</p>
         <p className="text-slate-400 text-xs mt-1 mb-4">Set dietary needs, restrictions, and preferences</p>
-        <button onClick={() => setEditing(true)} className="bg-[#185FA5] hover:bg-[#0C447C] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors">
+        <button onClick={() => setEditing(true)} className="bg-[#042C53] hover:bg-[#0B3D6E] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors">
           Set Dietary Profile
         </button>
       </div>
@@ -222,7 +222,7 @@ export default function DietaryProfile({ residentId, resident }) {
         </div>
         <div className="flex gap-3 pt-1">
           <button onClick={() => setEditing(false)} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
-          <button onClick={handleSave} disabled={saving} className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
+          <button onClick={handleSave} disabled={saving} className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
             {saving ? 'Saving…' : 'Save Profile'}
           </button>
         </div>

@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useProfile } from '../context/ProfileContext'
+import { useCommunity } from '../context/CommunityContext'
 import Layout from '../components/layout/Layout'
 import CertInput from '../components/ui/CertInput'
 
 const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
 
 export default function MyProfile() {
-  const { profile, isAdmin } = useProfile()
+  const { profile } = useProfile()
+  const { isAdmin } = useCommunity()
 
   const [form, setForm] = useState({
     full_name: profile?.full_name ?? '',
@@ -160,7 +162,7 @@ export default function MyProfile() {
             <button
               type="submit"
               disabled={saving}
-              className="bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-lg px-5 py-2 text-sm font-medium transition-colors"
+              className="bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-lg px-5 py-2 text-sm font-medium transition-colors"
             >
               {saving ? 'Saving…' : 'Save Changes'}
             </button>

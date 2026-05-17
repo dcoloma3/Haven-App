@@ -326,7 +326,7 @@ export default function EventForm({
             <button
               type="submit"
               disabled={saving || deleting}
-              className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-lg py-2 text-sm font-semibold transition-colors"
+              className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-lg py-2 text-sm font-semibold transition-colors"
             >
               {saving ? 'Saving…' : isEditing ? 'Save Changes' : 'Add Event'}
             </button>

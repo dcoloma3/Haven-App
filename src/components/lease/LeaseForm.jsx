@@ -114,7 +114,7 @@ export default function LeaseForm({ residentId, lease, onClose, onSaved }) {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors"
+            className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors"
           >
             {saving ? 'Saving…' : lease ? 'Save Changes' : 'Add Lease Terms'}
           </button>

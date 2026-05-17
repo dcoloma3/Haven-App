@@ -38,6 +38,7 @@ export default function ResidentAvatar({ resident, onUpdate, medStatus }) {
   async function handleFile(file) {
     setUploading(true)
     setError('')
+    setImgError(false)
 
     const ext = file.name.split('.').pop().toLowerCase() || 'jpg'
     const path = `${resident.id}/avatar.${ext}`

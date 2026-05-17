@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { useCommunity } from '../context/CommunityContext'
 import Layout from '../components/layout/Layout'
 
 function fmt12(t) {
@@ -55,6 +56,7 @@ function ResidentPhoto({ resident }) {
 const inputCls = 'border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent bg-white'
 
 export default function MedicationHistory() {
+  const { communityId } = useCommunity()
   const today = new Date()
   const sevenDaysAgo = new Date(today)
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6)
@@ -67,28 +69,34 @@ export default function MedicationHistory() {
   const [records, setRecords] = useState([])
   const [loading, setLoading] = useState(true)
 
-  // Load residents and staff profiles once
+  // Load residents and staff profiles once (re-run when communityId changes)
   useEffect(() => {
+    if (!communityId) return
     supabase
       .from('residents')
       .select('id, full_name, first_name, last_name')
+      .eq('community_id', communityId)
       .order('full_name')
       .then(({ data }) => setResidents(data ?? []))
 
+    // Scope staff profiles to this community only — never expose cross-community user data
     supabase
-      .from('profiles')
-      .select('user_id, full_name, email')
+      .from('community_members')
+      .select('user_id, profiles(user_id, full_name, email)')
+      .eq('community_id', communityId)
       .then(({ data }) => {
         const map = {}
-        ;(data ?? []).forEach(p => {
-          map[p.user_id] = p.full_name || p.email || 'Staff'
+        ;(data ?? []).forEach(m => {
+          const p = m.profiles
+          if (p) map[p.user_id] = p.full_name || p.email || 'Staff'
         })
         setStaffMap(map)
       })
-  }, [])
+  }, [communityId])
 
-  // Reload records whenever filters change
+  // Reload records whenever filters or communityId change
   useEffect(() => {
+    if (!communityId) return
     setLoading(true)
     let query = supabase
       .from('medication_administrations')
@@ -101,6 +109,7 @@ export default function MedicationHistory() {
         medications!medication_id(medication_name, dose),
         residents!resident_id(full_name, first_name, middle_name, last_name, room_number, avatar_url)
       `)
+      .eq('community_id', communityId)
       .gte('administered_date', fromDate)
       .lte('administered_date', toDate)
       .order('administered_date', { ascending: false })
@@ -112,7 +121,7 @@ export default function MedicationHistory() {
       setRecords(data ?? [])
       setLoading(false)
     })
-  }, [fromDate, toDate, residentFilter])
+  }, [communityId, fromDate, toDate, residentFilter])
 
   // Group records by date
   const grouped = useMemo(() => {
@@ -210,6 +219,12 @@ export default function MedicationHistory() {
         <div className="text-center py-16 text-slate-400">
           <p className="text-lg">No records found</p>
           <p className="text-sm mt-1">Try adjusting the date range or filters.</p>
+          <button
+            onClick={clearFilters}
+            className="mt-3 text-sm text-[#185FA5] hover:underline"
+          >
+            Clear filters
+          </button>
         </div>
       )}
 
@@ -234,9 +249,12 @@ export default function MedicationHistory() {
                       <ResidentPhoto resident={resident} />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-medium text-slate-800">
+                          <Link
+                            to={`/residents/${record.resident_id}`}
+                            className="text-sm font-medium text-[#185FA5] hover:text-[#0B3D6E] hover:underline underline-offset-2 transition-colors"
+                          >
                             {residentDisplayName(resident)}
-                          </span>
+                          </Link>
                           {resident?.room_number && (
                             <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
                               Rm {resident.room_number}

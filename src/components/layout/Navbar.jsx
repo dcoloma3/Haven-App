@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useFacility } from '../../context/FacilityContext'
 import { useProfile } from '../../context/ProfileContext'
@@ -15,23 +15,17 @@ function DarkModeToggle() {
     <button
       onClick={toggle}
       title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-      className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors hover:bg-white/10 text-white/60 hover:text-white flex-shrink-0"
+      className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors hover:bg-slate-100 text-slate-500 hover:text-slate-700 flex-shrink-0"
     >
       {isDark ? (
-        // Sun icon
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="5" />
-          <line x1="12" y1="1" x2="12" y2="3" />
-          <line x1="12" y1="21" x2="12" y2="23" />
-          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-          <line x1="1" y1="12" x2="3" y2="12" />
-          <line x1="21" y1="12" x2="23" y2="12" />
-          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+          <line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" />
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+          <line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" />
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
         </svg>
       ) : (
-        // Moon icon
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
         </svg>
@@ -40,21 +34,9 @@ function DarkModeToggle() {
   )
 }
 
-const navLinkCls = ({ isActive }) =>
-  `text-sm font-medium transition-colors ${isActive ? 'text-white' : 'text-white/70 hover:text-white'}`
-
-function SettingsIcon() {
-  return (
-    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-    </svg>
-  )
-}
-
 function ChevronDown() {
   return (
-    <svg className="w-3 h-3 flex-shrink-0 opacity-60" viewBox="0 0 12 12" fill="currentColor">
+    <svg className="w-3 h-3 flex-shrink-0 text-slate-400" viewBox="0 0 12 12" fill="currentColor">
       <path d="M6 8L1 3h10z" />
     </svg>
   )
@@ -86,8 +68,8 @@ function CreateCommunityModal({ onClose, onCreated }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
           <h2 className="font-semibold text-slate-800">New Community</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
@@ -118,8 +100,8 @@ function CreateCommunityModal({ onClose, onCreated }) {
           {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
           <div className="flex gap-3 pt-1">
             <button onClick={onClose} className="flex-1 border border-slate-300 text-slate-700 rounded-lg py-2 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
-            <button onClick={handleCreate} disabled={saving} className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-lg py-2 text-sm font-medium transition-colors">
-              {saving ? 'Creating…' : 'Create Community'}
+            <button onClick={handleCreate} disabled={saving} className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-lg py-2 text-sm font-medium transition-colors">
+              {saving ? 'Creating…' : 'Create community'}
             </button>
           </div>
         </div>
@@ -130,35 +112,51 @@ function CreateCommunityModal({ onClose, onCreated }) {
 
 function CommunityDropdown({ community, memberships, isAdmin, isSuperAdmin, onSwitch, onNew }) {
   const [open, setOpen] = useState(false)
+  const navigate = useNavigate()
+  const { setCommunityId } = useCommunity()
 
   return (
     <div className="relative">
       <button
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1.5 text-sm font-medium text-white/90 hover:text-white transition-colors max-w-[180px]"
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-slate-300 bg-white text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors min-w-0"
       >
-        <span className="truncate">{community?.name ?? 'Select Community'}</span>
+        {/* Small navy square mark */}
+        <span className="flex items-center justify-center w-5 h-5 rounded-[4px] bg-[#042C53] flex-shrink-0">
+          <svg className="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+            <polyline points="9 22 9 12 15 12 15 22" />
+          </svg>
+        </span>
+        {isSuperAdmin && (
+          <svg className="w-3 h-3 text-amber-500 flex-shrink-0 -ml-0.5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+          </svg>
+        )}
+        <span className="truncate">{community?.name ?? 'Select community'}</span>
         <ChevronDown />
       </button>
 
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-2 z-50 bg-white rounded-xl shadow-lg border border-slate-200 w-56 sm:w-64 overflow-hidden">
+          <div className="absolute right-0 top-full mt-2 z-50 bg-white rounded-xl shadow-lg border border-slate-200 w-56 sm:w-64 overflow-hidden" style={{ boxShadow: 'var(--haven-shadow-md)' }}>
             <div className="px-3 py-2 border-b border-slate-100">
-              <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">Your Communities</p>
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Your communities</p>
             </div>
             {memberships.map(m => (
               <button
                 key={m.communities.id}
                 onClick={() => { onSwitch(m.communities.id); setOpen(false) }}
                 className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between ${
-                  m.communities.id === community?.id ? 'bg-[#E6F1FB] text-[#185FA5]' : 'text-slate-700 hover:bg-slate-50'
+                  m.communities.id === community?.id
+                    ? 'bg-[#E6F1FB] text-[#042C53] font-semibold'
+                    : 'text-slate-700 hover:bg-slate-50'
                 }`}
               >
                 <span className="truncate">{m.communities.name}</span>
                 {m.communities.id === community?.id && (
-                  <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <svg className="w-3.5 h-3.5 flex-shrink-0 text-[#185FA5]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
                 )}
@@ -167,11 +165,22 @@ function CommunityDropdown({ community, memberships, isAdmin, isSuperAdmin, onSw
             {isAdmin && !isSuperAdmin && (
               <>
                 <div className="border-t border-slate-100" />
+                <button onClick={() => { onNew(); setOpen(false) }} className="w-full text-left px-4 py-2.5 text-sm text-[#185FA5] hover:bg-slate-50 transition-colors font-medium">
+                  + New community
+                </button>
+              </>
+            )}
+            {isSuperAdmin && (
+              <>
+                <div className="border-t border-slate-100" />
                 <button
-                  onClick={() => { onNew(); setOpen(false) }}
-                  className="w-full text-left px-4 py-2.5 text-sm text-[#185FA5] hover:bg-slate-50 transition-colors font-medium"
+                  onClick={() => { navigate('/superadmin'); setTimeout(() => setCommunityId(null), 50); setOpen(false) }}
+                  className="w-full text-left px-4 py-2.5 text-sm text-amber-700 hover:bg-amber-50 transition-colors font-medium flex items-center gap-2"
                 >
-                  + New Community
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                  </svg>
+                  Owner panel
                 </button>
               </>
             )}
@@ -198,15 +207,10 @@ function UserMenu({ profile, isAdmin, isSuperAdmin }) {
     navigate('/dashboard')
   }
 
-  function exitToOwnerPanel() {
-    setOpen(false)
-    navigate('/superadmin')
-  }
-
   return (
     <div className="relative">
-      <button onClick={() => setOpen(o => !o)} className="flex items-center gap-1.5 hover:opacity-90 transition-opacity">
-        <div className="w-7 h-7 rounded-full bg-[#185FA5] text-white text-xs font-semibold flex items-center justify-center flex-shrink-0">
+      <button onClick={() => setOpen(o => !o)} className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
+        <div className="w-7 h-7 rounded-full bg-[#042C53] text-white text-xs font-semibold flex items-center justify-center flex-shrink-0">
           {avatarInitials}
         </div>
         <ChevronDown />
@@ -215,11 +219,9 @@ function UserMenu({ profile, isAdmin, isSuperAdmin }) {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-2 z-50 bg-white rounded-xl shadow-lg border border-slate-200 w-56 sm:w-60 overflow-hidden">
-
-            {/* Identity header */}
+          <div className="absolute right-0 top-full mt-2 z-50 bg-white rounded-xl border border-slate-200 w-56 sm:w-60 overflow-hidden" style={{ boxShadow: 'var(--haven-shadow-md)' }}>
             <div className="px-4 py-3 border-b border-slate-100">
-              <p className="text-sm font-medium text-slate-800 truncate">{displayName}</p>
+              <p className="text-sm font-semibold text-slate-800 truncate">{displayName}</p>
               <span className={`inline-flex items-center mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${
                 isSuperAdmin ? 'bg-amber-100 text-amber-700' : isAdmin ? 'bg-[#E6F1FB] text-[#185FA5]' : 'bg-slate-100 text-slate-600'
               }`}>
@@ -227,65 +229,40 @@ function UserMenu({ profile, isAdmin, isSuperAdmin }) {
               </span>
             </div>
 
-            {/* Owner: community switcher */}
             {isSuperAdmin && allCommunities?.length > 0 && (
               <>
                 <div className="px-3 pt-2.5 pb-1">
-                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Switch Community</p>
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Switch community</p>
                 </div>
                 <div className="max-h-44 overflow-y-auto">
                   {allCommunities.map(c => (
-                    <button
-                      key={c.id}
-                      onClick={() => switchCommunity(c.id)}
+                    <button key={c.id} onClick={() => switchCommunity(c.id)}
                       className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between gap-2 transition-colors ${
-                        c.id === communityId
-                          ? 'bg-[#E6F1FB] text-[#185FA5] font-medium'
-                          : 'text-slate-700 hover:bg-slate-50'
+                        c.id === communityId ? 'bg-[#E6F1FB] text-[#042C53] font-semibold' : 'text-slate-700 hover:bg-slate-50'
                       }`}
                     >
                       <span className="truncate">{c.name}</span>
                       {c.id === communityId && (
-                        <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <svg className="w-3.5 h-3.5 flex-shrink-0 text-[#185FA5]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="20 6 9 17 4 12" />
                         </svg>
                       )}
                     </button>
                   ))}
                 </div>
-
-                {/* Owner Panel link */}
-                <div className="border-t border-slate-100">
-                  <button
-                    onClick={exitToOwnerPanel}
-                    className="w-full text-left px-4 py-2.5 text-sm text-amber-700 hover:bg-amber-50 transition-colors font-medium flex items-center gap-2"
-                  >
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
-                    </svg>
-                    Owner Panel
-                  </button>
-                </div>
                 <div className="border-t border-slate-100" />
               </>
             )}
 
             <Link to="/profile" onClick={() => setOpen(false)} className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
-              My Profile
+              My profile
             </Link>
-
-            <a
-              href="mailto:domcoloma@gmail.com?subject=Haven App Support"
-              onClick={() => setOpen(false)}
-              className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors border-t border-slate-100"
-            >
-              Contact Support
+            <a href="mailto:domcoloma@gmail.com?subject=Haven App Support" onClick={() => setOpen(false)}
+              className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors border-t border-slate-100">
+              Contact support
             </a>
-
-            <button
-              onClick={() => { setOpen(false); supabase.auth.signOut() }}
-              className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors border-t border-slate-100"
-            >
+            <button onClick={() => { setOpen(false); supabase.auth.signOut() }}
+              className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors border-t border-slate-100">
               Sign out
             </button>
           </div>
@@ -295,10 +272,36 @@ function UserMenu({ profile, isAdmin, isSuperAdmin }) {
   )
 }
 
+function StaffViewToggle() {
+  const { viewAsRole, setViewAsRole, isSuperAdmin, role } = useCommunity()
+  // Only real admins/super admins can toggle this
+  const canToggle = isSuperAdmin || role === 'admin'
+  if (!canToggle) return null
+  const isStaffView = viewAsRole === 'staff'
+  return (
+    <button
+      onClick={() => setViewAsRole(isStaffView ? null : 'staff')}
+      title={isStaffView ? 'Exit Staff View — back to your admin view' : 'Preview app as a staff member'}
+      className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors ${
+        isStaffView
+          ? 'bg-violet-600 border-violet-600 text-white hover:bg-violet-700'
+          : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700 hover:bg-slate-50'
+      }`}
+    >
+      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+      {isStaffView ? 'Exit Staff View' : 'Staff View'}
+    </button>
+  )
+}
+
 export default function Navbar() {
   const { profile } = useProfile()
   const { isAdmin, isSuperAdmin, community, communityId, memberships, setCommunityId } = useCommunity()
   const [showNewCommunity, setShowNewCommunity] = useState(false)
+  const [showMobileSearch, setShowMobileSearch] = useState(false)
   const navigate = useNavigate()
   const isMobile = useIsMobile()
 
@@ -308,36 +311,22 @@ export default function Navbar() {
     navigate('/dashboard')
   }
 
-  // Owner pill — visible whenever super admin is viewing a community
-  const ownerPill = isSuperAdmin && communityId ? (
-    <button
-      onClick={() => { navigate('/superadmin'); setTimeout(() => setCommunityId(null), 50) }}
-      className="flex items-center gap-1.5 bg-amber-400 hover:bg-amber-300 text-[#042C53] text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wide transition-colors flex-shrink-0"
-      title="You are in Owner Mode — click to return to Owner Panel"
-    >
-      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-      </svg>
-      Owner
-    </button>
-  ) : null
-
   return (
     <>
       <nav
-        className="flex items-center gap-2 fixed top-0 left-0 right-0 z-30 border-b w-full"
+        className="flex items-center gap-3 fixed top-0 left-0 right-0 z-30 bg-white border-b border-slate-200 w-full"
         style={{
-          backgroundColor: '#042C53',
-          borderBottomColor: 'rgba(255,255,255,0.1)',
-          paddingLeft: 'max(12px, env(safe-area-inset-left))',
-          paddingRight: 'max(12px, env(safe-area-inset-right))',
-          paddingTop: isMobile ? 'max(12px, env(safe-area-inset-top))' : '12px',
-          paddingBottom: '12px',
+          paddingLeft: 'max(16px, env(safe-area-inset-left))',
+          paddingRight: 'max(16px, env(safe-area-inset-right))',
+          paddingTop: isMobile ? 'max(12px, env(safe-area-inset-top))' : '0',
+          paddingBottom: isMobile ? '12px' : '0',
+          height: isMobile ? 'auto' : '61px',
+          boxShadow: 'var(--haven-shadow-xs)',
         }}
       >
-        {/* Logo */}
+        {/* Logo — mark only on mobile to preserve space */}
         <Link to="/dashboard" className="flex-shrink-0 hover:opacity-80 transition-opacity">
-          <HavenLogo variant="white" markHeight={32} textSize={24} />
+          <HavenLogo variant="color" markHeight={28} textSize={isMobile ? 0 : 20} />
         </Link>
 
         {/* Desktop: search bar — absolutely centered */}
@@ -347,34 +336,56 @@ export default function Navbar() {
           </div>
         )}
 
-        {/* Desktop: owner pill + community switcher + dark mode toggle + user menu */}
+        {/* Desktop: community dropdown + staff view toggle + user menu */}
         {!isMobile && (
           <div className="flex items-center gap-3 flex-shrink-0 ml-auto">
-            {ownerPill}
             <CommunityDropdown community={community} memberships={memberships} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} onSwitch={setCommunityId} onNew={() => setShowNewCommunity(true)} />
-            <div className="w-px h-4 bg-white/20" />
-            <DarkModeToggle />
-            <div className="w-px h-4 bg-white/20" />
+            <div className="w-px h-5 bg-slate-200" />
+            <StaffViewToggle />
+            <div className="w-px h-5 bg-slate-200" />
             <UserMenu profile={profile} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} />
           </div>
         )}
 
-        {/* Mobile: owner pill + community + dark mode toggle + user */}
+        {/* Mobile: community name — centered flex-1 */}
         {isMobile && (
-          <div className="flex items-center gap-2 ml-auto flex-shrink-0">
-            {ownerPill}
-            <DarkModeToggle />
+          <div className="flex-1 flex items-center justify-center min-w-0 px-2">
             <CommunityDropdown community={community} memberships={memberships} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} onSwitch={setCommunityId} onNew={() => setShowNewCommunity(true)} />
+          </div>
+        )}
+
+        {/* Mobile: right actions */}
+        {isMobile && (
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={() => setShowMobileSearch(s => !s)}
+              className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors hover:bg-slate-100 text-slate-500 hover:text-slate-700 flex-shrink-0"
+              aria-label="Search"
+            >
+              {showMobileSearch ? (
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+              )}
+            </button>
             <UserMenu profile={profile} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} />
+          </div>
+        )}
+
+        {/* Mobile search overlay */}
+        {isMobile && showMobileSearch && (
+          <div className="absolute left-0 right-0 top-full z-50 px-3 py-2 bg-white border-t border-b border-slate-200" style={{ boxShadow: 'var(--haven-shadow-md)' }}>
+            <GlobalSearch />
           </div>
         )}
       </nav>
 
       {showNewCommunity && (
-        <CreateCommunityModal
-          onClose={() => setShowNewCommunity(false)}
-          onCreated={handleCreated}
-        />
+        <CreateCommunityModal onClose={() => setShowNewCommunity(false)} onCreated={handleCreated} />
       )}
     </>
   )

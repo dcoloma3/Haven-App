@@ -57,6 +57,7 @@ export default function Maintenance() {
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState({})
   const [showModal, setShowModal] = useState(false)
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null)
 
   useEffect(() => { if (location.state?.quickAdd) setShowModal(true) }, [])
   const [saving, setSaving] = useState(false)
@@ -65,6 +66,7 @@ export default function Maintenance() {
   const [filterCategory, setFilterCategory] = useState('all')
   const [resolutionNotes, setResolutionNotes] = useState({})
   const [assignedTo, setAssignedTo] = useState({})
+  const [staffNames, setStaffNames] = useState([])
   const [form, setForm] = useState({ location: '', category: 'Plumbing', description: '', priority: 'medium' })
 
   const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
@@ -79,7 +81,24 @@ export default function Maintenance() {
     setLoading(false)
   }
 
-  useEffect(() => { fetchOrders() }, [communityId]) // eslint-disable-line
+  useEffect(() => {
+    fetchOrders()
+    supabase
+      .from('community_members')
+      .select('profiles(full_name, first_name, last_name)')
+      .eq('community_id', communityId)
+      .then(({ data }) => {
+        const names = (data ?? [])
+          .map(m => {
+            const p = m.profiles
+            if (!p) return null
+            return p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || null
+          })
+          .filter(Boolean)
+          .sort()
+        setStaffNames(names)
+      })
+  }, [communityId]) // eslint-disable-line
 
   const thisMonth = new Date().toISOString().slice(0, 7)
   const stats = {
@@ -135,12 +154,12 @@ export default function Maintenance() {
 
   return (
     <Layout>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Maintenance</h1>
           <p className="text-sm text-slate-500 mt-1">Work orders and maintenance requests</p>
         </div>
-        <button onClick={() => setShowModal(true)} className="bg-[#185FA5] hover:bg-[#0C447C] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2">
+        <button onClick={() => setShowModal(true)} className="self-start sm:self-auto whitespace-nowrap bg-[#042C53] hover:bg-[#0B3D6E] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2">
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
           </svg>
@@ -188,6 +207,9 @@ export default function Maintenance() {
       ) : filtered.length === 0 ? (
         <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center">
           <p className="text-slate-500 text-sm">No work orders found</p>
+          <button onClick={() => setShowModal(true)} className="mt-3 bg-[#042C53] hover:bg-[#0B3D6E] text-white rounded-xl px-4 py-2 text-sm font-semibold transition-colors">
+            + New Work Order
+          </button>
         </div>
       ) : (
         <div className="space-y-3">
@@ -223,12 +245,14 @@ export default function Maintenance() {
                   {isAdmin && (
                     <div className="space-y-3">
                       <div className="flex gap-2">
-                        <input
+                        <select
                           value={assignedTo[o.id] ?? (o.assigned_to || '')}
                           onChange={e => setAssignedTo(a => ({ ...a, [o.id]: e.target.value }))}
-                          placeholder="Assign to…"
                           className="flex-1 border border-slate-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#185FA5]"
-                        />
+                        >
+                          <option value="">— Unassigned —</option>
+                          {staffNames.map(name => <option key={name} value={name}>{name}</option>)}
+                        </select>
                         <button onClick={() => updateAssignee(o.id)} className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg font-medium transition-colors">Assign</button>
                       </div>
 
@@ -256,7 +280,7 @@ export default function Maintenance() {
                         </div>
                       )}
 
-                      <button onClick={() => handleDelete(o.id)} className="text-xs text-red-400 font-medium hover:text-red-600 transition-colors">Delete</button>
+                      <button onClick={() => setDeleteConfirmId(o.id)} className="text-xs text-red-400 font-medium hover:text-red-600 transition-colors">Delete</button>
                     </div>
                   )}
                 </div>
@@ -268,8 +292,8 @@ export default function Maintenance() {
 
       {/* New Work Order Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
-          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-2xl max-h-[92vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50" onClick={() => setShowModal(false)}>
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-2xl max-h-[92vh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="sticky top-0 bg-white border-b border-slate-200 px-5 py-4 flex items-center justify-between rounded-t-2xl">
               <h2 className="font-bold text-slate-800 text-lg">New Work Order</h2>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">
@@ -307,9 +331,22 @@ export default function Maintenance() {
             </div>
             <div className="sticky bottom-0 bg-white border-t border-slate-200 px-5 py-4 flex gap-3">
               <button onClick={() => setShowModal(false)} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
-              <button onClick={handleCreate} disabled={!form.location.trim() || !form.description.trim() || saving} className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
+              <button onClick={handleCreate} disabled={!form.location.trim() || !form.description.trim() || saving} className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
                 {saving ? 'Submitting…' : 'Submit Work Order'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteConfirmId && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" onClick={() => setDeleteConfirmId(null)}>
+          <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full" onClick={e => e.stopPropagation()}>
+            <h3 className="font-semibold text-slate-800 mb-2">Delete this work order?</h3>
+            <p className="text-sm text-slate-500 mb-5">This cannot be undone.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setDeleteConfirmId(null)} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
+              <button onClick={() => { handleDelete(deleteConfirmId); setDeleteConfirmId(null) }} className="flex-1 bg-red-600 hover:bg-red-700 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">Delete</button>
             </div>
           </div>
         </div>

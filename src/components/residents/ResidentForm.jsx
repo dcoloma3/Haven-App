@@ -1,7 +1,8 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useCommunity } from '../../context/CommunityContext'
+import PhotoSourcePicker from '../ui/PhotoSourcePicker'
 
 const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
 
@@ -122,7 +123,7 @@ function WhatsNext({ resident, onClose }) {
 /* ── Main form ── */
 export default function ResidentForm({ onClose, onSaved }) {
   const { communityId } = useCommunity()
-  const fileInputRef = useRef(null)
+
   const [form, setForm] = useState({
     first_name: '',
     middle_name: '',
@@ -142,8 +143,7 @@ export default function ResidentForm({ onClose, onSaved }) {
 
   function set(field, value) { setForm(f => ({ ...f, [field]: value })) }
 
-  function handlePhotoChange(e) {
-    const file = e.target.files?.[0]
+  function handlePhotoFile(file) {
     if (!file) return
     setPhotoFile(file)
     setPhotoPreview(URL.createObjectURL(file))
@@ -217,33 +217,30 @@ export default function ResidentForm({ onClose, onSaved }) {
 
           {/* Photo upload */}
           <div className="flex flex-col items-center gap-2 pb-2">
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className={`relative w-28 h-28 rounded-full flex items-center justify-center overflow-hidden transition-colors group ${photoPreview ? 'bg-slate-100 hover:bg-slate-200' : 'bg-slate-50 hover:bg-slate-100 border-2 border-dashed border-[#185FA5]/30'}`}
-            >
-              {photoPreview ? (
-                <>
-                  <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <CameraIcon />
-                  </div>
-                </>
-              ) : (
-                <div className="flex flex-col items-center gap-1.5 text-slate-400">
-                  <CameraIcon />
-                  <span className="text-xs font-medium text-[#185FA5]">Add Photo</span>
-                </div>
+            <PhotoSourcePicker onFile={handlePhotoFile} menuAlign="left">
+              {({ openMenu }) => (
+                <button
+                  type="button"
+                  onClick={openMenu}
+                  className={`relative w-28 h-28 rounded-full flex items-center justify-center overflow-hidden transition-colors group ${photoPreview ? 'bg-slate-100 hover:bg-slate-200' : 'bg-slate-50 hover:bg-slate-100 border-2 border-dashed border-[#185FA5]/30'}`}
+                >
+                  {photoPreview ? (
+                    <>
+                      <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <CameraIcon />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center gap-1.5 text-slate-400">
+                      <CameraIcon />
+                      <span className="text-xs font-medium text-[#185FA5]">Add Photo</span>
+                    </div>
+                  )}
+                </button>
               )}
-            </button>
+            </PhotoSourcePicker>
             <p className="text-xs text-slate-400">Optional — you can add it later</p>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handlePhotoChange}
-            />
           </div>
 
           <div className="grid grid-cols-3 gap-3">
@@ -314,7 +311,7 @@ export default function ResidentForm({ onClose, onSaved }) {
             <button type="button" onClick={onClose} className="flex-1 border border-slate-300 text-slate-700 rounded-lg py-2 text-sm hover:bg-slate-50 transition-colors">
               Cancel
             </button>
-            <button type="submit" disabled={saving} className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-lg py-2 text-sm font-medium transition-colors">
+            <button type="submit" disabled={saving} className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-lg py-2 text-sm font-medium transition-colors">
               {saving ? 'Saving…' : 'Save Resident'}
             </button>
           </div>

@@ -1,45 +1,11 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { completeTrial } from '../lib/trial'
 import HavenLogo from '../components/layout/HavenLogo'
 
 const inputCls = 'w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
 const labelCls = 'block text-sm font-medium text-slate-700 mb-1'
-
-async function completeTrial({ userId, email, firstName, lastName, communityName, residentCount }) {
-  const fullName = `${firstName} ${lastName}`
-  const trialStart = new Date()
-  const trialEnd = new Date()
-  trialEnd.setDate(trialEnd.getDate() + 14)
-
-  const { data: community, error: communityErr } = await supabase
-    .from('communities')
-    .insert([{
-      name: communityName,
-      plan: 'trial',
-      trial_start_date: trialStart.toISOString(),
-      trial_end_date: trialEnd.toISOString(),
-      resident_count_at_signup: residentCount,
-    }])
-    .select()
-    .single()
-
-  if (communityErr) throw communityErr
-
-  await supabase.from('community_members').insert([{
-    community_id: community.id,
-    user_id: userId,
-    role: 'admin',
-  }])
-
-  await supabase.from('profiles').upsert([{
-    user_id: userId,
-    email,
-    full_name: fullName,
-    onboarding_complete: true,
-    profile_completed: true,
-  }], { onConflict: 'user_id' })
-}
 
 export default function Signup() {
   const navigate = useNavigate()

@@ -25,20 +25,38 @@ function useSidebarCollapsed() {
 export default function Layout({ children }) {
   const isMobile = useIsMobile()
   const location = useLocation()
-  const { community } = useCommunity()
+  const { community, viewAsRole, setViewAsRole } = useCommunity()
   const { collapsed, toggle } = useSidebarCollapsed()
 
   const isTrial = community?.plan === 'trial'
   const trialActive = isTrial && community?.trial_end_date && new Date(community.trial_end_date) > new Date()
+  const isStaffView = viewAsRole === 'staff'
 
-  // Navbar is 61px. Trial banner adds 36px. Sidebar is 208px expanded / 56px collapsed.
-  const topPad = trialActive ? 'pt-[97px]' : 'pt-[61px]'
+  // Navbar 61px + optional trial banner 36px + optional staff banner 36px
+  const bannerCount = (trialActive ? 1 : 0) + (isStaffView ? 1 : 0)
+  const topPad = bannerCount === 2 ? 'pt-[133px]' : bannerCount === 1 ? 'pt-[97px]' : 'pt-[61px]'
   const leftPad = !isMobile ? (collapsed ? 'pl-[56px]' : 'pl-[208px]') : ''
 
   return (
     <div className="min-h-screen bg-slate-50 w-full overflow-x-hidden">
       <Navbar />
       {trialActive && <TrialBanner />}
+      {isStaffView && (
+        <div className="fixed top-[61px] left-0 right-0 z-40 flex items-center justify-between gap-3 bg-violet-600 px-4 py-2 text-white text-xs font-medium" style={{ marginTop: trialActive ? '36px' : '0' }}>
+          <div className="flex items-center gap-2">
+            <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+            </svg>
+            <span>Staff View — you're seeing the app as a staff member. Admin features are hidden.</span>
+          </div>
+          <button
+            onClick={() => setViewAsRole(null)}
+            className="flex-shrink-0 underline underline-offset-2 hover:text-white/80 transition-colors whitespace-nowrap"
+          >
+            Exit Staff View
+          </button>
+        </div>
+      )}
 
       {/* Desktop sidebar */}
       {!isMobile && <Sidebar collapsed={collapsed} onToggle={toggle} />}

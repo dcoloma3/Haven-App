@@ -54,6 +54,8 @@ export default function Billing() {
   const [generating, setGenerating] = useState(null)
   const [bulkGenerating, setBulkGenerating] = useState(false)
   const [updatingStatus, setUpdatingStatus] = useState(null)
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false)
+  const [bulkMessage, setBulkMessage] = useState('')
 
   async function load() {
     const [{ data: res }, { data: bills }] = await Promise.all([
@@ -88,11 +90,8 @@ export default function Billing() {
     await load()
   }
 
-  async function bulkGenerate() {
+  async function doBulkGenerate() {
     const missing = residents.filter(r => !billingMap[r.id])
-    if (missing.length === 0) { alert('All residents already have a statement for this month.'); return }
-    const confirmed = window.confirm(`Generate draft statements for all ${missing.length} resident${missing.length !== 1 ? 's' : ''} who don't have a statement for ${month}?`)
-    if (!confirmed) return
     setBulkGenerating(true)
     const authorName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Staff'
     const inserts = missing.map(r => ({
@@ -108,9 +107,16 @@ export default function Billing() {
       status: 'draft',
     }))
     const { error } = await supabase.from('billing_records').insert(inserts)
-    if (error) { console.error(error); alert('Bulk generate failed. Please try again.') }
+    if (error) { console.error(error); setBulkMessage('Bulk generate failed. Please try again.') }
     setBulkGenerating(false)
     await load()
+  }
+
+  function bulkGenerate() {
+    const missing = residents.filter(r => !billingMap[r.id])
+    if (missing.length === 0) { setBulkMessage('All residents already have a statement for this period.'); return }
+    setBulkMessage('')
+    setBulkConfirmOpen(true)
   }
 
   async function updateStatus(billId, status) {
@@ -149,13 +155,18 @@ export default function Billing() {
           className="border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5]"
         />
         {isAdmin && !loading && (
-          <button
-            onClick={bulkGenerate}
-            disabled={bulkGenerating}
-            className="ml-auto bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium px-4 py-2 rounded-xl transition-colors disabled:opacity-50"
-          >
-            {bulkGenerating ? 'Generating…' : 'Bulk Generate'}
-          </button>
+          <div className="ml-auto flex items-center gap-3 flex-wrap">
+            {bulkMessage && (
+              <p className="text-sm text-amber-600">{bulkMessage}</p>
+            )}
+            <button
+              onClick={bulkGenerate}
+              disabled={bulkGenerating}
+              className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium px-4 py-2 rounded-xl transition-colors disabled:opacity-50"
+            >
+              {bulkGenerating ? 'Generating…' : 'Bulk Generate'}
+            </button>
+          </div>
         )}
       </div>
 
@@ -199,10 +210,10 @@ export default function Billing() {
                 return (
                   <tr key={r.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-4 py-3">
-                      <button onClick={() => navigate(`/residents/${r.id}`)} className="text-[#185FA5] hover:text-[#0C447C] font-medium transition-colors">
+                      <button onClick={() => navigate(`/residents/${r.id}`)} className="text-[#185FA5] hover:text-[#0C447C] font-medium transition-colors whitespace-nowrap">
                         {r.first_name} {r.last_name}
                       </button>
-                      <p className="text-xs text-slate-400">Room {r.room_number || '—'}</p>
+                      <p className="text-xs text-slate-400 whitespace-nowrap">Room {r.room_number || '—'}</p>
                     </td>
                     <td className="px-4 py-3 font-semibold text-slate-700">
                       {bill ? `$${Number(bill.total_amount).toFixed(2)}` : <span className="text-slate-300">—</span>}
@@ -293,6 +304,21 @@ export default function Billing() {
           <span className="bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full text-[10px] font-semibold">Paid</span> = payment received &nbsp;·&nbsp;
           <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full text-[10px] font-semibold">Overdue</span> = payment past due
         </p>
+      )}
+
+      {bulkConfirmOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full">
+            <h3 className="font-semibold text-slate-800 mb-2">Generate bulk statements?</h3>
+            <p className="text-sm text-slate-500 mb-5">
+              Draft statements will be created for all residents who don't have one for {month}.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setBulkConfirmOpen(false)} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
+              <button onClick={() => { setBulkConfirmOpen(false); doBulkGenerate() }} className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">Generate</button>
+            </div>
+          </div>
+        </div>
       )}
     </Layout>
   )

@@ -81,6 +81,78 @@ const EMPTY_FORM = {
   notes: '',
 }
 
+// ─── Resident Picker Modal ────────────────────────────────────────────────────
+
+function ResidentPickerModal({ residents, onSelect, onClose }) {
+  const [search, setSearch] = useState('')
+  const filtered = residents.filter(r =>
+    `${r.first_name} ${r.last_name}`.toLowerCase().includes(search.toLowerCase()) ||
+    String(r.room_number || '').includes(search)
+  )
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-md max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="px-5 pt-5 pb-3 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <h2 className="font-bold text-slate-800 text-lg">Select resident</h2>
+            <p className="text-xs text-slate-400 mt-0.5">Choose who you're recording vitals for</p>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors p-1">
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Search */}
+        <div className="px-4 py-3 border-b border-slate-100">
+          <div className="relative">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              autoFocus
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search by name or room…"
+              className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-lg bg-[#F3F8FD] focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent"
+            />
+          </div>
+        </div>
+
+        {/* Resident list */}
+        <div className="overflow-y-auto flex-1">
+          {filtered.length === 0 && (
+            <p className="text-sm text-slate-400 text-center py-8">No residents match "{search}"</p>
+          )}
+          {filtered.map(r => (
+            <button
+              key={r.id}
+              onClick={() => onSelect(r)}
+              className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-[#F3F8FD] transition-colors border-b border-slate-100 last:border-0 text-left"
+            >
+              {/* Initials avatar */}
+              <div className="w-9 h-9 rounded-full bg-[#E6F1FB] text-[#042C53] text-sm font-semibold flex items-center justify-center flex-shrink-0">
+                {r.first_name?.[0]}{r.last_name?.[0]}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-800">{r.first_name} {r.last_name}</p>
+                <p className="text-xs text-slate-400">Room {r.room_number || '—'}</p>
+              </div>
+              <svg className="w-4 h-4 text-slate-300 ml-auto flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m9 6 6 6-6 6" />
+              </svg>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Inline Record Vitals Modal ───────────────────────────────────────────────
 
 function RecordVitalsModal({ resident, communityId, onClose, onSaved }) {
@@ -90,6 +162,7 @@ function RecordVitalsModal({ resident, communityId, onClose, onSaved }) {
     recorded_at: new Date().toISOString().slice(0, 16),
   })
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
 
@@ -98,6 +171,7 @@ function RecordVitalsModal({ resident, communityId, onClose, onSaved }) {
   }
 
   async function handleSave() {
+    setSaveError('')
     setSaving(true)
     const authorName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Staff'
     const payload = {
@@ -118,7 +192,7 @@ function RecordVitalsModal({ resident, communityId, onClose, onSaved }) {
     const { data, error } = await supabase.from('vital_signs').insert(payload).select().single()
     if (error) {
       console.error(error)
-      alert('Something went wrong. Please try again.')
+      setSaveError('Something went wrong. Please try again.')
       setSaving(false)
       return
     }
@@ -127,8 +201,8 @@ function RecordVitalsModal({ resident, communityId, onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
-      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-2xl max-h-[92vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-2xl max-h-[92vh] flex flex-col" onClick={e => e.stopPropagation()}>
         <div className="sticky top-0 bg-white border-b border-slate-200 px-5 py-4 flex items-center justify-between rounded-t-2xl">
           <div>
             <h2 className="font-bold text-slate-800 text-lg">Record Vital Signs</h2>
@@ -204,9 +278,14 @@ function RecordVitalsModal({ resident, communityId, onClose, onSaved }) {
             <textarea value={form.notes} onChange={e => handleChange('notes', e.target.value)} rows={2} className={inputCls + ' resize-none'} placeholder="Optional notes…" />
           </div>
         </div>
+        {saveError && (
+          <div className="mx-5 mb-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            {saveError}
+          </div>
+        )}
         <div className="sticky bottom-0 bg-white border-t border-slate-200 px-5 py-4 flex gap-3">
           <button onClick={onClose} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
-          <button onClick={handleSave} disabled={saving} className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
+          <button onClick={handleSave} disabled={saving} className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
             {saving ? 'Saving…' : 'Save Vitals'}
           </button>
         </div>
@@ -225,6 +304,7 @@ export default function VitalSigns() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
   const [recordingFor, setRecordingFor] = useState(null) // resident object
+  const [showPicker, setShowPicker] = useState(false)
   const [quickAddMode, setQuickAddMode] = useState(false)
 
   useEffect(() => { if (location.state?.quickAdd) setQuickAddMode(true) }, [])
@@ -286,7 +366,7 @@ export default function VitalSigns() {
 
     autoTable(doc, {
       startY: 36,
-      head: [['Resident', 'Room', 'BP (mmHg)', 'Pulse (bpm)', 'Temp (°F)', 'O2 Sat %', 'Glucose', 'Pain (0–10)', 'Recorded By', 'Date']],
+      head: [['Resident', 'Room', 'BP (mmHg)', 'Pulse (bpm)', 'Temp (°F)', 'O2 Sat %', 'Glucose', 'Weight (lbs)', 'Pain (0–10)', 'Recorded By', 'Date']],
       body: filtered.map(({ resident, vital }) => [
         `${resident.first_name} ${resident.last_name}`,
         resident.room_number || '—',
@@ -295,6 +375,7 @@ export default function VitalSigns() {
         vital?.temperature != null ? `${vital.temperature}°F` : '—',
         vital?.oxygen_saturation != null ? `${vital.oxygen_saturation}%` : '—',
         vital?.blood_glucose != null ? String(vital.blood_glucose) : '—',
+        vital?.weight != null ? `${vital.weight} lbs` : '—',
         vital?.pain_scale != null ? `${vital.pain_scale}/10` : '—',
         vital?.recorded_by_name || '—',
         vital ? new Date(vital.recorded_at).toLocaleDateString() : 'No data',
@@ -308,37 +389,51 @@ export default function VitalSigns() {
     doc.save(`vital-signs-${new Date().toISOString().split('T')[0]}.pdf`)
   }
 
-  const today = new Date().toISOString().split('T')[0]
-  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString()
+  // Use local midnight for date comparisons — avoids UTC/local off-by-one at day boundaries
+  const localMidnight = new Date(); localMidnight.setHours(0, 0, 0, 0)
+  const weekAgoMidnight = new Date(localMidnight); weekAgoMidnight.setDate(weekAgoMidnight.getDate() - 7)
 
   const filtered = rows.filter(({ vital }) => {
-    if (filter === 'today') return vital && vital.recorded_at?.startsWith(today)
-    if (filter === 'week') return vital && vital.recorded_at >= weekAgo
+    if (!vital) return filter === 'all'
+    const recordedAt = new Date(vital.recorded_at)
+    if (filter === 'today') return recordedAt >= localMidnight
+    if (filter === 'week') return recordedAt >= weekAgoMidnight
     return true
   })
 
   return (
     <Layout>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Vital Signs</h1>
           <p className="text-sm text-slate-500 mt-1">Latest reading per resident</p>
         </div>
-        {!loading && filtered.length > 0 && (
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          {!loading && filtered.length > 0 && (
+            <button
+              onClick={exportPDF}
+              className="border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors flex items-center gap-2"
+              title="Export to PDF"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="12" y1="18" x2="12" y2="12" />
+                <line x1="9" y1="15" x2="15" y2="15" />
+              </svg>
+              Export PDF
+            </button>
+          )}
           <button
-            onClick={exportPDF}
-            className="border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors flex items-center gap-2"
-            title="Export to PDF"
+            onClick={() => setShowPicker(true)}
+            className="bg-[#042C53] hover:bg-[#0B3D6E] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2 whitespace-nowrap"
           >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-              <line x1="12" y1="18" x2="12" y2="12" />
-              <line x1="9" y1="15" x2="15" y2="15" />
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14M5 12h14" />
             </svg>
-            Export PDF
+            Record Vitals
           </button>
-        )}
+        </div>
       </div>
 
       {quickAddMode && (
@@ -377,6 +472,7 @@ export default function VitalSigns() {
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Temp</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">O2%</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Glucose</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Weight</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Pain</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Alert</th>
@@ -389,11 +485,18 @@ export default function VitalSigns() {
                   <td className="px-4 py-3">
                     <button
                       onClick={() => navigate(`/residents/${resident.id}`)}
-                      className="text-[#185FA5] hover:text-[#0C447C] font-medium text-left transition-colors"
+                      className="text-[#185FA5] hover:text-[#0C447C] font-medium text-left transition-colors whitespace-nowrap"
                     >
                       {resident.first_name} {resident.last_name}
                     </button>
-                    <p className="text-xs text-slate-400">Room {resident.room_number || '—'}</p>
+                    <p className="text-xs text-slate-400 whitespace-nowrap">Room {resident.room_number || '—'}</p>
+                    {/* Inline record button — visible immediately without horizontal scroll */}
+                    <button
+                      onClick={() => setRecordingFor(resident)}
+                      className="mt-1 text-[10px] text-[#185FA5] font-semibold bg-[#E6F1FB] hover:bg-blue-100 px-2 py-0.5 rounded-md transition-colors whitespace-nowrap"
+                    >
+                      + Record
+                    </button>
                   </td>
                   <td className="px-4 py-3 text-slate-700">
                     {vital?.systolic && vital?.diastolic
@@ -418,6 +521,11 @@ export default function VitalSigns() {
                   <td className="px-4 py-3">
                     {vital?.blood_glucose != null
                       ? <span className={isOutOfRange('blood_glucose', vital.blood_glucose) ? 'text-red-600 font-semibold' : 'text-slate-700'}>{vital.blood_glucose}</span>
+                      : <span className="text-slate-300">—</span>}
+                  </td>
+                  <td className="px-4 py-3 text-slate-700">
+                    {vital?.weight != null
+                      ? <span>{vital.weight} lbs</span>
                       : <span className="text-slate-300">—</span>}
                   </td>
                   <td className="px-4 py-3">
@@ -445,7 +553,7 @@ export default function VitalSigns() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="px-4 py-8 text-center text-slate-400 text-sm">No data for selected filter</td>
+                  <td colSpan={11} className="px-4 py-8 text-center text-slate-400 text-sm">No data for selected filter</td>
                 </tr>
               )}
             </tbody>
@@ -454,6 +562,16 @@ export default function VitalSigns() {
         </div>
       )}
 
+      {/* Step 1: pick a resident */}
+      {showPicker && !recordingFor && (
+        <ResidentPickerModal
+          residents={rows.map(r => r.resident)}
+          onSelect={resident => { setShowPicker(false); setRecordingFor(resident) }}
+          onClose={() => setShowPicker(false)}
+        />
+      )}
+
+      {/* Step 2: record vitals for selected resident */}
       {recordingFor && (
         <RecordVitalsModal
           resident={recordingFor}

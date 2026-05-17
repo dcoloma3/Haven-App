@@ -242,8 +242,8 @@ function StaffModal({ member, communityId, currentUserId, onClose, onSaved, onDe
   const displayName = [form.first_name, form.last_name].filter(Boolean).join(' ') || form.full_name || 'Staff Member'
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4 py-6">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4 py-6" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
           <h2 className="font-semibold text-slate-800">{displayName}</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
@@ -361,7 +361,7 @@ function StaffModal({ member, communityId, currentUserId, onClose, onSaved, onDe
             <button onClick={onClose} className="border border-slate-300 text-slate-700 rounded-lg px-4 py-2 text-sm hover:bg-slate-50 transition-colors">
               Cancel
             </button>
-            <button onClick={handleSave} disabled={saving} className="bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors">
+            <button onClick={handleSave} disabled={saving} className="bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors">
               {saving ? 'Saving…' : 'Save Changes'}
             </button>
           </div>
@@ -403,8 +403,8 @@ function InviteModal({ communityId, currentUserId, onClose, onInvited }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
           <h2 className="font-semibold text-slate-800">Invite Staff Member</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
@@ -422,7 +422,7 @@ function InviteModal({ communityId, currentUserId, onClose, onInvited }) {
                 Share the app link with <strong>{email}</strong>. When they sign up, they'll automatically join your community as <strong>{role}</strong>.
               </p>
               <p className="text-xs font-mono bg-slate-100 rounded-lg px-3 py-2 mt-3 break-all">{window.location.origin}</p>
-              <button onClick={onClose} className="mt-4 bg-[#185FA5] text-white text-sm font-medium px-5 py-2 rounded-lg hover:bg-[#0C447C] transition-colors">Done</button>
+              <button onClick={onClose} className="mt-4 bg-[#042C53] text-white text-sm font-medium px-5 py-2 rounded-lg hover:bg-[#0B3D6E] transition-colors">Done</button>
             </div>
           ) : (
             <>
@@ -443,7 +443,7 @@ function InviteModal({ communityId, currentUserId, onClose, onInvited }) {
               {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
               <div className="flex gap-3">
                 <button onClick={onClose} className="flex-1 border border-slate-300 text-slate-700 rounded-lg py-2 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
-                <button onClick={handleInvite} disabled={saving} className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-lg py-2 text-sm font-medium transition-colors">
+                <button onClick={handleInvite} disabled={saving} className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-lg py-2 text-sm font-medium transition-colors">
                   {saving ? 'Creating…' : 'Create Invite'}
                 </button>
               </div>
@@ -502,8 +502,16 @@ export default function StaffDirectory() {
   async function handleTransfer() { await loadMembers(); await reloadCommunity() }
 
   // Split into my card and the rest
+  const [search, setSearch] = useState('')
+
   const myMember = members.find(m => m.userId === currentProfile?.user_id)
-  const otherMembers = members.filter(m => m.userId !== currentProfile?.user_id)
+  const otherMembers = members
+    .filter(m => m.userId !== currentProfile?.user_id)
+    .filter(m => {
+      if (!search.trim()) return true
+      const name = (m.profile?.full_name || [m.profile?.first_name, m.profile?.last_name].filter(Boolean).join(' ') || '').toLowerCase()
+      return name.includes(search.toLowerCase())
+    })
 
   return (
     <Layout>
@@ -512,7 +520,7 @@ export default function StaffDirectory() {
         {isAdmin && (
           <button
             onClick={() => setShowInvite(true)}
-            className="bg-[#185FA5] hover:bg-[#0C447C] text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
+            className="bg-[#042C53] hover:bg-[#0B3D6E] text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
           >
             + Invite Staff
           </button>
@@ -520,6 +528,21 @@ export default function StaffDirectory() {
       </div>
 
       {loading && <p className="text-slate-400 text-sm">Loading…</p>}
+
+      {!loading && members.length > 1 && (
+        <div className="relative mb-4">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search staff…"
+            className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent"
+          />
+        </div>
+      )}
 
       {!loading && (
         <>

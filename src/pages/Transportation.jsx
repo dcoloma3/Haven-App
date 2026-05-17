@@ -161,7 +161,7 @@ export default function Transportation() {
           <h1 className="text-2xl font-bold text-slate-800">Transportation</h1>
           <p className="text-sm text-slate-500 mt-1">Resident trip scheduling</p>
         </div>
-        <button onClick={openAdd} className="bg-[#185FA5] hover:bg-[#0C447C] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2">
+        <button onClick={openAdd} className="bg-[#042C53] hover:bg-[#0B3D6E] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2">
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
           </svg>
@@ -190,6 +190,9 @@ export default function Transportation() {
       ) : filtered.length === 0 ? (
         <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center">
           <p className="text-slate-500 text-sm">No trips found</p>
+          <button onClick={openAdd} className="mt-3 bg-[#042C53] hover:bg-[#0B3D6E] text-white rounded-xl px-4 py-2 text-sm font-semibold transition-colors">
+            + Schedule Trip
+          </button>
         </div>
       ) : (
         <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
@@ -211,7 +214,7 @@ export default function Transportation() {
                 <tr key={t.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-4 py-3">
                     {t.residents ? (
-                      <button onClick={() => navigate(`/residents/${t.residents.id}`)} className="text-[#185FA5] hover:text-[#0C447C] font-medium transition-colors">
+                      <button onClick={() => navigate(`/residents/${t.residents.id}`)} className="text-[#185FA5] hover:text-[#0B3D6E] font-medium transition-colors hover:underline underline-offset-2">
                         {t.residents.first_name} {t.residents.last_name}
                       </button>
                     ) : <span className="text-slate-400">—</span>}
@@ -244,8 +247,8 @@ export default function Transportation() {
 
       {/* Schedule Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
-          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-2xl max-h-[92vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50" onClick={() => { setShowModal(false); setEditTrip(null) }}>
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-2xl max-h-[92vh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="sticky top-0 bg-white border-b border-slate-200 px-5 py-4 flex items-center justify-between rounded-t-2xl">
               <h2 className="font-bold text-slate-800 text-lg">{editTrip ? 'Edit Trip' : 'Schedule Trip'}</h2>
               <button onClick={() => { setShowModal(false); setEditTrip(null) }} className="text-slate-400 hover:text-slate-600">
@@ -318,7 +321,7 @@ export default function Transportation() {
             </div>
             <div className="sticky bottom-0 bg-white border-t border-slate-200 px-5 py-4 flex gap-3">
               <button onClick={() => { setShowModal(false); setEditTrip(null) }} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
-              <button onClick={handleSave} disabled={!form.destination.trim() || !form.trip_date || !form.resident_id || saving} className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
+              <button onClick={handleSave} disabled={!form.destination.trim() || !form.trip_date || !form.resident_id || saving} className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
                 {saving ? 'Saving…' : editTrip ? 'Save Changes' : 'Schedule Trip'}
               </button>
             </div>
@@ -326,8 +329,8 @@ export default function Transportation() {
         </div>
       )}
       {cancelConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4" onClick={() => setCancelConfirm(null)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
             <h3 className="font-bold text-slate-800 mb-2">Cancel Trip</h3>
             <p className="text-sm text-slate-500 mb-5">
               Cancel the trip to <strong>{cancelConfirm.destination}</strong>? This will mark the trip as cancelled.

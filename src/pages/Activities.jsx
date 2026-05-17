@@ -32,7 +32,7 @@ create policy "community members can manage attendance" on activity_attendance
 */
 
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useCommunity } from '../context/CommunityContext'
 import { useProfile } from '../context/ProfileContext'
@@ -41,9 +41,10 @@ import Layout from '../components/layout/Layout'
 export default function Activities() {
   const { communityId, isAdmin } = useCommunity()
   const { profile } = useProfile()
+  const navigate = useNavigate()
   const [activities, setActivities] = useState([])
   const [loading, setLoading] = useState(true)
-  const [filterDate, setFilterDate] = useState('')
+  const [filterDate, setFilterDate] = useState(today)
   const [showNewModal, setShowNewModal] = useState(false)
   const [showAttendanceModal, setShowAttendanceModal] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -171,7 +172,7 @@ export default function Activities() {
           </Link>
         </div>
         {isAdmin && (
-          <button onClick={openNew} className="bg-[#185FA5] hover:bg-[#0C447C] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2 flex-shrink-0">
+          <button onClick={openNew} className="bg-[#042C53] hover:bg-[#0B3D6E] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2 flex-shrink-0">
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
             </svg>
@@ -188,7 +189,10 @@ export default function Activities() {
           onChange={e => setFilterDate(e.target.value)}
           className="border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5]"
         />
-        {filterDate && <button onClick={() => setFilterDate('')} className="text-sm text-slate-400 hover:text-slate-600">Clear</button>}
+        {filterDate !== today && (
+          <button onClick={() => setFilterDate(today)} className="text-sm text-[#185FA5] font-medium hover:text-[#0C447C]">Today</button>
+        )}
+        {filterDate && <button onClick={() => setFilterDate('')} className="text-sm text-slate-400 hover:text-slate-600">Show all</button>}
       </div>
 
       {loading ? (
@@ -232,7 +236,7 @@ export default function Activities() {
                     )}
                   </div>
                   <div className="flex flex-col gap-2 flex-shrink-0">
-                    <button onClick={() => openAttendance(a)} className="bg-[#185FA5] hover:bg-[#0C447C] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
+                    <button onClick={() => openAttendance(a)} className="bg-[#042C53] hover:bg-[#0B3D6E] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
                       Take Attendance
                     </button>
                     {isAdmin && (
@@ -251,8 +255,8 @@ export default function Activities() {
 
       {/* New / Edit Activity Modal */}
       {showNewModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
-          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-2xl max-h-[92vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50" onClick={() => { setShowNewModal(false); setEditActivity(null) }}>
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-2xl max-h-[92vh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="sticky top-0 bg-white border-b border-slate-200 px-5 py-4 flex items-center justify-between rounded-t-2xl">
               <h2 className="font-bold text-slate-800 text-lg">{editActivity ? 'Edit Activity' : 'New Activity'}</h2>
               <button onClick={() => { setShowNewModal(false); setEditActivity(null) }} className="text-slate-400 hover:text-slate-600">
@@ -293,7 +297,7 @@ export default function Activities() {
             </div>
             <div className="sticky bottom-0 bg-white border-t border-slate-200 px-5 py-4 flex gap-3">
               <button onClick={() => { setShowNewModal(false); setEditActivity(null) }} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
-              <button onClick={handleSave} disabled={!form.title.trim() || !form.activity_date || saving} className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
+              <button onClick={handleSave} disabled={!form.title.trim() || !form.activity_date || saving} className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
                 {saving ? 'Saving…' : editActivity ? 'Save Changes' : 'Create Activity'}
               </button>
             </div>
@@ -303,8 +307,8 @@ export default function Activities() {
 
       {/* Attendance Modal */}
       {showAttendanceModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
-          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-2xl max-h-[92vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50" onClick={() => setShowAttendanceModal(null)}>
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-2xl max-h-[92vh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="sticky top-0 bg-white border-b border-slate-200 px-5 py-4 flex items-center justify-between rounded-t-2xl">
               <div>
                 <h2 className="font-bold text-slate-800 text-lg">Take Attendance</h2>
@@ -328,7 +332,12 @@ export default function Activities() {
               <div className="space-y-2">
                 {residents.map(r => (
                   <div key={r.id} className={`flex items-center gap-2 rounded-xl px-4 py-3 ${attendance[r.id] == null ? 'bg-slate-100' : 'bg-slate-50'}`}>
-                    <p className="text-sm font-medium text-slate-700 flex-1 min-w-0 truncate">{r.first_name} {r.last_name}</p>
+                    <button
+                      onClick={e => { e.stopPropagation(); navigate(`/residents/${r.id}`) }}
+                      className="text-[#185FA5] hover:text-[#0B3D6E] font-medium transition-colors hover:underline underline-offset-2 text-sm flex-1 min-w-0 truncate text-left"
+                    >
+                      {r.first_name} {r.last_name}
+                    </button>
                     <div className="flex gap-1 flex-shrink-0">
                       {[
                         { val: 'attended', label: 'Attended', inactive: 'bg-white text-slate-400 border-slate-200 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200', active: 'bg-emerald-500 text-white border-emerald-500' },
@@ -350,7 +359,7 @@ export default function Activities() {
             </div>
             <div className="sticky bottom-0 bg-white border-t border-slate-200 px-5 py-4 flex gap-3">
               <button onClick={() => setShowAttendanceModal(null)} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
-              <button onClick={saveAttendance} disabled={savingAttendance} className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
+              <button onClick={saveAttendance} disabled={savingAttendance} className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
                 {savingAttendance ? 'Saving…' : 'Save Attendance'}
               </button>
             </div>
@@ -359,8 +368,8 @@ export default function Activities() {
       )}
 
       {deleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4" onClick={() => setDeleteConfirm(null)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
             <h3 className="font-bold text-slate-800 mb-2">Delete Activity</h3>
             <p className="text-sm text-slate-500 mb-5">Delete <strong>{deleteConfirm.title}</strong>? Attendance records will also be deleted.</p>
             <div className="flex gap-3">

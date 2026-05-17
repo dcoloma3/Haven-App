@@ -134,7 +134,7 @@ function ContactModal({ residentId, contact, onClose, onSaved }) {
           {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className="flex-1 border border-slate-300 text-slate-700 rounded-lg py-2 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
-            <button type="submit" disabled={saving} className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-lg py-2 text-sm font-medium transition-colors">
+            <button type="submit" disabled={saving} className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-lg py-2 text-sm font-medium transition-colors">
               {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Contact'}
             </button>
           </div>
@@ -149,6 +149,7 @@ export default function ContactList({ residentId }) {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingContact, setEditingContact] = useState(null)
+  const [deleteError, setDeleteError] = useState('')
 
   useEffect(() => {
     supabase
@@ -170,8 +171,9 @@ export default function ContactList({ residentId }) {
 
   async function handleDelete(contactId) {
     if (!window.confirm('Delete this contact? This cannot be undone.')) return
+    setDeleteError('')
     const { error } = await supabase.from('emergency_contacts').delete().eq('id', contactId)
-    if (error) { alert('Failed to delete contact. Please try again.'); return }
+    if (error) { setDeleteError('Failed to delete contact. Please try again.'); return }
     setContacts(prev => prev.filter(c => c.id !== contactId))
   }
 
@@ -206,6 +208,10 @@ export default function ContactList({ residentId }) {
         <h2 className="font-medium text-slate-700">Emergency Contacts</h2>
         <button onClick={() => setShowForm(true)} className="text-sm text-[#185FA5] hover:text-[#0C447C] transition-colors">+ Add</button>
       </div>
+
+      {deleteError && (
+        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2 mb-3">{deleteError}</p>
+      )}
 
       {loading && <p className="text-slate-400 text-sm">Loading…</p>}
 

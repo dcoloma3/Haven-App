@@ -55,6 +55,7 @@ export default function MoveChecklist({ residentId, resident }) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [marking, setMarking] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   async function fetchChecklists() {
     const { data } = await supabase
@@ -71,6 +72,7 @@ export default function MoveChecklist({ residentId, resident }) {
 
   async function startChecklist(type) {
     setSaving(true)
+    setSaveError('')
     const authorName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Staff'
     const defaults = type === 'move-in' ? DEFAULT_MOVEIN_ITEMS : DEFAULT_MOVEOUT_ITEMS
     const items = defaults.map(label => ({ label, checked: false, checked_by: null, checked_at: null }))
@@ -83,7 +85,7 @@ export default function MoveChecklist({ residentId, resident }) {
     }).select().single()
     if (error) {
       console.error(error)
-      alert('Something went wrong. Please try again.')
+      setSaveError('Something went wrong. Please try again.')
       setSaving(false)
       return
     }
@@ -92,6 +94,7 @@ export default function MoveChecklist({ residentId, resident }) {
   }
 
   async function toggleItem(checklist, index) {
+    setSaveError('')
     const authorName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Staff'
     const items = [...checklist.items]
     const item = { ...items[index] }
@@ -102,7 +105,7 @@ export default function MoveChecklist({ residentId, resident }) {
     const { data, error } = await supabase.from('move_checklists').update({ items }).eq('id', checklist.id).select().single()
     if (error) {
       console.error(error)
-      alert('Something went wrong. Please try again.')
+      setSaveError('Something went wrong. Please try again.')
       return
     }
     setChecklists(c => ({ ...c, [checklist.type]: data }))
@@ -110,10 +113,11 @@ export default function MoveChecklist({ residentId, resident }) {
 
   async function markComplete(checklist) {
     setMarking(true)
+    setSaveError('')
     const { data, error } = await supabase.from('move_checklists').update({ completed_at: new Date().toISOString() }).eq('id', checklist.id).select().single()
     if (error) {
       console.error(error)
-      alert('Something went wrong. Please try again.')
+      setSaveError('Something went wrong. Please try again.')
       setMarking(false)
       return
     }
@@ -142,6 +146,10 @@ export default function MoveChecklist({ residentId, resident }) {
         ))}
       </div>
 
+      {saveError && (
+        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{saveError}</p>
+      )}
+
       {!checklist ? (
         <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center">
           <p className="text-slate-500 text-sm font-medium mb-1">No {activeType} checklist yet</p>
@@ -149,7 +157,7 @@ export default function MoveChecklist({ residentId, resident }) {
           <button
             onClick={() => startChecklist(activeType)}
             disabled={saving}
-            className="bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors"
+            className="bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors"
           >
             {saving ? 'Starting…' : 'Start Checklist'}
           </button>

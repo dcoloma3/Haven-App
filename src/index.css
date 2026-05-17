@@ -3,6 +3,50 @@
 /* Enable class-based dark mode (.dark on <html>) */
 @variant dark (&:where(.dark, .dark *));
 
+/* ─── Haven Design System Tokens ──────────────────────────────────────────── */
+:root {
+  /* Brand anchors */
+  --haven-navy:        #042C53;
+  --haven-blue:        #185FA5;
+  --haven-blue-soft:   #E6F1FB;
+
+  /* Navy scale */
+  --haven-navy-900:    #021A33;
+  --haven-navy-800:    #042C53;
+  --haven-navy-700:    #0B3D6E;
+  --haven-navy-600:    #14528A;
+  --haven-navy-500:    #185FA5;
+  --haven-navy-400:    #3E7CBA;
+  --haven-navy-300:    #7AA5D2;
+  --haven-navy-200:    #B4CEE7;
+  --haven-navy-100:    #D5E4F3;
+  --haven-navy-50:     #E6F1FB;
+  --haven-navy-25:     #F3F8FD;
+
+  /* Semantic colors */
+  --haven-success:     #2E9968;
+  --haven-success-bg:  #DDF1E7;
+  --haven-success-fg:  #1F6B45;
+  --haven-warning:     #C68A1A;
+  --haven-warning-bg:  #FBEDD2;
+  --haven-warning-fg:  #8A5A00;
+  --haven-danger:      #C7445A;
+  --haven-danger-bg:   #F7DDE2;
+  --haven-danger-fg:   #963141;
+
+  /* Shadows — soft navy-tinted */
+  --haven-shadow-xs:   0 1px 2px rgba(4,44,83,0.04);
+  --haven-shadow-sm:   0 1px 2px rgba(4,44,83,0.04), 0 2px 6px rgba(4,44,83,0.05);
+  --haven-shadow-md:   0 2px 4px rgba(4,44,83,0.04), 0 8px 20px rgba(4,44,83,0.06);
+  --haven-shadow-lg:   0 4px 8px rgba(4,44,83,0.05), 0 20px 40px rgba(4,44,83,0.08);
+  --haven-shadow-focus:0 0 0 3px rgba(24,95,165,0.25);
+
+  /* Motion */
+  --haven-ease-out:    cubic-bezier(0.22, 0.61, 0.36, 1);
+  --haven-dur-fast:    120ms;
+  --haven-dur-base:    180ms;
+}
+
 @theme {
   --animate-page-in: pageIn 220ms ease-out;
 }
@@ -16,6 +60,16 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@keyframes havenLogoIn {
+  from { opacity: 0; transform: scale(0.88); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes havenDotBounce {
+  0%, 60%, 100% { transform: translateY(0);    opacity: 0.35; }
+  30%            { transform: translateY(-7px); opacity: 1;    }
 }
 
 @keyframes skeletonPulse {

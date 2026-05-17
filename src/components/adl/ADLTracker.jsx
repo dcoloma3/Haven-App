@@ -66,6 +66,7 @@ export default function ADLTracker({ residentId, resident }) {
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const [form, setForm] = useState(ADL_CATEGORIES.reduce((acc, c) => ({ ...acc, [c]: '' }), { notes: '' }))
 
   // Back-entry state
@@ -76,6 +77,7 @@ export default function ADLTracker({ residentId, resident }) {
   const [editingBack, setEditingBack] = useState(false)
   const [backForm, setBackForm] = useState(ADL_CATEGORIES.reduce((acc, c) => ({ ...acc, [c]: '' }), { notes: '' }))
   const [savingBack, setSavingBack] = useState(false)
+  const [saveBackError, setSaveBackError] = useState('')
 
   const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
 
@@ -103,6 +105,7 @@ export default function ADLTracker({ residentId, resident }) {
 
   async function handleSave() {
     setSaving(true)
+    setSaveError('')
     const authorName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Staff'
     const payload = {
       community_id: communityId,
@@ -120,7 +123,7 @@ export default function ADLTracker({ residentId, resident }) {
     }
     if (error) {
       console.error(error)
-      alert('Something went wrong. Please try again.')
+      setSaveError('Something went wrong. Please try again.')
       setSaving(false)
       return
     }
@@ -160,6 +163,7 @@ export default function ADLTracker({ residentId, resident }) {
 
   async function handleSaveBack() {
     setSavingBack(true)
+    setSaveBackError('')
     const authorName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Staff'
     const payload = {
       community_id: communityId,
@@ -177,7 +181,7 @@ export default function ADLTracker({ residentId, resident }) {
     }
     if (error) {
       console.error(error)
-      alert('Something went wrong. Please try again.')
+      setSaveBackError('Something went wrong. Please try again.')
       setSavingBack(false)
       return
     }
@@ -205,7 +209,7 @@ export default function ADLTracker({ residentId, resident }) {
         <h3 className="text-sm font-semibold text-slate-700">Activities of Daily Living</h3>
         <div className="flex gap-2">
           {!editing && (
-            <button onClick={startLog} className="bg-[#185FA5] hover:bg-[#0C447C] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors">
+            <button onClick={startLog} className="bg-[#042C53] hover:bg-[#0B3D6E] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors">
               {todayRecord ? "Edit Today's ADLs" : "Log Today's ADLs"}
             </button>
           )}
@@ -237,7 +241,7 @@ export default function ADLTracker({ residentId, resident }) {
             </div>
             <button
               onClick={handleCheckBackDate}
-              className="bg-[#185FA5] hover:bg-[#0C447C] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors"
+              className="bg-[#042C53] hover:bg-[#0B3D6E] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors"
             >
               Check Date
             </button>
@@ -284,9 +288,12 @@ export default function ADLTracker({ residentId, resident }) {
                   placeholder="Optional notes…"
                 />
               </div>
+              {saveBackError && (
+                <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{saveBackError}</p>
+              )}
               <div className="flex gap-3 pt-1">
                 <button onClick={cancelBackEntry} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
-                <button onClick={handleSaveBack} disabled={savingBack} className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
+                <button onClick={handleSaveBack} disabled={savingBack} className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
                   {savingBack ? 'Saving…' : 'Save Past ADLs'}
                 </button>
               </div>
@@ -325,9 +332,12 @@ export default function ADLTracker({ residentId, resident }) {
             <label className="block text-xs font-medium text-slate-600 mb-1">Session Notes</label>
             <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} className={inputCls + ' resize-none'} placeholder="Optional notes…" />
           </div>
+          {saveError && (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{saveError}</p>
+          )}
           <div className="flex gap-3 pt-1">
             <button onClick={() => setEditing(false)} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
-            <button onClick={handleSave} disabled={saving} className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
+            <button onClick={handleSave} disabled={saving} className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
               {saving ? 'Saving…' : 'Save ADLs'}
             </button>
           </div>
