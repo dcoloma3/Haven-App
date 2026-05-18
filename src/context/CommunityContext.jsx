@@ -43,13 +43,28 @@ export function CommunityProvider({ children }) {
       if (membErr) throw membErr
       const list = data ?? []
       setMemberships(list)
-      if (list.length === 1) {
-        setActiveCommunityId(prev => {
-          const id = prev || list[0].communities.id
-          try { localStorage.setItem('haven_community_id', id) } catch {}
-          return id
-        })
-      }
+
+      // Always validate the stored community ID against this user's actual memberships.
+      // Without this check, a stale localStorage value from a previous user on the same
+      // browser would cause cross-account data leakage.
+      setActiveCommunityId(prev => {
+        const validIds = list.map(m => m.communities?.id).filter(Boolean)
+        // Keep the stored ID only if it actually belongs to this user (or they're a super admin)
+        if (prev && (validIds.includes(prev) || superAdmin)) {
+          try { localStorage.setItem('haven_community_id', prev) } catch {}
+          return prev
+        }
+        // Otherwise fall back to the first community in their membership list
+        const id = list[0]?.communities?.id ?? null
+        try {
+          if (id) {
+            localStorage.setItem('haven_community_id', id)
+          } else {
+            localStorage.removeItem('haven_community_id')
+          }
+        } catch {}
+        return id
+      })
 
       // Super admin gets full list of all communities
       if (superAdmin) {
@@ -72,7 +87,7 @@ export function CommunityProvider({ children }) {
     supabase.auth.getSession().then(({ data }) => {
       load(data.session?.user?.id ?? null, data.session?.user?.email ?? '')
     })
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!session) {
         setMemberships([])
         setActiveCommunityId(null)
@@ -80,6 +95,13 @@ export function CommunityProvider({ children }) {
         setIsSuperAdmin(false)
         setAllCommunities([])
       } else {
+        // On a fresh sign-in, clear the stored community ID immediately so the
+        // validation in load() always picks the correct community for this user,
+        // rather than accidentally keeping a value left by a previous user.
+        if (event === 'SIGNED_IN') {
+          try { localStorage.removeItem('haven_community_id') } catch {}
+          setActiveCommunityId(null)
+        }
         load(session.user.id, session.user.email)
       }
     })
