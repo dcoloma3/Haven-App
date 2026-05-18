@@ -675,11 +675,11 @@ function PRNMedications({ residentId, medications }) {
   const todayStr = new Date().toISOString().split('T')[0]
 
   async function loadDoses() {
-    const prnIds = prnMeds.map(m => m.id)
+    const prnNames = prnMeds.map(m => m.medication_name)
     const { data } = await supabase
       .from('prn_administrations')
       .select('*')
-      .in('medication_id', prnIds)
+      .eq('resident_id', residentId)
       .gte('administered_at', `${todayStr}T00:00:00`)
       .lte('administered_at', `${todayStr}T23:59:59`)
       .order('administered_at', { ascending: false })
@@ -704,19 +704,17 @@ function PRNMedications({ residentId, medications }) {
     const timeKey = `${hh}:${mm}`
 
     const { data: { session } } = await supabase.auth.getSession()
-    const adminName = session?.user?.user_metadata?.full_name
-      || session?.user?.email
-      || null
     const { data, error } = await supabase
       .from('prn_administrations')
       .insert([{
-        medication_id: med.id,
+        medication_name: med.medication_name,
+        dose: med.dose ?? null,
         resident_id: residentId,
-        community_id: null,
+        community_id: med.community_id,
         administered_at: now.toISOString(),
         administered_by: session?.user?.id ?? null,
-        administered_by_name: adminName,
-        admin_notes: reason.trim(),
+        reason: reason.trim() || 'PRN dose administered',
+        notes: null,
       }])
       .select()
       .single()
@@ -742,7 +740,7 @@ function PRNMedications({ residentId, medications }) {
       {!loadingDoses && (
         <div className="divide-y divide-slate-100">
           {prnMeds.map(med => {
-            const medDoses = todayDoses.filter(d => d.medication_id === med.id)
+            const medDoses = todayDoses.filter(d => d.medication_name === med.medication_name)
             const lastDose = medDoses[0] ?? null
             const isGiving = givingId === med.id
 
@@ -785,7 +783,7 @@ function PRNMedications({ residentId, medications }) {
                             </svg>
                             <p className="text-xs text-emerald-700">
                               Given at {new Date(dose.administered_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-                              {dose.admin_notes && <span className="text-slate-500"> · {dose.admin_notes}</span>}
+                              {dose.notes && <span className="text-slate-500"> · {dose.notes}</span>}
                             </p>
                           </div>
                         ))}
