@@ -36,7 +36,7 @@ create policy "medication_not_given_select" on medication_not_given
     community_id in (
       select community_id from community_members where user_id = auth.uid()
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "medication_not_given_insert" on medication_not_given;
@@ -46,7 +46,7 @@ create policy "medication_not_given_insert" on medication_not_given
     community_id in (
       select community_id from community_members where user_id = auth.uid()
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "medication_not_given_update" on medication_not_given;
@@ -56,13 +56,13 @@ create policy "medication_not_given_update" on medication_not_given
     community_id in (
       select community_id from community_members where user_id = auth.uid()
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   )
   with check (
     community_id in (
       select community_id from community_members where user_id = auth.uid()
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "medication_not_given_delete" on medication_not_given;
@@ -72,7 +72,7 @@ create policy "medication_not_given_delete" on medication_not_given
     community_id in (
       select community_id from community_members where user_id = auth.uid()
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 -- ROLLBACK

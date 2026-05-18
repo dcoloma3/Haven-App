@@ -40,7 +40,7 @@ create policy "prn_administrations_select" on prn_administrations
     community_id in (
       select community_id from community_members where user_id = auth.uid()
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "prn_administrations_insert" on prn_administrations;
@@ -50,7 +50,7 @@ create policy "prn_administrations_insert" on prn_administrations
     community_id in (
       select community_id from community_members where user_id = auth.uid()
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "prn_administrations_update" on prn_administrations;
@@ -60,13 +60,13 @@ create policy "prn_administrations_update" on prn_administrations
     community_id in (
       select community_id from community_members where user_id = auth.uid()
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   )
   with check (
     community_id in (
       select community_id from community_members where user_id = auth.uid()
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "prn_administrations_delete" on prn_administrations;
@@ -76,7 +76,7 @@ create policy "prn_administrations_delete" on prn_administrations
     community_id in (
       select community_id from community_members where user_id = auth.uid()
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 -- ROLLBACK
