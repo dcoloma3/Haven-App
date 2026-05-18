@@ -741,22 +741,32 @@ create policy "notification_log_delete" on notification_log
   using (community_id in (select public.user_community_ids()) or public.is_super_admin());
 
 -- ── health_care ──
+-- NOTE: health_care has no community_id column — scoped through resident_id
 alter table health_care enable row level security;
 
 drop policy if exists "health_care_select" on health_care;
 create policy "health_care_select" on health_care
   for select to authenticated
-  using (community_id in (select public.user_community_ids()) or public.is_super_admin());
+  using (
+    resident_id in (
+      select id from residents
+      where community_id in (select public.user_community_ids())
+    )
+    or public.is_super_admin()
+  );
 
 drop policy if exists "health_care_insert" on health_care;
 create policy "health_care_insert" on health_care
   for insert to authenticated
   with check (
-    (community_id in (select public.user_community_ids())
-      and exists (select 1 from community_members
-                  where user_id = auth.uid()
-                    and community_id = health_care.community_id
-                    and role = 'admin'))
+    (resident_id in (
+      select id from residents r
+      where r.community_id in (select public.user_community_ids())
+        and exists (select 1 from community_members
+                    where user_id = auth.uid()
+                      and community_id = r.community_id
+                      and role = 'admin')
+    ))
     or public.is_super_admin()
   );
 
@@ -764,19 +774,25 @@ drop policy if exists "health_care_update" on health_care;
 create policy "health_care_update" on health_care
   for update to authenticated
   using (
-    (community_id in (select public.user_community_ids())
-      and exists (select 1 from community_members
-                  where user_id = auth.uid()
-                    and community_id = health_care.community_id
-                    and role = 'admin'))
+    (resident_id in (
+      select id from residents r
+      where r.community_id in (select public.user_community_ids())
+        and exists (select 1 from community_members
+                    where user_id = auth.uid()
+                      and community_id = r.community_id
+                      and role = 'admin')
+    ))
     or public.is_super_admin()
   )
   with check (
-    (community_id in (select public.user_community_ids())
-      and exists (select 1 from community_members
-                  where user_id = auth.uid()
-                    and community_id = health_care.community_id
-                    and role = 'admin'))
+    (resident_id in (
+      select id from residents r
+      where r.community_id in (select public.user_community_ids())
+        and exists (select 1 from community_members
+                    where user_id = auth.uid()
+                      and community_id = r.community_id
+                      and role = 'admin')
+    ))
     or public.is_super_admin()
   );
 
@@ -784,11 +800,14 @@ drop policy if exists "health_care_delete" on health_care;
 create policy "health_care_delete" on health_care
   for delete to authenticated
   using (
-    (community_id in (select public.user_community_ids())
-      and exists (select 1 from community_members
-                  where user_id = auth.uid()
-                    and community_id = health_care.community_id
-                    and role = 'admin'))
+    (resident_id in (
+      select id from residents r
+      where r.community_id in (select public.user_community_ids())
+        and exists (select 1 from community_members
+                    where user_id = auth.uid()
+                      and community_id = r.community_id
+                      and role = 'admin')
+    ))
     or public.is_super_admin()
   );
 
