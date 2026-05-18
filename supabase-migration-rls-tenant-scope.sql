@@ -5,12 +5,12 @@
 -- ============================================================
 
 -- STEP 1: Helper functions
-create or replace function auth.user_community_ids() returns setof uuid
+create or replace function public.user_community_ids() returns setof uuid
 language sql stable security definer as $$
   select community_id from public.community_members where user_id = auth.uid()
 $$;
 
-create or replace function auth.is_super_admin() returns boolean
+create or replace function public.is_super_admin() returns boolean
 language sql stable security definer as $$
   select exists (
     select 1 from public.super_admins where email = auth.email()
@@ -27,50 +27,50 @@ alter table residents enable row level security;
 drop policy if exists "residents_select" on residents;
 create policy "residents_select" on residents
   for select to authenticated
-  using (community_id in (select auth.user_community_ids()) or auth.is_super_admin());
+  using (community_id in (select public.user_community_ids()) or public.is_super_admin());
 
 drop policy if exists "residents_insert" on residents;
 create policy "residents_insert" on residents
   for insert to authenticated
   with check (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = residents.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "residents_update" on residents;
 create policy "residents_update" on residents
   for update to authenticated
   using (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = residents.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   )
   with check (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = residents.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "residents_delete" on residents;
 create policy "residents_delete" on residents
   for delete to authenticated
   using (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = residents.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 -- ── medications ──
@@ -82,9 +82,9 @@ create policy "medications_select" on medications
   using (
     resident_id in (
       select id from residents
-      where community_id in (select auth.user_community_ids())
+      where community_id in (select public.user_community_ids())
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "medications_insert" on medications;
@@ -93,13 +93,13 @@ create policy "medications_insert" on medications
   with check (
     (resident_id in (
       select id from residents r
-      where r.community_id in (select auth.user_community_ids())
+      where r.community_id in (select public.user_community_ids())
         and exists (select 1 from community_members
                     where user_id = auth.uid()
                       and community_id = r.community_id
                       and role = 'admin')
     ))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "medications_update" on medications;
@@ -108,24 +108,24 @@ create policy "medications_update" on medications
   using (
     (resident_id in (
       select id from residents r
-      where r.community_id in (select auth.user_community_ids())
+      where r.community_id in (select public.user_community_ids())
         and exists (select 1 from community_members
                     where user_id = auth.uid()
                       and community_id = r.community_id
                       and role = 'admin')
     ))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   )
   with check (
     (resident_id in (
       select id from residents r
-      where r.community_id in (select auth.user_community_ids())
+      where r.community_id in (select public.user_community_ids())
         and exists (select 1 from community_members
                     where user_id = auth.uid()
                       and community_id = r.community_id
                       and role = 'admin')
     ))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "medications_delete" on medications;
@@ -134,13 +134,13 @@ create policy "medications_delete" on medications
   using (
     (resident_id in (
       select id from residents r
-      where r.community_id in (select auth.user_community_ids())
+      where r.community_id in (select public.user_community_ids())
         and exists (select 1 from community_members
                     where user_id = auth.uid()
                       and community_id = r.community_id
                       and role = 'admin')
     ))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 -- ── lease_terms ──
@@ -152,9 +152,9 @@ create policy "lease_terms_select" on lease_terms
   using (
     resident_id in (
       select id from residents
-      where community_id in (select auth.user_community_ids())
+      where community_id in (select public.user_community_ids())
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "lease_terms_insert" on lease_terms;
@@ -163,13 +163,13 @@ create policy "lease_terms_insert" on lease_terms
   with check (
     (resident_id in (
       select id from residents r
-      where r.community_id in (select auth.user_community_ids())
+      where r.community_id in (select public.user_community_ids())
         and exists (select 1 from community_members
                     where user_id = auth.uid()
                       and community_id = r.community_id
                       and role = 'admin')
     ))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "lease_terms_update" on lease_terms;
@@ -178,24 +178,24 @@ create policy "lease_terms_update" on lease_terms
   using (
     (resident_id in (
       select id from residents r
-      where r.community_id in (select auth.user_community_ids())
+      where r.community_id in (select public.user_community_ids())
         and exists (select 1 from community_members
                     where user_id = auth.uid()
                       and community_id = r.community_id
                       and role = 'admin')
     ))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   )
   with check (
     (resident_id in (
       select id from residents r
-      where r.community_id in (select auth.user_community_ids())
+      where r.community_id in (select public.user_community_ids())
         and exists (select 1 from community_members
                     where user_id = auth.uid()
                       and community_id = r.community_id
                       and role = 'admin')
     ))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "lease_terms_delete" on lease_terms;
@@ -204,13 +204,13 @@ create policy "lease_terms_delete" on lease_terms
   using (
     (resident_id in (
       select id from residents r
-      where r.community_id in (select auth.user_community_ids())
+      where r.community_id in (select public.user_community_ids())
         and exists (select 1 from community_members
                     where user_id = auth.uid()
                       and community_id = r.community_id
                       and role = 'admin')
     ))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 -- ── billing_records ──
@@ -219,50 +219,50 @@ alter table billing_records enable row level security;
 drop policy if exists "billing_records_select" on billing_records;
 create policy "billing_records_select" on billing_records
   for select to authenticated
-  using (community_id in (select auth.user_community_ids()) or auth.is_super_admin());
+  using (community_id in (select public.user_community_ids()) or public.is_super_admin());
 
 drop policy if exists "billing_records_insert" on billing_records;
 create policy "billing_records_insert" on billing_records
   for insert to authenticated
   with check (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = billing_records.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "billing_records_update" on billing_records;
 create policy "billing_records_update" on billing_records
   for update to authenticated
   using (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = billing_records.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   )
   with check (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = billing_records.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "billing_records_delete" on billing_records;
 create policy "billing_records_delete" on billing_records
   for delete to authenticated
   using (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = billing_records.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 -- ── staff_certifications ──
@@ -271,50 +271,50 @@ alter table staff_certifications enable row level security;
 drop policy if exists "staff_certifications_select" on staff_certifications;
 create policy "staff_certifications_select" on staff_certifications
   for select to authenticated
-  using (community_id in (select auth.user_community_ids()) or auth.is_super_admin());
+  using (community_id in (select public.user_community_ids()) or public.is_super_admin());
 
 drop policy if exists "staff_certifications_insert" on staff_certifications;
 create policy "staff_certifications_insert" on staff_certifications
   for insert to authenticated
   with check (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = staff_certifications.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "staff_certifications_update" on staff_certifications;
 create policy "staff_certifications_update" on staff_certifications
   for update to authenticated
   using (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = staff_certifications.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   )
   with check (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = staff_certifications.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "staff_certifications_delete" on staff_certifications;
 create policy "staff_certifications_delete" on staff_certifications
   for delete to authenticated
   using (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = staff_certifications.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 -- ── shifts ──
@@ -323,50 +323,50 @@ alter table shifts enable row level security;
 drop policy if exists "shifts_select" on shifts;
 create policy "shifts_select" on shifts
   for select to authenticated
-  using (community_id in (select auth.user_community_ids()) or auth.is_super_admin());
+  using (community_id in (select public.user_community_ids()) or public.is_super_admin());
 
 drop policy if exists "shifts_insert" on shifts;
 create policy "shifts_insert" on shifts
   for insert to authenticated
   with check (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = shifts.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "shifts_update" on shifts;
 create policy "shifts_update" on shifts
   for update to authenticated
   using (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = shifts.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   )
   with check (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = shifts.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "shifts_delete" on shifts;
 create policy "shifts_delete" on shifts
   for delete to authenticated
   using (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = shifts.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 -- ── shift_notes — staff r/w ──
@@ -375,26 +375,26 @@ alter table shift_notes enable row level security;
 drop policy if exists "shift_notes_select" on shift_notes;
 create policy "shift_notes_select" on shift_notes
   for select to authenticated
-  using (community_id in (select auth.user_community_ids()) or auth.is_super_admin());
+  using (community_id in (select public.user_community_ids()) or public.is_super_admin());
 
 drop policy if exists "shift_notes_insert" on shift_notes;
 create policy "shift_notes_insert" on shift_notes
   for insert to authenticated
   with check (
-    community_id in (select auth.user_community_ids())
-    or auth.is_super_admin()
+    community_id in (select public.user_community_ids())
+    or public.is_super_admin()
   );
 
 drop policy if exists "shift_notes_update" on shift_notes;
 create policy "shift_notes_update" on shift_notes
   for update to authenticated
-  using (community_id in (select auth.user_community_ids()) or auth.is_super_admin())
-  with check (community_id in (select auth.user_community_ids()) or auth.is_super_admin());
+  using (community_id in (select public.user_community_ids()) or public.is_super_admin())
+  with check (community_id in (select public.user_community_ids()) or public.is_super_admin());
 
 drop policy if exists "shift_notes_delete" on shift_notes;
 create policy "shift_notes_delete" on shift_notes
   for delete to authenticated
-  using (community_id in (select auth.user_community_ids()) or auth.is_super_admin());
+  using (community_id in (select public.user_community_ids()) or public.is_super_admin());
 
 -- ── calendar_events ──
 alter table calendar_events enable row level security;
@@ -402,50 +402,50 @@ alter table calendar_events enable row level security;
 drop policy if exists "calendar_events_select" on calendar_events;
 create policy "calendar_events_select" on calendar_events
   for select to authenticated
-  using (community_id in (select auth.user_community_ids()) or auth.is_super_admin());
+  using (community_id in (select public.user_community_ids()) or public.is_super_admin());
 
 drop policy if exists "calendar_events_insert" on calendar_events;
 create policy "calendar_events_insert" on calendar_events
   for insert to authenticated
   with check (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = calendar_events.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "calendar_events_update" on calendar_events;
 create policy "calendar_events_update" on calendar_events
   for update to authenticated
   using (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = calendar_events.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   )
   with check (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = calendar_events.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "calendar_events_delete" on calendar_events;
 create policy "calendar_events_delete" on calendar_events
   for delete to authenticated
   using (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = calendar_events.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 -- ── activities ──
@@ -454,50 +454,50 @@ alter table activities enable row level security;
 drop policy if exists "activities_select" on activities;
 create policy "activities_select" on activities
   for select to authenticated
-  using (community_id in (select auth.user_community_ids()) or auth.is_super_admin());
+  using (community_id in (select public.user_community_ids()) or public.is_super_admin());
 
 drop policy if exists "activities_insert" on activities;
 create policy "activities_insert" on activities
   for insert to authenticated
   with check (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = activities.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "activities_update" on activities;
 create policy "activities_update" on activities
   for update to authenticated
   using (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = activities.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   )
   with check (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = activities.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "activities_delete" on activities;
 create policy "activities_delete" on activities
   for delete to authenticated
   using (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = activities.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 -- ── activity_attendance — staff r/w ──
@@ -507,28 +507,28 @@ drop policy if exists "activity_attendance_select" on activity_attendance;
 create policy "activity_attendance_select" on activity_attendance
   for select to authenticated
   using (
-    community_id in (select auth.user_community_ids())
-    or auth.is_super_admin()
+    community_id in (select public.user_community_ids())
+    or public.is_super_admin()
   );
 
 drop policy if exists "activity_attendance_insert" on activity_attendance;
 create policy "activity_attendance_insert" on activity_attendance
   for insert to authenticated
   with check (
-    community_id in (select auth.user_community_ids())
-    or auth.is_super_admin()
+    community_id in (select public.user_community_ids())
+    or public.is_super_admin()
   );
 
 drop policy if exists "activity_attendance_update" on activity_attendance;
 create policy "activity_attendance_update" on activity_attendance
   for update to authenticated
-  using (community_id in (select auth.user_community_ids()) or auth.is_super_admin())
-  with check (community_id in (select auth.user_community_ids()) or auth.is_super_admin());
+  using (community_id in (select public.user_community_ids()) or public.is_super_admin())
+  with check (community_id in (select public.user_community_ids()) or public.is_super_admin());
 
 drop policy if exists "activity_attendance_delete" on activity_attendance;
 create policy "activity_attendance_delete" on activity_attendance
   for delete to authenticated
-  using (community_id in (select auth.user_community_ids()) or auth.is_super_admin());
+  using (community_id in (select public.user_community_ids()) or public.is_super_admin());
 
 -- ── transportation_log — staff r/w ──
 alter table transportation_log enable row level security;
@@ -536,26 +536,26 @@ alter table transportation_log enable row level security;
 drop policy if exists "transportation_log_select" on transportation_log;
 create policy "transportation_log_select" on transportation_log
   for select to authenticated
-  using (community_id in (select auth.user_community_ids()) or auth.is_super_admin());
+  using (community_id in (select public.user_community_ids()) or public.is_super_admin());
 
 drop policy if exists "transportation_log_insert" on transportation_log;
 create policy "transportation_log_insert" on transportation_log
   for insert to authenticated
   with check (
-    community_id in (select auth.user_community_ids())
-    or auth.is_super_admin()
+    community_id in (select public.user_community_ids())
+    or public.is_super_admin()
   );
 
 drop policy if exists "transportation_log_update" on transportation_log;
 create policy "transportation_log_update" on transportation_log
   for update to authenticated
-  using (community_id in (select auth.user_community_ids()) or auth.is_super_admin())
-  with check (community_id in (select auth.user_community_ids()) or auth.is_super_admin());
+  using (community_id in (select public.user_community_ids()) or public.is_super_admin())
+  with check (community_id in (select public.user_community_ids()) or public.is_super_admin());
 
 drop policy if exists "transportation_log_delete" on transportation_log;
 create policy "transportation_log_delete" on transportation_log
   for delete to authenticated
-  using (community_id in (select auth.user_community_ids()) or auth.is_super_admin());
+  using (community_id in (select public.user_community_ids()) or public.is_super_admin());
 
 -- ── work_orders ──
 alter table work_orders enable row level security;
@@ -563,50 +563,50 @@ alter table work_orders enable row level security;
 drop policy if exists "work_orders_select" on work_orders;
 create policy "work_orders_select" on work_orders
   for select to authenticated
-  using (community_id in (select auth.user_community_ids()) or auth.is_super_admin());
+  using (community_id in (select public.user_community_ids()) or public.is_super_admin());
 
 drop policy if exists "work_orders_insert" on work_orders;
 create policy "work_orders_insert" on work_orders
   for insert to authenticated
   with check (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = work_orders.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "work_orders_update" on work_orders;
 create policy "work_orders_update" on work_orders
   for update to authenticated
   using (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = work_orders.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   )
   with check (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = work_orders.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "work_orders_delete" on work_orders;
 create policy "work_orders_delete" on work_orders
   for delete to authenticated
   using (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = work_orders.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 -- ── move_checklists ──
@@ -615,50 +615,50 @@ alter table move_checklists enable row level security;
 drop policy if exists "move_checklists_select" on move_checklists;
 create policy "move_checklists_select" on move_checklists
   for select to authenticated
-  using (community_id in (select auth.user_community_ids()) or auth.is_super_admin());
+  using (community_id in (select public.user_community_ids()) or public.is_super_admin());
 
 drop policy if exists "move_checklists_insert" on move_checklists;
 create policy "move_checklists_insert" on move_checklists
   for insert to authenticated
   with check (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = move_checklists.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "move_checklists_update" on move_checklists;
 create policy "move_checklists_update" on move_checklists
   for update to authenticated
   using (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = move_checklists.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   )
   with check (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = move_checklists.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "move_checklists_delete" on move_checklists;
 create policy "move_checklists_delete" on move_checklists
   for delete to authenticated
   using (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = move_checklists.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 -- ── notification_settings ──
@@ -667,50 +667,50 @@ alter table notification_settings enable row level security;
 drop policy if exists "notification_settings_select" on notification_settings;
 create policy "notification_settings_select" on notification_settings
   for select to authenticated
-  using (community_id in (select auth.user_community_ids()) or auth.is_super_admin());
+  using (community_id in (select public.user_community_ids()) or public.is_super_admin());
 
 drop policy if exists "notification_settings_insert" on notification_settings;
 create policy "notification_settings_insert" on notification_settings
   for insert to authenticated
   with check (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = notification_settings.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "notification_settings_update" on notification_settings;
 create policy "notification_settings_update" on notification_settings
   for update to authenticated
   using (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = notification_settings.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   )
   with check (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = notification_settings.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "notification_settings_delete" on notification_settings;
 create policy "notification_settings_delete" on notification_settings
   for delete to authenticated
   using (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = notification_settings.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 -- ── notification_log — staff r/w ──
@@ -719,26 +719,26 @@ alter table notification_log enable row level security;
 drop policy if exists "notification_log_select" on notification_log;
 create policy "notification_log_select" on notification_log
   for select to authenticated
-  using (community_id in (select auth.user_community_ids()) or auth.is_super_admin());
+  using (community_id in (select public.user_community_ids()) or public.is_super_admin());
 
 drop policy if exists "notification_log_insert" on notification_log;
 create policy "notification_log_insert" on notification_log
   for insert to authenticated
   with check (
-    community_id in (select auth.user_community_ids())
-    or auth.is_super_admin()
+    community_id in (select public.user_community_ids())
+    or public.is_super_admin()
   );
 
 drop policy if exists "notification_log_update" on notification_log;
 create policy "notification_log_update" on notification_log
   for update to authenticated
-  using (community_id in (select auth.user_community_ids()) or auth.is_super_admin())
-  with check (community_id in (select auth.user_community_ids()) or auth.is_super_admin());
+  using (community_id in (select public.user_community_ids()) or public.is_super_admin())
+  with check (community_id in (select public.user_community_ids()) or public.is_super_admin());
 
 drop policy if exists "notification_log_delete" on notification_log;
 create policy "notification_log_delete" on notification_log
   for delete to authenticated
-  using (community_id in (select auth.user_community_ids()) or auth.is_super_admin());
+  using (community_id in (select public.user_community_ids()) or public.is_super_admin());
 
 -- ── health_care ──
 alter table health_care enable row level security;
@@ -746,50 +746,50 @@ alter table health_care enable row level security;
 drop policy if exists "health_care_select" on health_care;
 create policy "health_care_select" on health_care
   for select to authenticated
-  using (community_id in (select auth.user_community_ids()) or auth.is_super_admin());
+  using (community_id in (select public.user_community_ids()) or public.is_super_admin());
 
 drop policy if exists "health_care_insert" on health_care;
 create policy "health_care_insert" on health_care
   for insert to authenticated
   with check (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = health_care.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "health_care_update" on health_care;
 create policy "health_care_update" on health_care
   for update to authenticated
   using (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = health_care.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   )
   with check (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = health_care.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "health_care_delete" on health_care;
 create policy "health_care_delete" on health_care
   for delete to authenticated
   using (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = health_care.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 -- ── dietary_profiles ──
@@ -801,9 +801,9 @@ create policy "dietary_profiles_select" on dietary_profiles
   using (
     resident_id in (
       select id from residents
-      where community_id in (select auth.user_community_ids())
+      where community_id in (select public.user_community_ids())
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "dietary_profiles_insert" on dietary_profiles;
@@ -812,13 +812,13 @@ create policy "dietary_profiles_insert" on dietary_profiles
   with check (
     (resident_id in (
       select id from residents r
-      where r.community_id in (select auth.user_community_ids())
+      where r.community_id in (select public.user_community_ids())
         and exists (select 1 from community_members
                     where user_id = auth.uid()
                       and community_id = r.community_id
                       and role = 'admin')
     ))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "dietary_profiles_update" on dietary_profiles;
@@ -827,24 +827,24 @@ create policy "dietary_profiles_update" on dietary_profiles
   using (
     (resident_id in (
       select id from residents r
-      where r.community_id in (select auth.user_community_ids())
+      where r.community_id in (select public.user_community_ids())
         and exists (select 1 from community_members
                     where user_id = auth.uid()
                       and community_id = r.community_id
                       and role = 'admin')
     ))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   )
   with check (
     (resident_id in (
       select id from residents r
-      where r.community_id in (select auth.user_community_ids())
+      where r.community_id in (select public.user_community_ids())
         and exists (select 1 from community_members
                     where user_id = auth.uid()
                       and community_id = r.community_id
                       and role = 'admin')
     ))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "dietary_profiles_delete" on dietary_profiles;
@@ -853,13 +853,13 @@ create policy "dietary_profiles_delete" on dietary_profiles
   using (
     (resident_id in (
       select id from residents r
-      where r.community_id in (select auth.user_community_ids())
+      where r.community_id in (select public.user_community_ids())
         and exists (select 1 from community_members
                     where user_id = auth.uid()
                       and community_id = r.community_id
                       and role = 'admin')
     ))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 -- ── waitlist ──
@@ -868,50 +868,50 @@ alter table waitlist enable row level security;
 drop policy if exists "waitlist_select" on waitlist;
 create policy "waitlist_select" on waitlist
   for select to authenticated
-  using (community_id in (select auth.user_community_ids()) or auth.is_super_admin());
+  using (community_id in (select public.user_community_ids()) or public.is_super_admin());
 
 drop policy if exists "waitlist_insert" on waitlist;
 create policy "waitlist_insert" on waitlist
   for insert to authenticated
   with check (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = waitlist.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "waitlist_update" on waitlist;
 create policy "waitlist_update" on waitlist
   for update to authenticated
   using (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = waitlist.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   )
   with check (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = waitlist.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "waitlist_delete" on waitlist;
 create policy "waitlist_delete" on waitlist
   for delete to authenticated
   using (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = waitlist.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 -- ── community_invites ──
@@ -920,36 +920,36 @@ alter table community_invites enable row level security;
 drop policy if exists "community_invites_select" on community_invites;
 create policy "community_invites_select" on community_invites
   for select to authenticated
-  using (community_id in (select auth.user_community_ids()) or auth.is_super_admin());
+  using (community_id in (select public.user_community_ids()) or public.is_super_admin());
 
 drop policy if exists "community_invites_insert" on community_invites;
 create policy "community_invites_insert" on community_invites
   for insert to authenticated
   with check (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = community_invites.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "community_invites_update" on community_invites;
 create policy "community_invites_update" on community_invites
   for update to authenticated
-  using (community_id in (select auth.user_community_ids()) or auth.is_super_admin())
-  with check (community_id in (select auth.user_community_ids()) or auth.is_super_admin());
+  using (community_id in (select public.user_community_ids()) or public.is_super_admin())
+  with check (community_id in (select public.user_community_ids()) or public.is_super_admin());
 
 drop policy if exists "community_invites_delete" on community_invites;
 create policy "community_invites_delete" on community_invites
   for delete to authenticated
   using (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = community_invites.community_id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 -- ============================================================
@@ -965,9 +965,9 @@ create policy "vital_signs_select" on vital_signs
   using (
     resident_id in (
       select id from residents
-      where community_id in (select auth.user_community_ids())
+      where community_id in (select public.user_community_ids())
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "vital_signs_insert" on vital_signs;
@@ -976,9 +976,9 @@ create policy "vital_signs_insert" on vital_signs
   with check (
     resident_id in (
       select id from residents
-      where community_id in (select auth.user_community_ids())
+      where community_id in (select public.user_community_ids())
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "vital_signs_update" on vital_signs;
@@ -987,16 +987,16 @@ create policy "vital_signs_update" on vital_signs
   using (
     resident_id in (
       select id from residents
-      where community_id in (select auth.user_community_ids())
+      where community_id in (select public.user_community_ids())
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   )
   with check (
     resident_id in (
       select id from residents
-      where community_id in (select auth.user_community_ids())
+      where community_id in (select public.user_community_ids())
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "vital_signs_delete" on vital_signs;
@@ -1005,9 +1005,9 @@ create policy "vital_signs_delete" on vital_signs
   using (
     resident_id in (
       select id from residents
-      where community_id in (select auth.user_community_ids())
+      where community_id in (select public.user_community_ids())
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 -- ── incidents — staff r/w (daily workflow) ──
@@ -1017,28 +1017,28 @@ drop policy if exists "incidents_select" on incidents;
 create policy "incidents_select" on incidents
   for select to authenticated
   using (
-    community_id in (select auth.user_community_ids())
-    or auth.is_super_admin()
+    community_id in (select public.user_community_ids())
+    or public.is_super_admin()
   );
 
 drop policy if exists "incidents_insert" on incidents;
 create policy "incidents_insert" on incidents
   for insert to authenticated
   with check (
-    community_id in (select auth.user_community_ids())
-    or auth.is_super_admin()
+    community_id in (select public.user_community_ids())
+    or public.is_super_admin()
   );
 
 drop policy if exists "incidents_update" on incidents;
 create policy "incidents_update" on incidents
   for update to authenticated
-  using (community_id in (select auth.user_community_ids()) or auth.is_super_admin())
-  with check (community_id in (select auth.user_community_ids()) or auth.is_super_admin());
+  using (community_id in (select public.user_community_ids()) or public.is_super_admin())
+  with check (community_id in (select public.user_community_ids()) or public.is_super_admin());
 
 drop policy if exists "incidents_delete" on incidents;
 create policy "incidents_delete" on incidents
   for delete to authenticated
-  using (community_id in (select auth.user_community_ids()) or auth.is_super_admin());
+  using (community_id in (select public.user_community_ids()) or public.is_super_admin());
 
 -- ── medication_administrations — staff r/w ──
 alter table medication_administrations enable row level security;
@@ -1049,9 +1049,9 @@ create policy "medication_administrations_select" on medication_administrations
   using (
     resident_id in (
       select id from residents
-      where community_id in (select auth.user_community_ids())
+      where community_id in (select public.user_community_ids())
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "medication_administrations_insert" on medication_administrations;
@@ -1060,9 +1060,9 @@ create policy "medication_administrations_insert" on medication_administrations
   with check (
     resident_id in (
       select id from residents
-      where community_id in (select auth.user_community_ids())
+      where community_id in (select public.user_community_ids())
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "medication_administrations_update" on medication_administrations;
@@ -1071,16 +1071,16 @@ create policy "medication_administrations_update" on medication_administrations
   using (
     resident_id in (
       select id from residents
-      where community_id in (select auth.user_community_ids())
+      where community_id in (select public.user_community_ids())
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   )
   with check (
     resident_id in (
       select id from residents
-      where community_id in (select auth.user_community_ids())
+      where community_id in (select public.user_community_ids())
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "medication_administrations_delete" on medication_administrations;
@@ -1089,9 +1089,9 @@ create policy "medication_administrations_delete" on medication_administrations
   using (
     resident_id in (
       select id from residents
-      where community_id in (select auth.user_community_ids())
+      where community_id in (select public.user_community_ids())
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 -- ── medication_not_given — staff r/w ──
@@ -1106,9 +1106,9 @@ create policy "medication_not_given_select" on medication_not_given
   using (
     resident_id in (
       select id from residents
-      where community_id in (select auth.user_community_ids())
+      where community_id in (select public.user_community_ids())
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "medication_not_given_insert" on medication_not_given;
@@ -1117,9 +1117,9 @@ create policy "medication_not_given_insert" on medication_not_given
   with check (
     resident_id in (
       select id from residents
-      where community_id in (select auth.user_community_ids())
+      where community_id in (select public.user_community_ids())
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "medication_not_given_update" on medication_not_given;
@@ -1128,16 +1128,16 @@ create policy "medication_not_given_update" on medication_not_given
   using (
     resident_id in (
       select id from residents
-      where community_id in (select auth.user_community_ids())
+      where community_id in (select public.user_community_ids())
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   )
   with check (
     resident_id in (
       select id from residents
-      where community_id in (select auth.user_community_ids())
+      where community_id in (select public.user_community_ids())
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "medication_not_given_delete" on medication_not_given;
@@ -1146,9 +1146,9 @@ create policy "medication_not_given_delete" on medication_not_given
   using (
     resident_id in (
       select id from residents
-      where community_id in (select auth.user_community_ids())
+      where community_id in (select public.user_community_ids())
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 -- ── prn_administrations — staff r/w ──
@@ -1160,9 +1160,9 @@ create policy "prn_administrations_select" on prn_administrations
   using (
     resident_id in (
       select id from residents
-      where community_id in (select auth.user_community_ids())
+      where community_id in (select public.user_community_ids())
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "prn_administrations_insert" on prn_administrations;
@@ -1171,9 +1171,9 @@ create policy "prn_administrations_insert" on prn_administrations
   with check (
     resident_id in (
       select id from residents
-      where community_id in (select auth.user_community_ids())
+      where community_id in (select public.user_community_ids())
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "prn_administrations_update" on prn_administrations;
@@ -1182,16 +1182,16 @@ create policy "prn_administrations_update" on prn_administrations
   using (
     resident_id in (
       select id from residents
-      where community_id in (select auth.user_community_ids())
+      where community_id in (select public.user_community_ids())
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   )
   with check (
     resident_id in (
       select id from residents
-      where community_id in (select auth.user_community_ids())
+      where community_id in (select public.user_community_ids())
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "prn_administrations_delete" on prn_administrations;
@@ -1200,9 +1200,9 @@ create policy "prn_administrations_delete" on prn_administrations
   using (
     resident_id in (
       select id from residents
-      where community_id in (select auth.user_community_ids())
+      where community_id in (select public.user_community_ids())
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 -- ── adl_records — staff r/w ──
@@ -1214,9 +1214,9 @@ create policy "adl_records_select" on adl_records
   using (
     resident_id in (
       select id from residents
-      where community_id in (select auth.user_community_ids())
+      where community_id in (select public.user_community_ids())
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "adl_records_insert" on adl_records;
@@ -1225,9 +1225,9 @@ create policy "adl_records_insert" on adl_records
   with check (
     resident_id in (
       select id from residents
-      where community_id in (select auth.user_community_ids())
+      where community_id in (select public.user_community_ids())
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "adl_records_update" on adl_records;
@@ -1236,16 +1236,16 @@ create policy "adl_records_update" on adl_records
   using (
     resident_id in (
       select id from residents
-      where community_id in (select auth.user_community_ids())
+      where community_id in (select public.user_community_ids())
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   )
   with check (
     resident_id in (
       select id from residents
-      where community_id in (select auth.user_community_ids())
+      where community_id in (select public.user_community_ids())
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "adl_records_delete" on adl_records;
@@ -1254,9 +1254,9 @@ create policy "adl_records_delete" on adl_records
   using (
     resident_id in (
       select id from residents
-      where community_id in (select auth.user_community_ids())
+      where community_id in (select public.user_community_ids())
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 -- ============================================================
@@ -1272,9 +1272,9 @@ create policy "emergency_contacts_select" on emergency_contacts
   using (
     resident_id in (
       select id from residents
-      where community_id in (select auth.user_community_ids())
+      where community_id in (select public.user_community_ids())
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "emergency_contacts_insert" on emergency_contacts;
@@ -1283,13 +1283,13 @@ create policy "emergency_contacts_insert" on emergency_contacts
   with check (
     (resident_id in (
       select id from residents r
-      where r.community_id in (select auth.user_community_ids())
+      where r.community_id in (select public.user_community_ids())
         and exists (select 1 from community_members
                     where user_id = auth.uid()
                       and community_id = r.community_id
                       and role = 'admin')
     ))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "emergency_contacts_update" on emergency_contacts;
@@ -1298,24 +1298,24 @@ create policy "emergency_contacts_update" on emergency_contacts
   using (
     (resident_id in (
       select id from residents r
-      where r.community_id in (select auth.user_community_ids())
+      where r.community_id in (select public.user_community_ids())
         and exists (select 1 from community_members
                     where user_id = auth.uid()
                       and community_id = r.community_id
                       and role = 'admin')
     ))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   )
   with check (
     (resident_id in (
       select id from residents r
-      where r.community_id in (select auth.user_community_ids())
+      where r.community_id in (select public.user_community_ids())
         and exists (select 1 from community_members
                     where user_id = auth.uid()
                       and community_id = r.community_id
                       and role = 'admin')
     ))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "emergency_contacts_delete" on emergency_contacts;
@@ -1324,13 +1324,13 @@ create policy "emergency_contacts_delete" on emergency_contacts
   using (
     (resident_id in (
       select id from residents r
-      where r.community_id in (select auth.user_community_ids())
+      where r.community_id in (select public.user_community_ids())
         and exists (select 1 from community_members
                     where user_id = auth.uid()
                       and community_id = r.community_id
                       and role = 'admin')
     ))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 -- ── care_plans ──
@@ -1342,9 +1342,9 @@ create policy "care_plans_select" on care_plans
   using (
     resident_id in (
       select id from residents
-      where community_id in (select auth.user_community_ids())
+      where community_id in (select public.user_community_ids())
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "care_plans_insert" on care_plans;
@@ -1353,13 +1353,13 @@ create policy "care_plans_insert" on care_plans
   with check (
     (resident_id in (
       select id from residents r
-      where r.community_id in (select auth.user_community_ids())
+      where r.community_id in (select public.user_community_ids())
         and exists (select 1 from community_members
                     where user_id = auth.uid()
                       and community_id = r.community_id
                       and role = 'admin')
     ))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "care_plans_update" on care_plans;
@@ -1368,24 +1368,24 @@ create policy "care_plans_update" on care_plans
   using (
     (resident_id in (
       select id from residents r
-      where r.community_id in (select auth.user_community_ids())
+      where r.community_id in (select public.user_community_ids())
         and exists (select 1 from community_members
                     where user_id = auth.uid()
                       and community_id = r.community_id
                       and role = 'admin')
     ))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   )
   with check (
     (resident_id in (
       select id from residents r
-      where r.community_id in (select auth.user_community_ids())
+      where r.community_id in (select public.user_community_ids())
         and exists (select 1 from community_members
                     where user_id = auth.uid()
                       and community_id = r.community_id
                       and role = 'admin')
     ))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "care_plans_delete" on care_plans;
@@ -1394,13 +1394,13 @@ create policy "care_plans_delete" on care_plans
   using (
     (resident_id in (
       select id from residents r
-      where r.community_id in (select auth.user_community_ids())
+      where r.community_id in (select public.user_community_ids())
         and exists (select 1 from community_members
                     where user_id = auth.uid()
                       and community_id = r.community_id
                       and role = 'admin')
     ))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 -- ── resident_documents ──
@@ -1412,9 +1412,9 @@ create policy "resident_documents_select" on resident_documents
   using (
     resident_id in (
       select id from residents
-      where community_id in (select auth.user_community_ids())
+      where community_id in (select public.user_community_ids())
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "resident_documents_insert" on resident_documents;
@@ -1423,13 +1423,13 @@ create policy "resident_documents_insert" on resident_documents
   with check (
     (resident_id in (
       select id from residents r
-      where r.community_id in (select auth.user_community_ids())
+      where r.community_id in (select public.user_community_ids())
         and exists (select 1 from community_members
                     where user_id = auth.uid()
                       and community_id = r.community_id
                       and role = 'admin')
     ))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "resident_documents_update" on resident_documents;
@@ -1438,24 +1438,24 @@ create policy "resident_documents_update" on resident_documents
   using (
     (resident_id in (
       select id from residents r
-      where r.community_id in (select auth.user_community_ids())
+      where r.community_id in (select public.user_community_ids())
         and exists (select 1 from community_members
                     where user_id = auth.uid()
                       and community_id = r.community_id
                       and role = 'admin')
     ))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   )
   with check (
     (resident_id in (
       select id from residents r
-      where r.community_id in (select auth.user_community_ids())
+      where r.community_id in (select public.user_community_ids())
         and exists (select 1 from community_members
                     where user_id = auth.uid()
                       and community_id = r.community_id
                       and role = 'admin')
     ))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "resident_documents_delete" on resident_documents;
@@ -1464,13 +1464,13 @@ create policy "resident_documents_delete" on resident_documents
   using (
     (resident_id in (
       select id from residents r
-      where r.community_id in (select auth.user_community_ids())
+      where r.community_id in (select public.user_community_ids())
         and exists (select 1 from community_members
                     where user_id = auth.uid()
                       and community_id = r.community_id
                       and role = 'admin')
     ))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 -- ── resident_photos ──
@@ -1482,9 +1482,9 @@ create policy "resident_photos_select" on resident_photos
   using (
     resident_id in (
       select id from residents
-      where community_id in (select auth.user_community_ids())
+      where community_id in (select public.user_community_ids())
     )
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "resident_photos_insert" on resident_photos;
@@ -1493,13 +1493,13 @@ create policy "resident_photos_insert" on resident_photos
   with check (
     (resident_id in (
       select id from residents r
-      where r.community_id in (select auth.user_community_ids())
+      where r.community_id in (select public.user_community_ids())
         and exists (select 1 from community_members
                     where user_id = auth.uid()
                       and community_id = r.community_id
                       and role = 'admin')
     ))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "resident_photos_update" on resident_photos;
@@ -1508,24 +1508,24 @@ create policy "resident_photos_update" on resident_photos
   using (
     (resident_id in (
       select id from residents r
-      where r.community_id in (select auth.user_community_ids())
+      where r.community_id in (select public.user_community_ids())
         and exists (select 1 from community_members
                     where user_id = auth.uid()
                       and community_id = r.community_id
                       and role = 'admin')
     ))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   )
   with check (
     (resident_id in (
       select id from residents r
-      where r.community_id in (select auth.user_community_ids())
+      where r.community_id in (select public.user_community_ids())
         and exists (select 1 from community_members
                     where user_id = auth.uid()
                       and community_id = r.community_id
                       and role = 'admin')
     ))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "resident_photos_delete" on resident_photos;
@@ -1534,13 +1534,13 @@ create policy "resident_photos_delete" on resident_photos
   using (
     (resident_id in (
       select id from residents r
-      where r.community_id in (select auth.user_community_ids())
+      where r.community_id in (select public.user_community_ids())
         and exists (select 1 from community_members
                     where user_id = auth.uid()
                       and community_id = r.community_id
                       and role = 'admin')
     ))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 -- ============================================================
@@ -1565,22 +1565,22 @@ drop policy if exists "family_access_insert" on family_access;
 create policy "family_access_insert" on family_access
   for insert to authenticated
   with check (
-    community_id in (select auth.user_community_ids())
-    or auth.is_super_admin()
+    community_id in (select public.user_community_ids())
+    or public.is_super_admin()
   );
 
 drop policy if exists "family_access_update" on family_access;
 create policy "family_access_update" on family_access
   for update to authenticated
-  using (community_id in (select auth.user_community_ids()) or auth.is_super_admin())
-  with check (community_id in (select auth.user_community_ids()) or auth.is_super_admin());
+  using (community_id in (select public.user_community_ids()) or public.is_super_admin())
+  with check (community_id in (select public.user_community_ids()) or public.is_super_admin());
 
 drop policy if exists "family_access_delete" on family_access;
 create policy "family_access_delete" on family_access
   for delete to authenticated
   using (
-    community_id in (select auth.user_community_ids())
-    or auth.is_super_admin()
+    community_id in (select public.user_community_ids())
+    or public.is_super_admin()
   );
 
 -- ── super_admins ──
@@ -1601,7 +1601,7 @@ alter table profiles enable row level security;
 drop policy if exists "profiles_select" on profiles;
 create policy "profiles_select" on profiles
   for select to authenticated
-  using (user_id = auth.uid() or auth.is_super_admin());
+  using (user_id = auth.uid() or public.is_super_admin());
 
 drop policy if exists "profiles_insert" on profiles;
 create policy "profiles_insert" on profiles
@@ -1620,50 +1620,50 @@ alter table community_members enable row level security;
 drop policy if exists "community_members_select" on community_members;
 create policy "community_members_select" on community_members
   for select to authenticated
-  using (community_id in (select auth.user_community_ids()) or auth.is_super_admin());
+  using (community_id in (select public.user_community_ids()) or public.is_super_admin());
 
 drop policy if exists "community_members_insert" on community_members;
 create policy "community_members_insert" on community_members
   for insert to authenticated
   with check (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members cm2
                   where cm2.user_id = auth.uid()
                     and cm2.community_id = community_members.community_id
                     and cm2.role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "community_members_update" on community_members;
 create policy "community_members_update" on community_members
   for update to authenticated
   using (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members cm2
                   where cm2.user_id = auth.uid()
                     and cm2.community_id = community_members.community_id
                     and cm2.role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   )
   with check (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members cm2
                   where cm2.user_id = auth.uid()
                     and cm2.community_id = community_members.community_id
                     and cm2.role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "community_members_delete" on community_members;
 create policy "community_members_delete" on community_members
   for delete to authenticated
   using (
-    (community_id in (select auth.user_community_ids())
+    (community_id in (select public.user_community_ids())
       and exists (select 1 from community_members cm2
                   where cm2.user_id = auth.uid()
                     and cm2.community_id = community_members.community_id
                     and cm2.role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 -- ── communities ──
@@ -1672,43 +1672,43 @@ alter table communities enable row level security;
 drop policy if exists "communities_select" on communities;
 create policy "communities_select" on communities
   for select to authenticated
-  using (id in (select auth.user_community_ids()) or auth.is_super_admin());
+  using (id in (select public.user_community_ids()) or public.is_super_admin());
 
 drop policy if exists "communities_insert" on communities;
 create policy "communities_insert" on communities
   for insert to authenticated
-  with check (auth.uid() is not null or auth.is_super_admin());
+  with check (auth.uid() is not null or public.is_super_admin());
 
 drop policy if exists "communities_update" on communities;
 create policy "communities_update" on communities
   for update to authenticated
   using (
-    (id in (select auth.user_community_ids())
+    (id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = communities.id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   )
   with check (
-    (id in (select auth.user_community_ids())
+    (id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = communities.id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 drop policy if exists "communities_delete" on communities;
 create policy "communities_delete" on communities
   for delete to authenticated
   using (
-    (id in (select auth.user_community_ids())
+    (id in (select public.user_community_ids())
       and exists (select 1 from community_members
                   where user_id = auth.uid()
                     and community_id = communities.id
                     and role = 'admin'))
-    or auth.is_super_admin()
+    or public.is_super_admin()
   );
 
 -- ============================================================
@@ -1718,8 +1718,8 @@ create policy "communities_delete" on communities
 
 /*
 -- Drop helper functions
-drop function if exists auth.user_community_ids();
-drop function if exists auth.is_super_admin();
+drop function if exists public.user_community_ids();
+drop function if exists public.is_super_admin();
 
 -- Drop all policies created above
 drop policy if exists "residents_select" on residents;
