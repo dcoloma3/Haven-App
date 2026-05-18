@@ -674,22 +674,23 @@ function PRNMedications({ residentId, medications }) {
 
   const todayStr = new Date().toISOString().split('T')[0]
 
-  useEffect(() => {
-    if (prnMeds.length === 0) { setLoadingDoses(false); return }
-    loadDoses()
-  }, [residentId, prnMeds.length]) // eslint-disable-line react-hooks/exhaustive-deps
-
   async function loadDoses() {
     const prnIds = prnMeds.map(m => m.id)
     const { data } = await supabase
-      .from('medication_administrations')
+      .from('prn_administrations')
       .select('*')
       .in('medication_id', prnIds)
-      .eq('administered_date', todayStr)
+      .gte('administered_at', `${todayStr}T00:00:00`)
+      .lte('administered_at', `${todayStr}T23:59:59`)
       .order('administered_at', { ascending: false })
     setTodayDoses(data ?? [])
     setLoadingDoses(false)
   }
+
+  useEffect(() => {
+    if (prnMeds.length === 0) { setLoadingDoses(false); return }
+    loadDoses()
+  }, [residentId, prnMeds.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleGiveNow(med) {
     if (!reason.trim()) { setSaveError('Please enter a reason.'); return }
@@ -703,16 +704,18 @@ function PRNMedications({ residentId, medications }) {
     const timeKey = `${hh}:${mm}`
 
     const { data: { session } } = await supabase.auth.getSession()
+    const adminName = session?.user?.user_metadata?.full_name
+      || session?.user?.email
+      || null
     const { data, error } = await supabase
-      .from('medication_administrations')
+      .from('prn_administrations')
       .insert([{
         medication_id: med.id,
         resident_id: residentId,
-        scheduled_time: timeKey,
-        administered_date: todayStr,
+        community_id: null,
         administered_at: now.toISOString(),
         administered_by: session?.user?.id ?? null,
-        admin_status: 'given',
+        administered_by_name: adminName,
         admin_notes: reason.trim(),
       }])
       .select()
