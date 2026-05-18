@@ -36,6 +36,7 @@ export default function FamilyView() {
       await supabase.from('family_access').update({ last_accessed_at: new Date().toISOString() }).eq('id', access.id)
 
       const resident = access.residents
+      if (!resident) { setState('invalid'); return }
       const communityName = resident?.communities?.name || null
       const today = new Date().toISOString().split('T')[0]
       const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]

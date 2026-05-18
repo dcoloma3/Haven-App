@@ -51,7 +51,8 @@ export default function TrialExpired() {
             <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.42 2 2 0 0 1 3.58 1.25h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.8a16 16 0 0 0 6.29 6.29l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
           </svg>
           <span className="text-sm text-slate-500">Or call us: </span>
-          <span className="text-sm font-semibold text-slate-700">+1 (XXX) XXX-XXXX</span>
+          {/* TODO: Add Google Voice support number here — see TASKS.md item #1 */}
+          <span className="font-medium text-slate-600">support@haven.care</span>
         </div>
 
         <div className="border-t border-slate-100 pt-4">
