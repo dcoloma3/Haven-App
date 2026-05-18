@@ -1113,62 +1113,10 @@ create policy "medication_administrations_delete" on medication_administrations
     or public.is_super_admin()
   );
 
--- ── medication_not_given — staff r/w ──
--- NOTE: This table is intentionally kept. It records doses that were not
--- administered (refused, held, omitted) and is distinct from
--- medication_administrations. Both tables serve the audit trail.
-alter table medication_not_given enable row level security;
-
-drop policy if exists "medication_not_given_select" on medication_not_given;
-create policy "medication_not_given_select" on medication_not_given
-  for select to authenticated
-  using (
-    resident_id in (
-      select id from residents
-      where community_id in (select public.user_community_ids())
-    )
-    or public.is_super_admin()
-  );
-
-drop policy if exists "medication_not_given_insert" on medication_not_given;
-create policy "medication_not_given_insert" on medication_not_given
-  for insert to authenticated
-  with check (
-    resident_id in (
-      select id from residents
-      where community_id in (select public.user_community_ids())
-    )
-    or public.is_super_admin()
-  );
-
-drop policy if exists "medication_not_given_update" on medication_not_given;
-create policy "medication_not_given_update" on medication_not_given
-  for update to authenticated
-  using (
-    resident_id in (
-      select id from residents
-      where community_id in (select public.user_community_ids())
-    )
-    or public.is_super_admin()
-  )
-  with check (
-    resident_id in (
-      select id from residents
-      where community_id in (select public.user_community_ids())
-    )
-    or public.is_super_admin()
-  );
-
-drop policy if exists "medication_not_given_delete" on medication_not_given;
-create policy "medication_not_given_delete" on medication_not_given
-  for delete to authenticated
-  using (
-    resident_id in (
-      select id from residents
-      where community_id in (select public.user_community_ids())
-    )
-    or public.is_super_admin()
-  );
+-- ── medication_not_given ──
+-- NOTE: This table does not exist yet in production. RLS policies for it
+-- are included in supabase-migration-medication-not-given.sql which
+-- creates the table and enables RLS in one step. Run that migration first.
 
 -- ── prn_administrations — staff r/w ──
 alter table prn_administrations enable row level security;
