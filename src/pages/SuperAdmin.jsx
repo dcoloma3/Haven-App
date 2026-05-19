@@ -223,8 +223,7 @@ function CommunityRow({ c, s, isMine, onEnter, onDelete }) {
           )}
         </div>
         {c.address && <p className="text-xs text-slate-400 mt-0.5 truncate">{c.address}</p>}
-        {/* Fix 4 — Delete link (customer rows only) */}
-        {!isMine && onDelete && (
+        {onDelete && (
           <button
             onClick={() => onDelete(c)}
             className="text-xs text-red-400 hover:text-red-600 mt-0.5 transition-colors"
@@ -778,7 +777,7 @@ export default function SuperAdmin() {
             </div>
             <div className="divide-y divide-amber-100/60">
               {myCommunities.map(c => (
-                <CommunityRow key={c.id} c={c} s={stats[c.id]} isMine onEnter={enterCommunity} />
+                <CommunityRow key={c.id} c={c} s={stats[c.id]} isMine onEnter={enterCommunity} onDelete={setDeleteTarget} />
               ))}
             </div>
           </div>
