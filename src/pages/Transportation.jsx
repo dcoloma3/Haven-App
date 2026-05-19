@@ -57,6 +57,7 @@ export default function Transportation() {
   const [editTrip, setEditTrip] = useState(null)
   const [cancelConfirm, setCancelConfirm] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [tripError, setTripError] = useState('')
   const [residentSearch, setResidentSearch] = useState('')
   const [form, setForm] = useState({ resident_id: '', trip_date: new Date().toISOString().split('T')[0], departure_time: '', return_time: '', destination: '', purpose: '', driver_name: '', vehicle: '', notes: '', status: 'scheduled' })
 
@@ -130,12 +131,14 @@ export default function Transportation() {
       notes: form.notes.trim() || null,
       status: form.status,
     }
+    let err
     if (editTrip) {
-      await supabase.from('transportation_log').update(payload).eq('id', editTrip.id)
+      ;({ error: err } = await supabase.from('transportation_log').update(payload).eq('id', editTrip.id).eq('community_id', communityId))
     } else {
-      await supabase.from('transportation_log').insert(payload)
+      ;({ error: err } = await supabase.from('transportation_log').insert(payload))
     }
     setSaving(false)
+    if (err) { setTripError(err.message); return }
     setShowModal(false)
     setEditTrip(null)
     setForm({ resident_id: '', trip_date: today, departure_time: '', return_time: '', destination: '', purpose: '', driver_name: '', vehicle: '', notes: '', status: 'scheduled' })
@@ -144,14 +147,13 @@ export default function Transportation() {
   }
 
   async function updateStatus(id, status) {
-    await supabase.from('transportation_log').update({ status }).eq('id', id)
-    await load()
+    const { error } = await supabase.from('transportation_log').update({ status }).eq('id', id).eq('community_id', communityId)
+    if (!error) await load()
   }
 
   async function handleCancelTrip(trip) {
-    await supabase.from('transportation_log').update({ status: 'cancelled' }).eq('id', trip.id)
-    setCancelConfirm(null)
-    await load()
+    const { error } = await supabase.from('transportation_log').update({ status: 'cancelled' }).eq('id', trip.id).eq('community_id', communityId)
+    if (!error) { setCancelConfirm(null); await load() }
   }
 
   return (
@@ -319,11 +321,14 @@ export default function Transportation() {
                 <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} className={inputCls + ' resize-none'} placeholder="Optional notes…" />
               </div>
             </div>
-            <div className="sticky bottom-0 bg-white border-t border-slate-200 px-5 py-4 flex gap-3">
-              <button onClick={() => { setShowModal(false); setEditTrip(null) }} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
-              <button onClick={handleSave} disabled={!form.destination.trim() || !form.trip_date || !form.resident_id || saving} className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
-                {saving ? 'Saving…' : editTrip ? 'Save Changes' : 'Schedule Trip'}
-              </button>
+            <div className="sticky bottom-0 bg-white border-t border-slate-200 px-5 py-4">
+              {tripError && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-3">{tripError}</p>}
+              <div className="flex gap-3">
+                <button onClick={() => { setShowModal(false); setEditTrip(null); setTripError('') }} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
+                <button onClick={handleSave} disabled={!form.destination.trim() || !form.trip_date || !form.resident_id || saving} className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
+                  {saving ? 'Saving…' : editTrip ? 'Save Changes' : 'Schedule Trip'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

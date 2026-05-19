@@ -68,6 +68,7 @@ export default function Maintenance() {
   const [assignedTo, setAssignedTo] = useState({})
   const [staffNames, setStaffNames] = useState([])
   const [form, setForm] = useState({ location: '', category: 'Plumbing', description: '', priority: 'medium' })
+  const [maintError, setMaintError] = useState('')
 
   const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
 
@@ -111,7 +112,7 @@ export default function Maintenance() {
     if (!form.location.trim() || !form.description.trim()) return
     setSaving(true)
     const authorName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Staff'
-    await supabase.from('work_orders').insert({
+    const { error } = await supabase.from('work_orders').insert({
       community_id: communityId,
       reported_by_name: authorName,
       location: form.location.trim(),
@@ -120,6 +121,7 @@ export default function Maintenance() {
       priority: form.priority,
     })
     setSaving(false)
+    if (error) { setMaintError(error.message); return }
     setShowModal(false)
     setForm({ location: '', category: 'Plumbing', description: '', priority: 'medium' })
     await fetchOrders()
@@ -131,18 +133,18 @@ export default function Maintenance() {
       updates.resolved_at = new Date().toISOString()
       if (resolutionNotes[id]) updates.resolution_notes = resolutionNotes[id]
     }
-    await supabase.from('work_orders').update(updates).eq('id', id)
-    await fetchOrders()
+    const { error } = await supabase.from('work_orders').update(updates).eq('id', id).eq('community_id', communityId)
+    if (!error) await fetchOrders()
   }
 
   async function updateAssignee(id) {
-    await supabase.from('work_orders').update({ assigned_to: assignedTo[id] || null }).eq('id', id)
-    await fetchOrders()
+    const { error } = await supabase.from('work_orders').update({ assigned_to: assignedTo[id] || null }).eq('id', id).eq('community_id', communityId)
+    if (!error) await fetchOrders()
   }
 
   async function handleDelete(id) {
-    await supabase.from('work_orders').delete().eq('id', id)
-    await fetchOrders()
+    const { error } = await supabase.from('work_orders').delete().eq('id', id).eq('community_id', communityId)
+    if (!error) await fetchOrders()
   }
 
   const filtered = orders.filter(o => {
@@ -329,11 +331,14 @@ export default function Maintenance() {
                 <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={4} className={inputCls + ' resize-none'} placeholder="Describe the issue…" />
               </div>
             </div>
-            <div className="sticky bottom-0 bg-white border-t border-slate-200 px-5 py-4 flex gap-3">
-              <button onClick={() => setShowModal(false)} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
-              <button onClick={handleCreate} disabled={!form.location.trim() || !form.description.trim() || saving} className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
-                {saving ? 'Submitting…' : 'Submit Work Order'}
-              </button>
+            <div className="sticky bottom-0 bg-white border-t border-slate-200 px-5 py-4">
+              {maintError && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-3">{maintError}</p>}
+              <div className="flex gap-3">
+                <button onClick={() => { setShowModal(false); setMaintError('') }} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
+                <button onClick={handleCreate} disabled={!form.location.trim() || !form.description.trim() || saving} className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
+                  {saving ? 'Submitting…' : 'Submit Work Order'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

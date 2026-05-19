@@ -143,7 +143,7 @@ export default function Occupancy() {
       status: form.status,
     }
     if (editProspect) {
-      await supabase.from('waitlist').update(payload).eq('id', editProspect.id)
+      await supabase.from('waitlist').update(payload).eq('id', editProspect.id).eq('community_id', communityId)
     } else {
       await supabase.from('waitlist').insert(payload)
     }
@@ -153,7 +153,7 @@ export default function Occupancy() {
   }
 
   async function handleDelete(id) {
-    await supabase.from('waitlist').delete().eq('id', id)
+    await supabase.from('waitlist').delete().eq('id', id).eq('community_id', communityId)
     setDeleteConfirm(null)
     await load()
   }

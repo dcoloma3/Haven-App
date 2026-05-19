@@ -57,6 +57,7 @@ function Badge({ cls, children }) {
 }
 
 function IncidentRow({ incident, isAdmin, onEdit, onStatusChange, onDelete, onResidentClick, facilityName }) {
+  const { communityId } = useCommunity()
   const [expanded, setExpanded] = useState(false)
   const [updatingStatus, setUpdatingStatus] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
@@ -68,18 +69,19 @@ function IncidentRow({ incident, isAdmin, onEdit, onStatusChange, onDelete, onRe
   async function changeStatus(newStatus) {
     setUpdatingStatus(true)
     const extra = newStatus === 'reviewed' ? { reviewed_at: new Date().toISOString() } : {}
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('incidents')
       .update({ status: newStatus, ...extra })
       .eq('id', incident.id)
+      .eq('community_id', communityId)
       .select()
       .single()
     setUpdatingStatus(false)
-    if (data) onStatusChange({ ...data, resident_name: residentName, room_number: incident.room_number })
+    if (!error && data) onStatusChange({ ...data, resident_name: residentName, room_number: incident.room_number })
   }
 
   async function handleDelete() {
-    await supabase.from('incidents').delete().eq('id', incident.id)
+    await supabase.from('incidents').delete().eq('id', incident.id).eq('community_id', communityId)
     onDelete(incident.id)
   }
 

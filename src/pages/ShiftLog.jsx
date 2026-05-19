@@ -103,12 +103,12 @@ export default function ShiftLog() {
   }
 
   async function togglePin(note) {
-    await supabase.from('shift_notes').update({ is_pinned: !note.is_pinned }).eq('id', note.id)
+    await supabase.from('shift_notes').update({ is_pinned: !note.is_pinned }).eq('id', note.id).eq('community_id', communityId)
     await fetchNotes()
   }
 
   async function handleDelete(id) {
-    await supabase.from('shift_notes').delete().eq('id', id)
+    await supabase.from('shift_notes').delete().eq('id', id).eq('community_id', communityId)
     await fetchNotes()
   }
 

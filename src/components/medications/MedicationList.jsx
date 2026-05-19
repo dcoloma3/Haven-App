@@ -122,6 +122,8 @@ function MedicationModal({ residentId, communityId, medication, onClose, onSaved
       setError('Enter a valid interval.'); return
     }
 
+    const freqType = form.frequency_type || 'daily'
+
     const finalTimes = newTime && !(form.scheduled_times ?? []).includes(newTime)
       ? [...(form.scheduled_times ?? []), newTime].sort()
       : (form.scheduled_times ?? [])
@@ -156,7 +158,7 @@ function MedicationModal({ residentId, communityId, medication, onClose, onSaved
     onSaved(data)
   }
 
-  const freqType = form.frequency_type || 'daily'
+  const freqType = form.frequency_type || 'daily' // used in render for conditional UI
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">

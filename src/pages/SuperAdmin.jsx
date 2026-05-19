@@ -927,8 +927,8 @@ export default function SuperAdmin() {
                 {sa.email !== profile?.email && (
                   <button
                     onClick={async () => {
-                      await supabase.from('super_admins').delete().eq('id', sa.id)
-                      loadSuperAdmins()
+                      const { error } = await supabase.from('super_admins').delete().eq('id', sa.id)
+                      if (!error) loadSuperAdmins()
                     }}
                     className="text-xs text-red-400 hover:text-red-600 transition-colors"
                   >

@@ -139,7 +139,7 @@ export default function Certifications() {
 
   async function handleDelete(id) {
     setCertError('')
-    const { error } = await supabase.from('staff_certifications').delete().eq('id', id)
+    const { error } = await supabase.from('staff_certifications').delete().eq('id', id).eq('community_id', communityId)
     if (error) {
       console.error(error)
       setCertError(error.message || 'Something went wrong.')

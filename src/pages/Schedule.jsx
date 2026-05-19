@@ -166,7 +166,7 @@ function ShiftModal({ shift, defaultDate, staff, communityId, onClose, onSaved, 
 
   async function handleDelete() {
     setDeleting(true)
-    await supabase.from('shifts').delete().eq('id', shift.id)
+    await supabase.from('shifts').delete().eq('id', shift.id).eq('community_id', communityId)
     onDeleted(shift.id)
   }
 

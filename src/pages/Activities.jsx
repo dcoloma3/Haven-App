@@ -42,6 +42,7 @@ export default function Activities() {
   const { communityId, isAdmin } = useCommunity()
   const { profile } = useProfile()
   const navigate = useNavigate()
+  const today = new Date().toISOString().split('T')[0]
   const [activities, setActivities] = useState([])
   const [loading, setLoading] = useState(true)
   const [filterDate, setFilterDate] = useState(today)
@@ -52,12 +53,12 @@ export default function Activities() {
   const [attendance, setAttendance] = useState({})
   const [savingAttendance, setSavingAttendance] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
+  const [saveError, setSaveError] = useState('')
 
   const [editActivity, setEditActivity] = useState(null)
   const [form, setForm] = useState({ activity_date: new Date().toISOString().split('T')[0], activity_time: '', title: '', description: '', location: '', capacity: '' })
 
   const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
-  const today = new Date().toISOString().split('T')[0]
 
   async function load() {
     let query = supabase.from('activities').select('*, activity_attendance(id, resident_id, status)').eq('community_id', communityId).order('activity_date', { ascending: true }).order('activity_time', { ascending: true })
@@ -100,6 +101,7 @@ export default function Activities() {
   async function handleSave() {
     if (!form.title.trim() || !form.activity_date) return
     setSaving(true)
+    setSaveError('')
     const authorName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Staff'
     const payload = {
       community_id: communityId,
@@ -111,12 +113,14 @@ export default function Activities() {
       location: form.location.trim() || null,
       capacity: form.capacity ? parseInt(form.capacity) : null,
     }
+    let err
     if (editActivity) {
-      await supabase.from('activities').update(payload).eq('id', editActivity.id)
+      ;({ error: err } = await supabase.from('activities').update(payload).eq('id', editActivity.id).eq('community_id', communityId))
     } else {
-      await supabase.from('activities').insert(payload)
+      ;({ error: err } = await supabase.from('activities').insert(payload))
     }
     setSaving(false)
+    if (err) { setSaveError(err.message); return }
     setShowNewModal(false)
     setEditActivity(null)
     setForm({ activity_date: today, activity_time: '', title: '', description: '', location: '', capacity: '' })
@@ -153,7 +157,8 @@ export default function Activities() {
   }
 
   async function handleDelete(id) {
-    await supabase.from('activities').delete().eq('id', id)
+    const { error } = await supabase.from('activities').delete().eq('id', id).eq('community_id', communityId)
+    if (error) { setSaveError(error.message); return }
     setDeleteConfirm(null)
     await load()
   }
