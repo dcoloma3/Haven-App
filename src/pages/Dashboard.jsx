@@ -123,7 +123,6 @@ export default function Dashboard() {
   const [showForm, setShowForm] = useState(false)
   const [showFormer, setShowFormer] = useState(false)
   const [search, setSearch] = useState('')
-  const [careFilter, setCareFilter] = useState('All')
   const [medStatusMap, setMedStatusMap] = useState({})
   const [todayStr, setTodayStr] = useState(() => new Date().toISOString().split('T')[0])
   const [openIncidentCount, setOpenIncidentCount] = useState(0)
@@ -237,10 +236,7 @@ export default function Dashboard() {
     setShowForm(false)
   }
 
-  const careOptions = ['All', 'AL', 'IL', 'MC', 'SNF', 'Hospice', 'Respite']
-
   const filtered = residents.filter(r => {
-    if (careFilter !== 'All' && r.care_level !== careFilter) return false
     if (!search.trim()) return true
     const q = search.toLowerCase()
     return getResidentFullName(r).toLowerCase().includes(q) ||
@@ -449,29 +445,6 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Care level filter — active residents only */}
-      {!showFormer && (
-        <div role="group" aria-label="Filter by care level" className="flex gap-1.5 overflow-x-auto scrollbar-none mb-4 pb-0.5 pr-4">
-          {careOptions.map(opt => (
-            <button
-              key={opt}
-              type="button"
-              onClick={() => setCareFilter(opt)}
-              aria-pressed={careFilter === opt}
-              aria-label={CARE_LEVEL_LABELS[opt] || opt}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                careFilter === opt
-                  ? 'bg-[#185FA5] text-white'
-                  : opt !== 'All' && CARE_LEVEL_COLORS[opt]
-                    ? `${CARE_LEVEL_COLORS[opt]} opacity-80 hover:opacity-100`
-                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              {opt}
-            </button>
-          ))}
-        </div>
-      )}
 
       {loading && (
         <div>
