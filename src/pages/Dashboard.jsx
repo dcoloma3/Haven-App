@@ -174,7 +174,7 @@ export default function Dashboard() {
 
       const [{ data: incidents }, { data: appts }, { data: prospects }, { data: certs }] = await Promise.all([
         supabase.from('incidents').select('id, severity').eq('community_id', communityId).eq('status', 'open'),
-        supabase.from('calendar_events').select('id').eq('community_id', communityId).eq('start_date', todayStr),
+        supabase.from('calendar_events').select('id').eq('community_id', communityId).eq('event_date', todayStr),
         supabase.from('waitlist').select('id, status').eq('community_id', communityId),
         supabase.from('staff_certifications').select('id, expiry_date').eq('community_id', communityId).lte('expiry_date', in30Str).gte('expiry_date', todayStr),
       ])

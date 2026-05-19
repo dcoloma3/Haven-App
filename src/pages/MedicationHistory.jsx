@@ -94,9 +94,13 @@ export default function MedicationHistory() {
       })
   }, [communityId])
 
-  // Reload records whenever filters or communityId change
+  // Reload records whenever filters, communityId, or residents change.
+  // medication_administrations has no community_id column — scope via resident IDs instead.
   useEffect(() => {
     if (!communityId) return
+    const residentIds = residents.map(r => r.id)
+    // If residents haven't loaded yet, wait — avoids a cross-community data leak
+    if (!residentIds.length) { setRecords([]); setLoading(false); return }
     setLoading(true)
     let query = supabase
       .from('medication_administrations')
@@ -109,19 +113,22 @@ export default function MedicationHistory() {
         medications!medication_id(medication_name, dose),
         residents!resident_id(full_name, first_name, middle_name, last_name, room_number, avatar_url)
       `)
-      .eq('community_id', communityId)
       .gte('administered_date', fromDate)
       .lte('administered_date', toDate)
       .order('administered_date', { ascending: false })
       .order('scheduled_time', { ascending: true })
 
-    if (residentFilter) query = query.eq('resident_id', residentFilter)
+    if (residentFilter) {
+      query = query.eq('resident_id', residentFilter)
+    } else {
+      query = query.in('resident_id', residentIds)
+    }
 
     query.then(({ data }) => {
       setRecords(data ?? [])
       setLoading(false)
     })
-  }, [communityId, fromDate, toDate, residentFilter])
+  }, [communityId, fromDate, toDate, residentFilter, residents])
 
   // Group records by date
   const grouped = useMemo(() => {
