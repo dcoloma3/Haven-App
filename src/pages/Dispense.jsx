@@ -29,6 +29,12 @@ function toDateStr(d) {
 function formatDisplayDate(d) {
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
 }
+function fmtWeekday(d) {
+  return d.toLocaleDateString('en-US', { weekday: 'long' })
+}
+function fmtDateShort(d) {
+  return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+}
 
 function residentName(r) {
   if (!r) return '—'
@@ -821,14 +827,24 @@ export default function Dispense() {
 
       {/* ── Date navigation ── */}
       <div className="flex items-center gap-2 mb-5">
-        <button onClick={prevDay} className="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-500 active:bg-slate-100 flex-shrink-0">
+        <button onClick={prevDay} className="w-9 h-9 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 active:bg-slate-100 flex-shrink-0 transition-colors">
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
         </button>
-        <span className="text-sm font-medium text-slate-600 flex-1 text-center truncate">{formatDisplayDate(date)}</span>
-        {!isToday && (
-          <button onClick={() => setDate(new Date())} className="text-xs font-semibold text-[#185FA5] flex-shrink-0">Today</button>
-        )}
-        <button onClick={nextDay} className="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-500 active:bg-slate-100 flex-shrink-0">
+
+        <div className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-center">
+          <div className="flex items-center justify-center gap-1.5">
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">{fmtWeekday(date)}</p>
+            {isToday && <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full uppercase tracking-wide">Today</span>}
+          </div>
+          <p className="text-base font-bold text-slate-800 mt-0.5">{fmtDateShort(date)}</p>
+          {!isToday && (
+            <button onClick={() => setDate(new Date())} className="text-[11px] text-[#185FA5] font-semibold mt-0.5 hover:underline">
+              ← Back to today
+            </button>
+          )}
+        </div>
+
+        <button onClick={nextDay} className="w-9 h-9 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 active:bg-slate-100 flex-shrink-0 transition-colors">
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
         </button>
       </div>
