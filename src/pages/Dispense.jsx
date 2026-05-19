@@ -513,6 +513,7 @@ export default function Dispense() {
   const [notGivenModal, setNotGivenModal] = useState(null) // { med, time }
   const [savingNotGiven, setSavingNotGiven] = useState(false)
   const [expandedTimes, setExpandedTimes] = useState(new Set())
+  const [expandedResidents, setExpandedResidents] = useState(new Set()) // 'time::residentId'
   const { communityId } = useCommunity()
   const [dispenseTab, setDispenseTab] = useState('routine')
   // Medication IDs scoped to this community (for scoping administration queries)
@@ -612,6 +613,15 @@ export default function Dispense() {
     setExpandedTimes(prev => {
       const n = new Set(prev)
       n.has(time) ? n.delete(time) : n.add(time)
+      return n
+    })
+  }
+
+  function toggleResident(time, residentId) {
+    const key = `${time}::${residentId}`
+    setExpandedResidents(prev => {
+      const n = new Set(prev)
+      n.has(key) ? n.delete(key) : n.add(key)
       return n
     })
   }
@@ -870,115 +880,153 @@ export default function Dispense() {
                       </p>
                     </button>
 
-                    {/* ── Flat medication rows — collapsible ── */}
-                    {isOpen && <div className={`border-t ${dividerCls(timeStatus)}`}>
-                        {residentList
-                          .flatMap(([rid, { resident, meds }]) =>
-                            meds.map(med => ({ rid, resident, med }))
-                          )
-                          .map(({ rid, resident, med }, idx) => {
-                            if (!resident) return null
-                            const mKey = adminKey(med.id, time)
-                            const isDone = administered.has(mKey)
-                            const isTogg = toggling.has(mKey)
-                            const isNotGiven = notGiven.has(mKey)
-                            const ngRecord = isNotGiven ? notGiven.get(mKey) : null
-                            const ngLabel = ngRecord ? (NOT_GIVEN_REASONS.find(r => r.value === ngRecord.reason)?.label ?? ngRecord.reason) : ''
-                            const isRefused = isNotGiven && ngRecord?.reason === 'refused'
-                            const isWithheld = isNotGiven && ngRecord?.reason === 'held'
-                            return (
-                              <div
-                                key={mKey}
-                                className={`px-4 py-3.5 ${idx !== 0 ? `border-t ${dividerCls(timeStatus)}` : ''} ${isDone ? 'bg-emerald-50/40' : isNotGiven ? 'bg-rose-50/30' : ''}`}
+                    {/* ── Resident rows — two-level accordion ── */}
+                    {isOpen && (
+                      <div className={`border-t ${dividerCls(timeStatus)}`}>
+                        {residentList.map(([rid, { resident, meds }], rIdx) => {
+                          if (!resident) return null
+                          const resKey = `${time}::${rid}`
+                          const isResOpen = expandedResidents.has(resKey)
+                          const resDone = meds.filter(m => administered.has(adminKey(m.id, time))).length
+                          const resNotGiven = meds.filter(m => notGiven.has(adminKey(m.id, time))).length
+                          const resTotal = meds.length
+                          const resAllDone = resDone === resTotal
+                          const resAllRecorded = resDone + resNotGiven === resTotal
+
+                          return (
+                            <div key={rid} className={`${rIdx !== 0 ? `border-t ${dividerCls(timeStatus)}` : ''}`}>
+
+                              {/* ── Resident header row (tap to expand) ── */}
+                              <button
+                                onClick={() => toggleResident(time, rid)}
+                                className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
+                                  resAllDone ? 'bg-emerald-50/50' : resAllRecorded ? 'bg-rose-50/30' : 'hover:bg-slate-50'
+                                }`}
                               >
-                                {/* Resident + med info */}
-                                <div className="flex items-center gap-3">
-                                  <ResidentAvatar resident={resident} size="sm" />
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                      <Link
-                                        to={`/residents/${rid}`}
-                                        onClick={e => e.stopPropagation()}
-                                        className="font-semibold text-slate-800 text-sm truncate hover:text-[#185FA5] hover:underline transition-colors"
-                                      >
-                                        {residentName(resident)}
-                                      </Link>
-                                      {resident.room_number && (
-                                        <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded flex-shrink-0">Rm {resident.room_number}</span>
-                                      )}
-                                    </div>
-                                    <p className={`text-xs mt-0.5 truncate ${isDone ? 'text-slate-400 line-through' : 'text-slate-500'}`}>
-                                      {med.medication_name}{med.dose ? ` · ${med.dose}` : ''}
-                                    </p>
-                                    {med.notes && (
-                                      <p className="text-xs text-amber-700 bg-amber-50 rounded px-1.5 py-0.5 mt-1 leading-relaxed">
-                                        {med.notes}
-                                      </p>
+                                <ResidentAvatar resident={resident} size="sm" />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="font-semibold text-slate-800 text-sm truncate">
+                                      {residentName(resident)}
+                                    </span>
+                                    {resident.room_number && (
+                                      <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded flex-shrink-0">Rm {resident.room_number}</span>
                                     )}
-                                    {isDone && <GivenByLine record={administered.get(mKey)} staffMap={staffMap} />}
                                   </div>
+                                  <p className="text-xs text-slate-400 mt-0.5">
+                                    {resTotal} {resTotal === 1 ? 'med' : 'meds'} · {resDone}/{resTotal} given
+                                    {resAllDone && <span className="ml-1.5 text-emerald-600 font-semibold">✓ Complete</span>}
+                                  </p>
                                 </div>
+                                <ChevronIcon open={isResOpen} />
+                              </button>
 
-                                {/* Status buttons */}
-                                <div className="flex gap-2 mt-3 ml-12">
-                                  {/* Given */}
-                                  <button
-                                    onClick={e => { e.stopPropagation(); isDone ? setConfirmUndo({ med, time, record: administered.get(mKey) }) : (!isNotGiven && handleToggle(med, time)) }}
-                                    disabled={isTogg || isNotGiven}
-                                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border text-xs font-semibold transition-colors ${
-                                      isDone
-                                        ? 'bg-emerald-500 border-emerald-500 text-white'
-                                        : isNotGiven
-                                        ? 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'
-                                        : 'bg-white border-slate-200 text-slate-500 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 active:scale-95'
-                                    }`}
-                                  >
-                                    <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                      <polyline points="20 6 9 17 4 12" />
-                                    </svg>
-                                    Given
-                                  </button>
+                              {/* ── Medication rows for this resident ── */}
+                              {isResOpen && (
+                                <div className={`border-t ${dividerCls(timeStatus)} bg-slate-50/40`}>
+                                  {meds.map((med, mIdx) => {
+                                    const mKey = adminKey(med.id, time)
+                                    const isDone = administered.has(mKey)
+                                    const isTogg = toggling.has(mKey)
+                                    const isNotGiven = notGiven.has(mKey)
+                                    const ngRecord = isNotGiven ? notGiven.get(mKey) : null
+                                    const isRefused = isNotGiven && ngRecord?.reason === 'refused'
+                                    const isWithheld = isNotGiven && ngRecord?.reason === 'held'
 
-                                  {/* Refused */}
-                                  <button
-                                    onClick={e => { e.stopPropagation(); isRefused ? handleUndoNotGiven(med, time) : (!isDone && !isNotGiven && quickNotGiven(med, time, 'refused')) }}
-                                    disabled={isDone || (isNotGiven && !isRefused)}
-                                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border text-xs font-semibold transition-colors ${
-                                      isRefused
-                                        ? 'bg-rose-500 border-rose-500 text-white'
-                                        : isDone || (isNotGiven && !isRefused)
-                                        ? 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'
-                                        : 'bg-white border-slate-200 text-slate-500 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-700 active:scale-95'
-                                    }`}
-                                  >
-                                    <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                                    </svg>
-                                    Refused
-                                  </button>
+                                    return (
+                                      <div
+                                        key={mKey}
+                                        className={`px-4 py-3.5 ${mIdx !== 0 ? `border-t ${dividerCls(timeStatus)}` : ''} ${isDone ? 'bg-emerald-50/40' : isNotGiven ? 'bg-rose-50/30' : ''}`}
+                                      >
+                                        {/* Med info */}
+                                        <div className="flex items-start gap-3 ml-1">
+                                          <div className="flex-1 min-w-0">
+                                            <p className={`text-sm font-semibold truncate ${isDone ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
+                                              {med.medication_name}{med.dose ? ` · ${med.dose}` : ''}
+                                            </p>
+                                            {med.notes && (
+                                              <p className="text-xs text-amber-700 bg-amber-50 rounded px-1.5 py-0.5 mt-1 leading-relaxed">
+                                                {med.notes}
+                                              </p>
+                                            )}
+                                            {isDone && <GivenByLine record={administered.get(mKey)} staffMap={staffMap} />}
+                                          </div>
+                                          <Link
+                                            to={`/residents/${rid}`}
+                                            onClick={e => e.stopPropagation()}
+                                            className="text-xs text-slate-400 hover:text-[#185FA5] transition-colors flex-shrink-0 mt-0.5"
+                                            title="View profile"
+                                          >
+                                            Profile →
+                                          </Link>
+                                        </div>
 
-                                  {/* Withheld */}
-                                  <button
-                                    onClick={e => { e.stopPropagation(); isWithheld ? handleUndoNotGiven(med, time) : (!isDone && !isNotGiven && quickNotGiven(med, time, 'held')) }}
-                                    disabled={isDone || (isNotGiven && !isWithheld)}
-                                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border text-xs font-semibold transition-colors ${
-                                      isWithheld
-                                        ? 'bg-amber-500 border-amber-500 text-white'
-                                        : isDone || (isNotGiven && !isWithheld)
-                                        ? 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'
-                                        : 'bg-white border-slate-200 text-slate-500 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-700 active:scale-95'
-                                    }`}
-                                  >
-                                    <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                      <rect x="6" y="4" width="4" height="16" rx="1" /><rect x="14" y="4" width="4" height="16" rx="1" />
-                                    </svg>
-                                    Withheld
-                                  </button>
+                                        {/* Status buttons */}
+                                        <div className="flex gap-2 mt-3 ml-1">
+                                          {/* Given */}
+                                          <button
+                                            onClick={e => { e.stopPropagation(); isDone ? setConfirmUndo({ med, time, record: administered.get(mKey) }) : (!isNotGiven && handleToggle(med, time)) }}
+                                            disabled={isTogg || isNotGiven}
+                                            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border text-xs font-semibold transition-colors ${
+                                              isDone
+                                                ? 'bg-emerald-500 border-emerald-500 text-white'
+                                                : isNotGiven
+                                                ? 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'
+                                                : 'bg-white border-slate-200 text-slate-500 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 active:scale-95'
+                                            }`}
+                                          >
+                                            <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                              <polyline points="20 6 9 17 4 12" />
+                                            </svg>
+                                            Given
+                                          </button>
+
+                                          {/* Refused */}
+                                          <button
+                                            onClick={e => { e.stopPropagation(); isRefused ? handleUndoNotGiven(med, time) : (!isDone && !isNotGiven && quickNotGiven(med, time, 'refused')) }}
+                                            disabled={isDone || (isNotGiven && !isRefused)}
+                                            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border text-xs font-semibold transition-colors ${
+                                              isRefused
+                                                ? 'bg-rose-500 border-rose-500 text-white'
+                                                : isDone || (isNotGiven && !isRefused)
+                                                ? 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'
+                                                : 'bg-white border-slate-200 text-slate-500 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-700 active:scale-95'
+                                            }`}
+                                          >
+                                            <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                                            </svg>
+                                            Refused
+                                          </button>
+
+                                          {/* Withheld */}
+                                          <button
+                                            onClick={e => { e.stopPropagation(); isWithheld ? handleUndoNotGiven(med, time) : (!isDone && !isNotGiven && quickNotGiven(med, time, 'held')) }}
+                                            disabled={isDone || (isNotGiven && !isWithheld)}
+                                            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border text-xs font-semibold transition-colors ${
+                                              isWithheld
+                                                ? 'bg-amber-500 border-amber-500 text-white'
+                                                : isDone || (isNotGiven && !isWithheld)
+                                                ? 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'
+                                                : 'bg-white border-slate-200 text-slate-500 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-700 active:scale-95'
+                                            }`}
+                                          >
+                                            <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                              <rect x="6" y="4" width="4" height="16" rx="1" /><rect x="14" y="4" width="4" height="16" rx="1" />
+                                            </svg>
+                                            Withheld
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )
+                                  })}
                                 </div>
-                              </div>
-                            )
-                          })}
-                      </div>}
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
               )
