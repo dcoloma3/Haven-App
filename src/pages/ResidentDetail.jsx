@@ -24,6 +24,7 @@ import MoveChecklist from '../components/moveinout/MoveChecklist'
 import ResidentTransportation from '../components/transportation/ResidentTransportation'
 import { useCommunity } from '../context/CommunityContext'
 import { useIsMobile } from '../hooks/useIsMobile'
+import { generateFaceSheetPDF } from '../lib/faceSheetPDF'
 
 // Consolidated tabs — related sections are grouped within each tab
 const ALL_TABS   = ['Profile', 'Medications', 'Health', 'Contacts', 'Records', 'Billing']
@@ -118,6 +119,7 @@ export default function ResidentDetail() {
   const [showRemovalModal, setShowRemovalModal] = useState(false)
   const [reactivating, setReactivating] = useState(false)
   const [medStatus, setMedStatus] = useState(null)
+  const [generatingPDF, setGeneratingPDF] = useState(false)
   const tabsRef = useRef(null)
 
   const todayStr = new Date().toISOString().split('T')[0]
@@ -205,6 +207,15 @@ export default function ResidentDetail() {
     setReactivating(false)
   }
 
+  async function handleFaceSheet() {
+    setGeneratingPDF(true)
+    try {
+      await generateFaceSheetPDF({ residentId: id, communityId, supabase })
+    } finally {
+      setGeneratingPDF(false)
+    }
+  }
+
   if (loading) {
     return <Layout><p className="text-slate-400 text-sm">Loading…</p></Layout>
   }
@@ -259,6 +270,19 @@ export default function ResidentDetail() {
           <h1 className="text-xl font-bold text-slate-800 truncate">{fullName}</h1>
           <p className="text-sm text-slate-400 mt-0.5">Room {resident.room_number || '—'}</p>
         </div>
+        <button
+          onClick={handleFaceSheet}
+          disabled={generatingPDF}
+          title="Download printable face sheet"
+          className="flex-shrink-0 flex items-center gap-1.5 border border-slate-300 text-slate-600 rounded-lg px-3 py-1.5 text-sm font-medium hover:bg-slate-50 hover:border-slate-400 transition-colors disabled:opacity-50"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="6 9 6 2 18 2 18 9"/>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+            <rect x="6" y="14" width="12" height="8"/>
+          </svg>
+          {generatingPDF ? 'Generating…' : 'Face Sheet'}
+        </button>
       </div>
 
       {/* Tabs — 5 for staff, 6 for admin */}
