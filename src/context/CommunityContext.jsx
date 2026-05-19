@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 
 const CommunityContext = createContext(null)
@@ -13,6 +13,7 @@ export function CommunityProvider({ children }) {
   const [editMode] = useState(true) // super admin always has full edit access
   const [loadError, setLoadError] = useState(null)
   const [viewAsRole, setViewAsRole] = useState(null) // null = real role, 'staff' = preview as staff
+  const lastUserIdRef = useRef(null)
 
   const load = useCallback(async (userId, email) => {
     if (!userId) {
@@ -98,10 +99,12 @@ export function CommunityProvider({ children }) {
         // On a fresh sign-in, clear the stored community ID immediately so the
         // validation in load() always picks the correct community for this user,
         // rather than accidentally keeping a value left by a previous user.
-        if (event === 'SIGNED_IN') {
+        if (event === 'SIGNED_IN' && session.user.id !== lastUserIdRef.current) {
+          // Genuinely new user — clear to prevent cross-user data leakage
           try { localStorage.removeItem('haven_community_id') } catch {}
           setActiveCommunityId(null)
         }
+        lastUserIdRef.current = session.user.id
         load(session.user.id, session.user.email)
       }
     })
