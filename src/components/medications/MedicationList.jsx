@@ -6,6 +6,7 @@ alter table medications add column if not exists min_interval_hours integer;
 
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { useCommunity } from '../../context/CommunityContext'
 import { adminKey, isMedDueOnDate } from '../../lib/medStatus'
 
 const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
@@ -68,7 +69,7 @@ const EMPTY_FORM = {
 
 // ─── Medication Modal (Add / Edit) ────────────────────────────────────────────
 
-function MedicationModal({ residentId, medication, onClose, onSaved }) {
+function MedicationModal({ residentId, communityId, medication, onClose, onSaved }) {
   const isEdit = !!medication
   const [form, setForm] = useState(isEdit ? { ...medication, frequency_days: medication.frequency_days ?? [], frequency_interval: medication.frequency_interval ?? 2 } : EMPTY_FORM)
   const [newTime, setNewTime] = useState('')
@@ -138,7 +139,7 @@ function MedicationModal({ residentId, medication, onClose, onSaved }) {
     if (isEdit) {
       ;({ data, error: err } = await supabase.from('medications').update(payload).eq('id', medication.id).select().single())
     } else {
-      ;({ data, error: err } = await supabase.from('medications').insert([{ ...payload, resident_id: residentId }]).select().single())
+      ;({ data, error: err } = await supabase.from('medications').insert([{ ...payload, resident_id: residentId, community_id: communityId }]).select().single())
     }
 
     setSaving(false)
@@ -847,6 +848,7 @@ function PRNMedications({ residentId, medications }) {
 // ─── Main MedicationList ──────────────────────────────────────────────────────
 
 export default function MedicationList({ residentId, onMedStatusChange }) {
+  const { communityId } = useCommunity()
   const [medications, setMedications] = useState([])
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
@@ -960,8 +962,8 @@ export default function MedicationList({ residentId, onMedStatusChange }) {
         )}
       </div>
 
-      {showAdd && <MedicationModal residentId={residentId} onClose={() => setShowAdd(false)} onSaved={handleSaved} />}
-      {editing && <MedicationModal medication={editing} onClose={() => setEditing(null)} onSaved={handleSaved} />}
+      {showAdd && <MedicationModal residentId={residentId} communityId={communityId} onClose={() => setShowAdd(false)} onSaved={handleSaved} />}
+      {editing && <MedicationModal residentId={residentId} communityId={communityId} medication={editing} onClose={() => setEditing(null)} onSaved={handleSaved} />}
     </div>
   )
 }
