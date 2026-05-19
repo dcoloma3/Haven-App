@@ -13,6 +13,7 @@ export function CommunityProvider({ children }) {
   const [editMode] = useState(true) // super admin always has full edit access
   const [loadError, setLoadError] = useState(null)
   const [viewAsRole, setViewAsRole] = useState(null) // null = real role, 'staff' = preview as staff
+  const [isReloading, setIsReloading] = useState(false)
   const lastUserIdRef = useRef(null)
 
   const load = useCallback(async (userId, email) => {
@@ -25,6 +26,7 @@ export function CommunityProvider({ children }) {
       return
     }
 
+    setIsReloading(true)
     try {
       // Check super admin by email
       const { data: saData } = await supabase
@@ -81,6 +83,8 @@ export function CommunityProvider({ children }) {
       console.error('CommunityContext load error:', err)
       setMemberships([]) // unblock the loading spinner
       setLoadError(err?.message || 'Failed to load community data')
+    } finally {
+      setIsReloading(false)
     }
   }, [])
 
@@ -145,7 +149,7 @@ export function CommunityProvider({ children }) {
       isSuperAdmin,
       allCommunities,
       editMode: true,
-      loading: memberships === null,
+      loading: memberships === null || isReloading,
       loadError,
       viewAsRole,
       setViewAsRole,
