@@ -119,7 +119,7 @@ function CommunityDropdown({ community, memberships, isAdmin, isSuperAdmin, onSw
     <div className="relative">
       <button
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-slate-300 bg-white text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors min-w-0"
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-white/20 hover:border-white/40 bg-white/10 text-sm font-medium text-white hover:text-white transition-colors min-w-0"
       >
         {/* Small navy square mark */}
         <span className="flex items-center justify-center w-5 h-5 rounded-[4px] bg-[#042C53] flex-shrink-0">
@@ -314,7 +314,7 @@ export default function Navbar() {
   return (
     <>
       <nav
-        className="flex items-center gap-3 fixed top-0 left-0 right-0 z-30 bg-white border-b border-slate-200 w-full"
+        className="flex items-center gap-3 fixed top-0 left-0 right-0 z-30 bg-[#042C53] border-b border-white/10 w-full"
         style={{
           paddingLeft: 'max(16px, env(safe-area-inset-left))',
           paddingRight: 'max(16px, env(safe-area-inset-right))',
@@ -326,7 +326,7 @@ export default function Navbar() {
       >
         {/* Logo — mark only on mobile to preserve space */}
         <Link to="/dashboard" className="flex-shrink-0 hover:opacity-80 transition-opacity">
-          <HavenLogo variant="color" markHeight={28} textSize={isMobile ? 0 : 20} />
+          <HavenLogo variant="white" markHeight={28} textSize={isMobile ? 0 : 20} />
         </Link>
 
         {/* Desktop: search bar — absolutely centered */}
@@ -340,9 +340,9 @@ export default function Navbar() {
         {!isMobile && (
           <div className="flex items-center gap-3 flex-shrink-0 ml-auto">
             <CommunityDropdown community={community} memberships={memberships} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} onSwitch={setCommunityId} onNew={() => setShowNewCommunity(true)} />
-            <div className="w-px h-5 bg-slate-200" />
+            <div className="w-px h-5 bg-white/20" />
             <StaffViewToggle />
-            <div className="w-px h-5 bg-slate-200" />
+            <div className="w-px h-5 bg-white/20" />
             <UserMenu profile={profile} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} />
           </div>
         )}
@@ -359,7 +359,7 @@ export default function Navbar() {
           <div className="flex items-center gap-2 flex-shrink-0">
             <button
               onClick={() => setShowMobileSearch(s => !s)}
-              className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors hover:bg-slate-100 text-slate-500 hover:text-slate-700 flex-shrink-0"
+              className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors hover:bg-white/10 text-white/70 hover:text-white flex-shrink-0"
               aria-label="Search"
             >
               {showMobileSearch ? (
@@ -378,7 +378,7 @@ export default function Navbar() {
 
         {/* Mobile search overlay */}
         {isMobile && showMobileSearch && (
-          <div className="absolute left-0 right-0 top-full z-50 px-3 py-2 bg-white border-t border-b border-slate-200" style={{ boxShadow: 'var(--haven-shadow-md)' }}>
+          <div className="absolute left-0 right-0 top-full z-50 px-3 py-2 bg-[#042C53] border-t border-b border-white/10" style={{ boxShadow: 'var(--haven-shadow-md)' }}>
             <GlobalSearch />
           </div>
         )}
