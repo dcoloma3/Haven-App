@@ -567,7 +567,7 @@ export default function ResidentMedHistory({ residentId, resident }) {
 
       {/* Day-grouped log */}
       {!loading && grouped.length > 0 && (
-        <div className="space-y-5 mt-2">
+        <div className="space-y-5 mt-2 max-h-[480px] overflow-y-auto pr-1">
           {grouped.map(([dateStr, { routine, prn }]) => {
             const dayTotal = routine.length + prn.length
             return (

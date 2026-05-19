@@ -13,6 +13,15 @@ const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm fo
 
 function getTodayStr() { return new Date().toISOString().split('T')[0] }
 
+function ChevronIcon({ open }) {
+  return (
+    <svg className={`w-4 h-4 text-slate-400 flex-shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+      viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  )
+}
+
 function fmt12(t) {
   const [h, m] = t.split(':').map(Number)
   const ampm = h < 12 ? 'AM' : 'PM'
@@ -517,6 +526,7 @@ function DoseRow({ med, time, record, toggling, onSet }) {
 // ─── Today's Medications Section ─────────────────────────────────────────────
 
 function TodayMedications({ residentId, medications, onStatusChange }) {
+  const [open, setOpen] = useState(true)
   const [administered, setAdministered] = useState(new Map())
   const [toggling, setToggling] = useState(new Set())
   const [loadingAdmins, setLoadingAdmins] = useState(true)
@@ -620,42 +630,52 @@ function TodayMedications({ residentId, medications, onStatusChange }) {
 
   return (
     <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden mb-4">
-      {/* Header */}
-      <div className="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-2">
+      {/* Header — clickable to collapse */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full px-5 py-4 flex items-center justify-between gap-2 text-left hover:bg-slate-50 transition-colors"
+      >
         <div>
           <h2 className="font-semibold text-slate-800">Today's Medications</h2>
           <p className="text-xs text-slate-400 mt-0.5">{todayLabel}</p>
         </div>
-        {totalDoses > 0 && !loadingAdmins && (
-          <span className={`text-sm font-semibold flex-shrink-0 mt-0.5 ${documentedDoses === totalDoses ? 'text-emerald-600' : documentedDoses > 0 ? 'text-amber-500' : 'text-slate-400'}`}>
-            {documentedDoses}/{totalDoses} documented
-          </span>
-        )}
-      </div>
-
-      {loadingAdmins && <p className="text-slate-400 text-sm px-5 py-4">Loading…</p>}
-
-      {!loadingAdmins && todayMeds.length === 0 && (
-        <p className="text-sm text-slate-400 px-5 py-4">No medications scheduled for today.</p>
-      )}
-
-      {!loadingAdmins && rows.length > 0 && (
-        <div className="divide-y divide-slate-100">
-          {rows.map(({ med, time }) => {
-            const key = adminKey(med.id, time)
-            const record = administered.get(key) ?? null
-            return (
-              <DoseRow
-                key={key}
-                med={med}
-                time={time}
-                record={record}
-                toggling={toggling}
-                onSet={handleSet}
-              />
-            )
-          })}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {totalDoses > 0 && !loadingAdmins && (
+            <span className={`text-sm font-semibold ${documentedDoses === totalDoses ? 'text-emerald-600' : documentedDoses > 0 ? 'text-amber-500' : 'text-slate-400'}`}>
+              {documentedDoses}/{totalDoses}
+            </span>
+          )}
+          <ChevronIcon open={open} />
         </div>
+      </button>
+
+      {open && (
+        <>
+          {loadingAdmins && <p className="text-slate-400 text-sm px-5 py-4 border-t border-slate-100">Loading…</p>}
+
+          {!loadingAdmins && todayMeds.length === 0 && (
+            <p className="text-sm text-slate-400 px-5 py-4 border-t border-slate-100">No medications scheduled for today.</p>
+          )}
+
+          {!loadingAdmins && rows.length > 0 && (
+            <div className="divide-y divide-slate-100 border-t border-slate-100">
+              {rows.map(({ med, time }) => {
+                const key = adminKey(med.id, time)
+                const record = administered.get(key) ?? null
+                return (
+                  <DoseRow
+                    key={key}
+                    med={med}
+                    time={time}
+                    record={record}
+                    toggling={toggling}
+                    onSet={handleSet}
+                  />
+                )
+              })}
+            </div>
+          )}
+        </>
       )}
     </div>
   )
@@ -666,6 +686,7 @@ function TodayMedications({ residentId, medications, onStatusChange }) {
 function PRNMedications({ residentId, medications }) {
   const prnMeds = medications.filter(m => m.frequency_type === 'prn')
 
+  const [open, setOpen] = useState(false)
   const [todayDoses, setTodayDoses] = useState([]) // array of medication_administrations records
   const [loadingDoses, setLoadingDoses] = useState(true)
   const [givingId, setGivingId] = useState(null) // which med has "Give Now" open
@@ -731,16 +752,28 @@ function PRNMedications({ residentId, medications }) {
 
   return (
     <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden mb-4">
-      <div className="px-5 py-4 border-b border-slate-100">
-        <h2 className="font-semibold text-slate-800">PRN / As Needed</h2>
-        <p className="text-xs text-slate-400 mt-0.5">Given on demand — tap Give Now and record the reason</p>
-      </div>
+      {/* Header — clickable to collapse */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full px-5 py-4 flex items-center justify-between gap-2 text-left hover:bg-slate-50 transition-colors"
+      >
+        <div>
+          <h2 className="font-semibold text-slate-800">PRN / As Needed</h2>
+          <p className="text-xs text-slate-400 mt-0.5">Given on demand — tap Give Now and record the reason</p>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="text-xs text-slate-400">{prnMeds.length} med{prnMeds.length !== 1 ? 's' : ''}</span>
+          <ChevronIcon open={open} />
+        </div>
+      </button>
 
-      {loadingDoses && <p className="text-slate-400 text-sm px-5 py-4">Loading…</p>}
+      {open && (
+        <>
+          {loadingDoses && <p className="text-slate-400 text-sm px-5 py-4 border-t border-slate-100">Loading…</p>}
 
-      {!loadingDoses && (
-        <div className="divide-y divide-slate-100">
-          {prnMeds.map(med => {
+          {!loadingDoses && (
+            <div className="divide-y divide-slate-100 border-t border-slate-100">
+              {prnMeds.map(med => {
             const medDoses = todayDoses.filter(d => d.medication_name === med.medication_name)
             const lastDose = medDoses[0] ?? null
             const isGiving = givingId === med.id
@@ -840,6 +873,8 @@ function PRNMedications({ residentId, medications }) {
             )
           })}
         </div>
+          )}
+        </>
       )}
     </div>
   )
@@ -853,6 +888,7 @@ export default function MedicationList({ residentId, onMedStatusChange }) {
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
   const [editing, setEditing] = useState(null)
+  const [openManage, setOpenManage] = useState(false)
 
   useEffect(() => {
     supabase
@@ -898,66 +934,88 @@ export default function MedicationList({ residentId, onMedStatusChange }) {
       )}
 
       {/* ── Manage Medications ── */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6">
-        <div className="flex items-center justify-between mb-5">
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+        {/* Header — clickable to collapse */}
+        <button
+          onClick={() => setOpenManage(o => !o)}
+          className="w-full px-5 py-4 flex items-center justify-between gap-2 text-left hover:bg-slate-50 transition-colors"
+        >
           <h2 className="font-medium text-slate-700">Manage Medications</h2>
-          <button onClick={() => setShowAdd(true)} className="text-sm text-[#185FA5] hover:text-[#0C447C] transition-colors">+ Add</button>
-        </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {!loading && medications.length > 0 && (
+              <span className="text-xs text-slate-400">{medications.length} med{medications.length !== 1 ? 's' : ''}</span>
+            )}
+            <ChevronIcon open={openManage} />
+          </div>
+        </button>
 
-        {loading && <p className="text-slate-400 text-sm">Loading…</p>}
-        {!loading && medications.length === 0 && <p className="text-sm text-slate-400">No medications listed.</p>}
+        {openManage && (
+          <div className="px-5 pb-5 border-t border-slate-100">
+            <div className="flex items-center justify-end pt-4 mb-3">
+              <button
+                onClick={e => { e.stopPropagation(); setShowAdd(true) }}
+                className="text-sm text-[#185FA5] hover:text-[#0C447C] transition-colors"
+              >
+                + Add Medication
+              </button>
+            </div>
 
-        {!loading && medications.length > 0 && (
-          <div className="divide-y divide-slate-100">
-            {medications.map(med => {
-              const dateRange = [shortDate(med.start_date), shortDate(med.end_date)].filter(Boolean)
-              return (
-                <div key={med.id} className="py-3">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-800">{med.medication_name}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">
-                        {[med.dose, describeFrequency(med)].filter(Boolean).join(' · ')}
-                      </p>
-                      {dateRange.length > 0 && (
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          {med.start_date && med.end_date
-                            ? `${shortDate(med.start_date)} – ${shortDate(med.end_date)}`
-                            : med.start_date
-                              ? `From ${shortDate(med.start_date)}`
-                              : `Until ${shortDate(med.end_date)}`}
-                        </p>
-                      )}
-                      {med.scheduled_times?.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 mt-1.5">
-                          {med.scheduled_times.map(t => (
-                            <span key={t} className="inline-block bg-[#E6F1FB] text-[#185FA5] text-xs font-medium px-2 py-0.5 rounded-full">
-                              {fmt12(t)}
-                            </span>
-                          ))}
+            {loading && <p className="text-slate-400 text-sm">Loading…</p>}
+            {!loading && medications.length === 0 && <p className="text-sm text-slate-400">No medications listed.</p>}
+
+            {!loading && medications.length > 0 && (
+              <div className="divide-y divide-slate-100">
+                {medications.map(med => {
+                  const dateRange = [shortDate(med.start_date), shortDate(med.end_date)].filter(Boolean)
+                  return (
+                    <div key={med.id} className="py-3">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-slate-800">{med.medication_name}</p>
+                          <p className="text-xs text-slate-400 mt-0.5">
+                            {[med.dose, describeFrequency(med)].filter(Boolean).join(' · ')}
+                          </p>
+                          {dateRange.length > 0 && (
+                            <p className="text-xs text-slate-400 mt-0.5">
+                              {med.start_date && med.end_date
+                                ? `${shortDate(med.start_date)} – ${shortDate(med.end_date)}`
+                                : med.start_date
+                                  ? `From ${shortDate(med.start_date)}`
+                                  : `Until ${shortDate(med.end_date)}`}
+                            </p>
+                          )}
+                          {med.scheduled_times?.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mt-1.5">
+                              {med.scheduled_times.map(t => (
+                                <span key={t} className="inline-block bg-[#E6F1FB] text-[#185FA5] text-xs font-medium px-2 py-0.5 rounded-full">
+                                  {fmt12(t)}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {med.frequency_type === 'prn' && med.indication && (
+                            <p className="text-xs text-violet-600 mt-1">PRN · {med.indication}</p>
+                          )}
+                          {med.frequency && <p className="text-xs text-slate-500 mt-1.5">{med.frequency}</p>}
+                          {med.notes && (
+                            <div className="flex items-start gap-1.5 mt-2 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-2">
+                              <svg className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-px" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                              </svg>
+                              <p className="text-xs text-amber-800 leading-relaxed font-medium">{med.notes}</p>
+                            </div>
+                          )}
                         </div>
-                      )}
-                      {med.frequency_type === 'prn' && med.indication && (
-                        <p className="text-xs text-violet-600 mt-1">PRN · {med.indication}</p>
-                      )}
-                      {med.frequency && <p className="text-xs text-slate-500 mt-1.5">{med.frequency}</p>}
-                      {med.notes && (
-                        <div className="flex items-start gap-1.5 mt-2 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-2">
-                          <svg className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-px" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                          </svg>
-                          <p className="text-xs text-amber-800 leading-relaxed font-medium">{med.notes}</p>
+                        <div className="flex items-center gap-3 flex-shrink-0 mt-0.5">
+                          <button onClick={() => setEditing(med)} className="text-xs text-[#185FA5] hover:text-[#0C447C] transition-colors">Edit</button>
+                          <button onClick={() => handleDelete(med.id)} className="text-xs text-red-400 hover:text-red-600 transition-colors">Delete</button>
                         </div>
-                      )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3 flex-shrink-0 mt-0.5">
-                      <button onClick={() => setEditing(med)} className="text-xs text-[#185FA5] hover:text-[#0C447C] transition-colors">Edit</button>
-                      <button onClick={() => handleDelete(med.id)} className="text-xs text-red-400 hover:text-red-600 transition-colors">Delete</button>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
+                  )
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
