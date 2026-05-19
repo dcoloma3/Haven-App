@@ -120,8 +120,11 @@ function ProtectedRoute({ children, trialLocked, featureName }) {
     return <NoMembershipScreen />
   }
 
-  // Multiple communities, none selected yet
-  if (memberships.length > 1 && !communityId) {
+  // Send to community picker if no community is selected.
+  // Super admins pick from allCommunities (not memberships), so checking
+  // memberships.length is wrong for them — only check communityId directly.
+  // Regular users only need to pick if they have multiple memberships.
+  if (!communityId && (isSuperAdmin || memberships.length > 1)) {
     return <Navigate to="/community" replace />
   }
 
