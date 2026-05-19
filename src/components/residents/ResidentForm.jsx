@@ -161,7 +161,14 @@ export default function ResidentForm({ onClose, onSaved }) {
 
     const { data, error: insertErr } = await supabase
       .from('residents')
-      .insert([{ ...form, full_name, community_id: communityId }])
+      .insert([{
+        ...form,
+        full_name,
+        community_id: communityId,
+        // Convert empty strings to null for date columns — Postgres rejects '' for type date
+        date_of_birth: form.date_of_birth || null,
+        move_in_date: form.move_in_date || null,
+      }])
       .select()
       .single()
 
