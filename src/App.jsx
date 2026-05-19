@@ -65,7 +65,7 @@ function NoMembershipScreen() {
   )
 }
 
-function ProtectedRoute({ children, trialLocked, featureName }) {
+function ProtectedRoute({ children, trialLocked, featureName, requireCommunity = true }) {
   const { profile, loading: profileLoading, profileError } = useProfile()
   const { memberships, communityId, community, loading: communityLoading, isSuperAdmin, loadError, reload } = useCommunity()
 
@@ -124,7 +124,8 @@ function ProtectedRoute({ children, trialLocked, featureName }) {
   // Super admins pick from allCommunities (not memberships), so checking
   // memberships.length is wrong for them — only check communityId directly.
   // Regular users only need to pick if they have multiple memberships.
-  if (!communityId && (isSuperAdmin || memberships.length > 1)) {
+  // Pages that set requireCommunity={false} (e.g. /superadmin) bypass this check.
+  if (requireCommunity && !communityId && (isSuperAdmin || memberships.length > 1)) {
     return <Navigate to="/community" replace />
   }
 
@@ -238,7 +239,7 @@ export default function App() {
                 session ? <ProtectedRoute trialLocked featureName="Notification Log"><RequireAdmin><NotificationLog /></RequireAdmin></ProtectedRoute> : <Navigate to="/login" replace />
               } />
 
-              <Route path="/superadmin" element={session ? <ProtectedRoute><RequireSuperAdmin><SuperAdmin /></RequireSuperAdmin></ProtectedRoute> : <Navigate to="/login" replace />} />
+              <Route path="/superadmin" element={session ? <ProtectedRoute requireCommunity={false}><RequireSuperAdmin><SuperAdmin /></RequireSuperAdmin></ProtectedRoute> : <Navigate to="/login" replace />} />
               <Route path="*" element={<Navigate to={session ? '/dashboard' : '/'} replace />} />
             </Routes>
           </FacilityProvider>
