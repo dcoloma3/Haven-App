@@ -533,6 +533,8 @@ export default function Dispense() {
   const [notGiven, setNotGiven] = useState(new Map())   // adminKey → not_given record
   const [notGivenModal, setNotGivenModal] = useState(null) // { med, time }
   const [savingNotGiven, setSavingNotGiven] = useState(false)
+  const [refusedForm, setRefusedForm] = useState(null) // { key, med, time, notes }
+  const [savingRefused, setSavingRefused] = useState(false)
   const [expandedTimes, setExpandedTimes] = useState(new Set())
   const [expandedResidents, setExpandedResidents] = useState(new Set()) // 'time::residentId'
   const { communityId } = useCommunity()
@@ -665,6 +667,26 @@ export default function Dispense() {
       recorded_by: session?.user?.id ?? null,
     }]).select().single()
     if (data) setNotGiven(prev => { const n = new Map(prev); n.set(key, data); return n })
+  }
+
+  async function handleRefusedSubmit() {
+    if (!refusedForm || !refusedForm.notes.trim()) return
+    const { key, med, time, notes } = refusedForm
+    setSavingRefused(true)
+    const { data: { session } } = await supabase.auth.getSession()
+    const { data } = await supabase.from('medication_not_given').insert([{
+      medication_id: med.id,
+      resident_id: med.resident_id,
+      community_id: communityId,
+      scheduled_time: time,
+      administered_date: dateStr,
+      reason: 'refused',
+      notes: notes.trim(),
+      recorded_by: session?.user?.id ?? null,
+    }]).select().single()
+    if (data) setNotGiven(prev => { const n = new Map(prev); n.set(key, data); return n })
+    setSavingRefused(false)
+    setRefusedForm(null)
   }
 
   // Called after the user confirms undoing a dose
@@ -952,7 +974,7 @@ export default function Dispense() {
                                     const isNotGiven = notGiven.has(mKey)
                                     const ngRecord = isNotGiven ? notGiven.get(mKey) : null
                                     const isRefused = isNotGiven && ngRecord?.reason === 'refused'
-                                    const isWithheld = isNotGiven && ngRecord?.reason === 'held'
+                                    const isRefusedFormOpen = refusedForm?.key === mKey
 
                                     return (
                                       <div
@@ -971,6 +993,9 @@ export default function Dispense() {
                                               </p>
                                             )}
                                             {isDone && <GivenByLine record={administered.get(mKey)} staffMap={staffMap} />}
+                                            {isRefused && ngRecord?.notes && (
+                                              <p className="text-xs text-rose-600 mt-0.5 italic">Refused: {ngRecord.notes}</p>
+                                            )}
                                           </div>
                                           <Link
                                             to={`/residents/${rid}`}
@@ -986,12 +1011,12 @@ export default function Dispense() {
                                         <div className="flex gap-2 mt-3 ml-1">
                                           {/* Given */}
                                           <button
-                                            onClick={e => { e.stopPropagation(); isDone ? setConfirmUndo({ med, time, record: administered.get(mKey) }) : (!isNotGiven && handleToggle(med, time)) }}
-                                            disabled={isTogg || isNotGiven}
+                                            onClick={e => { e.stopPropagation(); isDone ? setConfirmUndo({ med, time, record: administered.get(mKey) }) : (!isNotGiven && !isRefusedFormOpen && handleToggle(med, time)) }}
+                                            disabled={isTogg || isNotGiven || isRefusedFormOpen}
                                             className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border text-xs font-semibold transition-colors ${
                                               isDone
                                                 ? 'bg-emerald-500 border-emerald-500 text-white'
-                                                : isNotGiven
+                                                : isNotGiven || isRefusedFormOpen
                                                 ? 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'
                                                 : 'bg-white border-slate-200 text-slate-500 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 active:scale-95'
                                             }`}
@@ -1004,11 +1029,19 @@ export default function Dispense() {
 
                                           {/* Refused */}
                                           <button
-                                            onClick={e => { e.stopPropagation(); isRefused ? handleUndoNotGiven(med, time) : (!isDone && !isNotGiven && quickNotGiven(med, time, 'refused')) }}
+                                            onClick={e => {
+                                              e.stopPropagation()
+                                              if (isRefused) { handleUndoNotGiven(med, time); return }
+                                              if (isDone || isNotGiven) return
+                                              if (isRefusedFormOpen) { setRefusedForm(null); return }
+                                              setRefusedForm({ key: mKey, med, time, notes: '' })
+                                            }}
                                             disabled={isDone || (isNotGiven && !isRefused)}
                                             className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border text-xs font-semibold transition-colors ${
                                               isRefused
                                                 ? 'bg-rose-500 border-rose-500 text-white'
+                                                : isRefusedFormOpen
+                                                ? 'bg-rose-50 border-rose-300 text-rose-700'
                                                 : isDone || (isNotGiven && !isRefused)
                                                 ? 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'
                                                 : 'bg-white border-slate-200 text-slate-500 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-700 active:scale-95'
@@ -1019,25 +1052,38 @@ export default function Dispense() {
                                             </svg>
                                             Refused
                                           </button>
-
-                                          {/* Withheld */}
-                                          <button
-                                            onClick={e => { e.stopPropagation(); isWithheld ? handleUndoNotGiven(med, time) : (!isDone && !isNotGiven && quickNotGiven(med, time, 'held')) }}
-                                            disabled={isDone || (isNotGiven && !isWithheld)}
-                                            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border text-xs font-semibold transition-colors ${
-                                              isWithheld
-                                                ? 'bg-amber-500 border-amber-500 text-white'
-                                                : isDone || (isNotGiven && !isWithheld)
-                                                ? 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'
-                                                : 'bg-white border-slate-200 text-slate-500 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-700 active:scale-95'
-                                            }`}
-                                          >
-                                            <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                              <rect x="6" y="4" width="4" height="16" rx="1" /><rect x="14" y="4" width="4" height="16" rx="1" />
-                                            </svg>
-                                            Withheld
-                                          </button>
                                         </div>
+
+                                        {/* Inline refused reason form */}
+                                        {isRefusedFormOpen && (
+                                          <div className="mt-3 ml-1 bg-rose-50 border border-rose-200 rounded-xl p-3">
+                                            <p className="text-xs font-semibold text-rose-700 mb-2">Why did the resident refuse? <span className="text-rose-500">*</span></p>
+                                            <input
+                                              autoFocus
+                                              type="text"
+                                              value={refusedForm.notes}
+                                              onChange={e => setRefusedForm(f => ({ ...f, notes: e.target.value }))}
+                                              onKeyDown={e => { if (e.key === 'Enter' && refusedForm.notes.trim()) handleRefusedSubmit(); if (e.key === 'Escape') setRefusedForm(null) }}
+                                              placeholder="e.g. Said medication makes them feel nauseous"
+                                              className="w-full border border-rose-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-400 focus:border-transparent mb-2"
+                                            />
+                                            <div className="flex gap-2">
+                                              <button
+                                                onClick={e => { e.stopPropagation(); setRefusedForm(null) }}
+                                                className="flex-1 border border-slate-300 bg-white text-slate-600 text-xs font-medium py-1.5 rounded-lg hover:bg-slate-50 transition-colors"
+                                              >
+                                                Cancel
+                                              </button>
+                                              <button
+                                                onClick={e => { e.stopPropagation(); handleRefusedSubmit() }}
+                                                disabled={savingRefused || !refusedForm.notes.trim()}
+                                                className="flex-1 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-xs font-semibold py-1.5 rounded-lg transition-colors"
+                                              >
+                                                {savingRefused ? 'Saving…' : 'Record Refusal'}
+                                              </button>
+                                            </div>
+                                          </div>
+                                        )}
                                       </div>
                                     )
                                   })}
