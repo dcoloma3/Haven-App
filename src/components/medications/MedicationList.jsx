@@ -128,6 +128,11 @@ function MedicationModal({ residentId, communityId, medication, onClose, onSaved
       ? [...(form.scheduled_times ?? []), newTime].sort()
       : (form.scheduled_times ?? [])
 
+    if (freqType !== 'prn' && finalTimes.length === 0) {
+      setError('Add at least one scheduled time so this medication appears in the Dispense tab.')
+      return
+    }
+
     setSaving(true)
     setError('')
 
@@ -251,7 +256,7 @@ function MedicationModal({ residentId, communityId, medication, onClose, onSaved
 
           {freqType !== 'prn' && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Scheduled Times</label>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Scheduled Times <span className="text-red-500">*</span></label>
 
               {/* Quick-pick preset times */}
               <div className="flex flex-wrap gap-1.5 mb-3">
