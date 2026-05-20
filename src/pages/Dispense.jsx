@@ -642,6 +642,14 @@ export default function Dispense() {
 
   const sortedTimes = useMemo(() => Object.keys(timeGroups).sort(), [timeGroups])
 
+  // First incomplete time slot — used for "Due up next" indicator
+  const nextDueTime = useMemo(() => {
+    return sortedTimes.find(time => {
+      const allMedsAtTime = Object.values(timeGroups[time]).flatMap(rg => rg.meds)
+      return calcStatus(allMedsAtTime, time, administered) !== 'all'
+    }) ?? null
+  }, [sortedTimes, timeGroups, administered])
+
   const { totalMeds, totalDone } = useMemo(() => {
     let totalMeds = 0, totalDone = 0
     sortedTimes.forEach(time => {
@@ -832,6 +840,15 @@ export default function Dispense() {
                 style={{ width: `${pct}%` }}
               />
             </div>
+            {nextDueTime && !allDone && (
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-[#185FA5] flex-shrink-0" style={{ animation: 'pulse 2s cubic-bezier(0.4,0,0.6,1) infinite' }} />
+                  <span className="text-xs font-semibold text-slate-600">Due up next</span>
+                </div>
+                <span className="text-xs font-bold text-[#185FA5]">{fmt12(nextDueTime)}</span>
+              </div>
+            )}
           </div>
         )
       })()}
@@ -935,6 +952,11 @@ export default function Dispense() {
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-2xl font-bold text-slate-800 tracking-tight">{fmt12(time)}</p>
                         <div className="flex items-center gap-2 flex-shrink-0">
+                          {time === nextDueTime && (
+                            <span className="text-[10px] font-bold bg-[#185FA5] text-white px-1.5 py-0.5 rounded-full uppercase tracking-wide">
+                              Next
+                            </span>
+                          )}
                           <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
                             timeStatus === 'all' ? 'bg-emerald-500 text-white' :
                             timeStatus === 'partial' ? 'bg-amber-500 text-white' :
