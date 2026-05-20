@@ -68,7 +68,7 @@ function CommunityDropdown({ community, memberships, isAdmin, isSuperAdmin, onSw
                 )}
               </button>
             ))}
-            {isAdmin && !isSuperAdmin && (
+            {isAdmin && (
               <>
                 <div className="border-t border-slate-100" />
                 <button onClick={() => { onNew(); setOpen(false) }} className="w-full text-left px-4 py-2.5 text-sm text-[#185FA5] hover:bg-slate-50 transition-colors font-medium">
