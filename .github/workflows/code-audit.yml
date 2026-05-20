@@ -1,0 +1,31 @@
+name: Code Audit (Phase 1)
+
+on:
+  schedule:
+    # Run every day at 7 AM Pacific (2 PM UTC)
+    - cron: '0 14 * * *'
+  workflow_dispatch:
+
+jobs:
+  code-audit:
+    runs-on: ubuntu-latest
+    name: Static code, security & bundle audit
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run code audit
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
+        run: node scripts/code-audit.mjs
