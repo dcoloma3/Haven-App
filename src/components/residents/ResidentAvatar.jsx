@@ -84,7 +84,7 @@ export default function ResidentAvatar({ resident, onUpdate, medStatus }) {
           <button
             type="button"
             onClick={() => !uploading && openMenu()}
-            className="relative group block w-16 h-16 rounded-full focus:outline-none"
+            className="relative group block w-24 h-24 rounded-full focus:outline-none"
             style={medStatus ? { boxShadow: ringBoxShadow(medStatus) } : undefined}
             title="Change photo"
           >
@@ -93,11 +93,11 @@ export default function ResidentAvatar({ resident, onUpdate, medStatus }) {
                 src={resident.avatar_url}
                 alt={getDisplayName(resident)}
                 onError={() => setImgError(true)}
-                className="w-16 h-16 rounded-full object-cover"
+                className="w-24 h-24 rounded-full object-cover"
               />
             ) : (
               <div
-                className="w-16 h-16 rounded-full flex items-center justify-center text-lg font-semibold"
+                className="w-24 h-24 rounded-full flex items-center justify-center text-2xl font-semibold"
                 style={{ backgroundColor: color.chipBg, color: color.chipText }}
               >
                 {uploading ? <span className="text-sm animate-pulse">…</span> : initials}
