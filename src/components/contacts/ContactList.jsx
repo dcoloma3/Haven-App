@@ -150,6 +150,7 @@ export default function ContactList({ residentId }) {
   const [showForm, setShowForm] = useState(false)
   const [editingContact, setEditingContact] = useState(null)
   const [deleteError, setDeleteError] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(null)
 
   useEffect(() => {
     supabase
@@ -170,11 +171,11 @@ export default function ContactList({ residentId }) {
   })
 
   async function handleDelete(contactId) {
-    if (!window.confirm('Delete this contact? This cannot be undone.')) return
     setDeleteError('')
     const { error } = await supabase.from('emergency_contacts').delete().eq('id', contactId)
     if (error) { setDeleteError('Failed to delete contact. Please try again.'); return }
     setContacts(prev => prev.filter(c => c.id !== contactId))
+    setConfirmDelete(null)
   }
 
   function handleSaved(data, isEdit) {
@@ -259,12 +260,29 @@ export default function ContactList({ residentId }) {
                   >
                     <PencilIcon />
                   </button>
-                  <button
-                    onClick={() => handleDelete(contact.id)}
-                    className="text-xs text-red-400 hover:text-red-600 transition-colors"
-                  >
-                    Delete
-                  </button>
+                  {confirmDelete === contact.id ? (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleDelete(contact.id)}
+                        className="text-xs text-red-600 font-semibold hover:text-red-800 transition-colors"
+                      >
+                        Yes, delete
+                      </button>
+                      <button
+                        onClick={() => setConfirmDelete(null)}
+                        className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmDelete(contact.id)}
+                      className="text-xs text-red-400 hover:text-red-600 transition-colors"
+                    >
+                      Delete
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
