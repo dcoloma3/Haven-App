@@ -745,21 +745,19 @@ function ContactSection() {
   async function handleSubmit(e) {
     e.preventDefault()
     setSubmitting(true)
-    // Opens the user's email client with pre-filled content.
-    // To replace with a real form service (e.g. Formspree), swap this block:
-    //   const res = await fetch('https://formspree.io/f/YOUR_FORM_ID', {
-    //     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    //     body: JSON.stringify(form),
-    //   })
-    const subject = encodeURIComponent(`Haven inquiry — ${form.facility} (${form.firstName} ${form.lastName})`)
-    const body = encodeURIComponent(
-      `Name: ${form.firstName} ${form.lastName}\nEmail: ${form.email}\nFacility: ${form.facility}\n\nMessage:\n${form.message}`
-    )
-    window.location.href = `mailto:support@haven.care?subject=${subject}&body=${body}`
-    setTimeout(() => {
-      setSubmitting(false)
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      if (!res.ok) throw new Error('Failed to send')
       setSent(true)
-    }, 400)
+    } catch {
+      alert('Something went wrong. Please email us directly at support@haven.care')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const inputBase = {
