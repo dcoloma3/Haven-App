@@ -14,7 +14,7 @@ function useSidebarCollapsed() {
   function toggle() {
     setCollapsed(c => {
       const next = !c
-      try { localStorage.setItem('haven_sidebar', next ? '1' : '0') } catch {}
+      try { localStorage.setItem('haven_sidebar', next ? '1' : '0') } catch { /* intentional */ }
       return next
     })
   }

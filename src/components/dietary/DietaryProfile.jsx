@@ -36,7 +36,7 @@ function formatDietTypes(arr) {
   return arr.join(', ')
 }
 
-export default function DietaryProfile({ residentId, resident }) {
+export default function DietaryProfile({ residentId, resident: _resident }) {
   const { communityId } = useCommunity()
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)

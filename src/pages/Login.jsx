@@ -51,7 +51,7 @@ export default function Login() {
     setLoading(true)
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (!error && !rememberMe) {
-      try { sessionStorage.setItem('haven_session_only', '1') } catch {}
+      try { sessionStorage.setItem('haven_session_only', '1') } catch { /* intentional */ }
     }
     if (error) setError(error.message)
     setLoading(false)

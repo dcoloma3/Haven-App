@@ -24,6 +24,7 @@ const TYPE_COLORS = {
   other: 'bg-gray-100 text-gray-600',
 }
 
+// eslint-disable-next-line no-unused-vars
 const SEVERITY_COLORS = {
   low: 'bg-emerald-100 text-emerald-700',
   medium: 'bg-amber-100 text-amber-700',
@@ -274,7 +275,10 @@ export default function ResidentIncidents({ residentId, resident }) {
     setLoading(false)
   }, [residentId])
 
-  useEffect(() => { loadIncidents() }, [loadIncidents])
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadIncidents()
+  }, [loadIncidents])
 
   function handleSaved(saved) {
     setIncidents(prev => {

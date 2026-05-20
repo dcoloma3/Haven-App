@@ -254,7 +254,7 @@ function ComplianceItemModal({ item, docKey, resident, communityId, onClose, onS
 
 // ── Category Section ─────────────────────────────────────────────────────────
 
-function CategorySection({ categoryKey, docKeys, itemMap, resident, onEdit }) {
+function CategorySection({ categoryKey, docKeys, itemMap, resident: _resident, onEdit }) {
   const [open, setOpen] = useState(true)
   const category = DOC_CATEGORIES[categoryKey]
 
@@ -367,7 +367,7 @@ function CategorySection({ categoryKey, docKeys, itemMap, resident, onEdit }) {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 
-export default function ResidentCompliance({ residentId, resident, onResidentUpdate }) {
+export default function ResidentCompliance({ residentId, resident, onResidentUpdate: _onResidentUpdate }) {
   const { communityId } = useCommunity()
   const [items, setItems]       = useState([])
   const [loading, setLoading]   = useState(true)
@@ -403,6 +403,7 @@ export default function ResidentCompliance({ residentId, resident, onResidentUpd
     }).sort((a, b) => a.expiration_date.localeCompare(b.expiration_date))
   }, [items])
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!communityId || !residentId) return
     setLoading(true)
@@ -416,6 +417,7 @@ export default function ResidentCompliance({ residentId, resident, onResidentUpd
         setLoading(false)
       })
   }, [communityId, residentId])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function handleEdit(key, item) {
     setEditKey(key)

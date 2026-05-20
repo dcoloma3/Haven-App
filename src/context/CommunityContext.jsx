@@ -11,7 +11,6 @@ export function CommunityProvider({ children }) {
   })
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
   const [allCommunities, setAllCommunities] = useState([])
-  const [editMode] = useState(true) // super admin always has full edit access
   const [loadError, setLoadError] = useState(null)
   const [viewAsRole, setViewAsRole] = useState(null) // null = real role, 'staff' = preview as staff
   const [isReloading, setIsReloading] = useState(false)
@@ -55,7 +54,7 @@ export function CommunityProvider({ children }) {
         const validIds = list.map(m => m.communities?.id).filter(Boolean)
         // Keep the stored ID only if it actually belongs to this user (or they're a super admin)
         if (prev && (validIds.includes(prev) || superAdmin)) {
-          try { localStorage.setItem('haven_community_id', prev) } catch {}
+          try { localStorage.setItem('haven_community_id', prev) } catch { /* intentional */ }
           return prev
         }
         // Otherwise fall back to the first community in their membership list
@@ -66,7 +65,7 @@ export function CommunityProvider({ children }) {
           } else {
             localStorage.removeItem('haven_community_id')
           }
-        } catch {}
+        } catch { /* intentional */ }
         return id
       })
 
@@ -97,7 +96,7 @@ export function CommunityProvider({ children }) {
       if (!session) {
         setMemberships([])
         setActiveCommunityId(null)
-        try { localStorage.removeItem('haven_community_id') } catch {}
+        try { localStorage.removeItem('haven_community_id') } catch { /* intentional */ }
         setIsSuperAdmin(false)
         setAllCommunities([])
       } else {
@@ -106,7 +105,7 @@ export function CommunityProvider({ children }) {
         // rather than accidentally keeping a value left by a previous user.
         if (event === 'SIGNED_IN' && session.user.id !== lastUserIdRef.current) {
           // Genuinely new user — clear to prevent cross-user data leakage
-          try { localStorage.removeItem('haven_community_id') } catch {}
+          try { localStorage.removeItem('haven_community_id') } catch { /* intentional */ }
           setActiveCommunityId(null)
         }
         lastUserIdRef.current = session.user.id
@@ -130,6 +129,7 @@ export function CommunityProvider({ children }) {
     await load(data.session?.user?.id ?? null, data.session?.user?.email ?? '')
   }
 
+  // eslint-disable-next-line no-unused-vars
   function setEditMode() {} // no-op kept for any legacy references
 
   async function reloadAllCommunities() {
@@ -155,7 +155,7 @@ export function CommunityProvider({ children }) {
       viewAsRole,
       setViewAsRole,
       setCommunityId: (id) => {
-        try { id ? localStorage.setItem('haven_community_id', id) : localStorage.removeItem('haven_community_id') } catch {}
+        try { id ? localStorage.setItem('haven_community_id', id) : localStorage.removeItem('haven_community_id') } catch { /* intentional */ }
         setActiveCommunityId(id)
         const name = memberships?.find(m => m.communities?.id === id)?.communities?.name
         setCommunityTags(id, name)
@@ -168,6 +168,7 @@ export function CommunityProvider({ children }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useCommunity() {
   return useContext(CommunityContext)
 }

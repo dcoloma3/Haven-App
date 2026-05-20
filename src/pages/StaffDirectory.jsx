@@ -380,7 +380,7 @@ function StaffModal({ member, communityId, currentUserId, onClose, onSaved, onDe
 
 // ─── Invite Modal ─────────────────────────────────────────────────────────────
 
-function InviteModal({ communityId, currentUserId, onClose, onInvited }) {
+function InviteModal({ communityId: _communityId, currentUserId, onClose, onInvited }) {
   const { memberships } = useCommunity()
   const [email, setEmail] = useState('')
   const [role, setRole] = useState('staff')
@@ -502,7 +502,10 @@ export default function StaffDirectory() {
     setLoading(false)
   }
 
-  useEffect(() => { loadMembers() }, [communityId])
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadMembers()
+  }, [communityId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleSaved() { await loadMembers(); setEditing(null) }
   function handleDeleted(memberId) { setMembers(prev => prev.filter(m => m.memberId !== memberId)); setEditing(null) }

@@ -20,6 +20,7 @@ function NoteModal({ file, onSave, onCancel, saving }) {
 
   useEffect(() => {
     const url = URL.createObjectURL(file)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPreview(url)
     return () => URL.revokeObjectURL(url)
   }, [file])

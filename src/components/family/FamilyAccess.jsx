@@ -28,7 +28,7 @@ import { supabase } from '../../lib/supabase'
 import { useCommunity } from '../../context/CommunityContext'
 import { useProfile } from '../../context/ProfileContext'
 
-export default function FamilyAccess({ residentId, resident }) {
+export default function FamilyAccess({ residentId, resident: _resident }) {
   const { communityId, isAdmin } = useCommunity()
   const { profile } = useProfile()
   const [members, setMembers] = useState([])

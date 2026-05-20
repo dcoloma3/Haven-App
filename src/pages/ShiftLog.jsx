@@ -50,7 +50,10 @@ export default function ShiftLog() {
   const [showModal, setShowModal] = useState(false)
   const [deleteConfirmId, setDeleteConfirmId] = useState(null)
 
-  useEffect(() => { if (location.state?.quickAdd) setShowModal(true) }, [])
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (location.state?.quickAdd) setShowModal(true)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const [saving, setSaving] = useState(false)
   const [filterShift, setFilterShift] = useState('All')
   const [filterDate, setFilterDate] = useState(localDateStr())

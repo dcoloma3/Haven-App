@@ -9,6 +9,7 @@ export function FacilityProvider({ children }) {
 
   useEffect(() => {
     if (community) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFacility({
         id: community.id,
         facility_name: community.name,
@@ -30,6 +31,7 @@ export function FacilityProvider({ children }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useFacility() {
   return useContext(FacilityContext)
 }

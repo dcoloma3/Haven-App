@@ -17,7 +17,7 @@ export function useDarkMode() {
     try {
       if (isDark) localStorage.setItem('haven_dark', '1')
       else localStorage.removeItem('haven_dark')
-    } catch {}
+    } catch { /* intentional */ }
   }, [isDark])
 
   return { isDark, toggle: () => setIsDark(d => !d) }

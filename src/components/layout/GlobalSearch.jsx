@@ -58,7 +58,7 @@ export default function GlobalSearch() {
   const [results, setResults] = useState(null)
   const [loading, setLoading] = useState(false)
   const [open, setOpen]       = useState(false)
-  const [focused, setFocused] = useState(false)
+  const [, setFocused] = useState(false)
   const navigate    = useNavigate()
   const containerRef = useRef(null)
   const timerRef     = useRef(null)
@@ -77,6 +77,7 @@ export default function GlobalSearch() {
   // Debounced search
   useEffect(() => {
     clearTimeout(timerRef.current)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (query.length < 2) { setResults(null); setOpen(false); return }
 
     setLoading(true)
@@ -98,7 +99,7 @@ export default function GlobalSearch() {
     }, 200)
 
     return () => clearTimeout(timerRef.current)
-  }, [query])
+  }, [query, communityId])
 
   function handleSelect(path) {
     setQuery('')

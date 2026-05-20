@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { useFacility } from '../../context/FacilityContext'
 import { useProfile } from '../../context/ProfileContext'
 import { useCommunity } from '../../context/CommunityContext'
 import { useIsMobile } from '../../hooks/useIsMobile'
@@ -101,7 +100,7 @@ function CommunityDropdown({ community, memberships, isAdmin, isSuperAdmin, onSw
 function UserMenu({ profile, isAdmin, isSuperAdmin }) {
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
-  const { community, communityId, allCommunities, setCommunityId } = useCommunity()
+  const { communityId, allCommunities, setCommunityId } = useCommunity()
 
   const displayName = profile?.full_name || profile?.email?.split('@')[0] || 'Account'
   const avatarInitials = profile?.full_name
@@ -206,7 +205,7 @@ function StaffViewToggle() {
 
 export default function Navbar() {
   const { profile } = useProfile()
-  const { isAdmin, isSuperAdmin, community, communityId, memberships, setCommunityId } = useCommunity()
+  const { isAdmin, isSuperAdmin, community, memberships, setCommunityId } = useCommunity()
   const [showNewCommunity, setShowNewCommunity] = useState(false)
   const [showMobileSearch, setShowMobileSearch] = useState(false)
   const navigate = useNavigate()

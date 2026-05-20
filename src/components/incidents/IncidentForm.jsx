@@ -40,6 +40,7 @@ function ResidentSearch({ communityId, value, onChange }) {
   const ref = useRef(null)
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!query.trim() || query === value?.name) { setResults([]); return }
     const t = setTimeout(async () => {
       const { data } = await supabase

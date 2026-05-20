@@ -178,7 +178,10 @@ export default function ResidentMedHistory({ residentId, resident }) {
     setLoading(false)
   }, [residentId, from, to])
 
-  useEffect(() => { loadRecords() }, [loadRecords])
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadRecords()
+  }, [loadRecords])
 
   // Unique medication names across both routine and PRN records in range
   const medOptions = useMemo(() => {
@@ -227,8 +230,6 @@ export default function ResidentMedHistory({ residentId, resident }) {
       const generatedOn = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
       const rangeLabel = from === to ? formatDateShort(from) : `${formatDateShort(from)} – ${formatDateShort(to)}`
       const modeLabel = marMode === 'administered' ? 'Administered Medications Only' : 'Full Clinical MAR (with missed doses)'
-      const medLabel = selectedMed ? `Medication: ${selectedMed}` : 'All Medications'
-
       // Header bar — taller when filtering a specific med
       const headerH = selectedMed ? 36 : 30
       doc.setFillColor(4, 44, 83)

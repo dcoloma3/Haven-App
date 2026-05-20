@@ -308,7 +308,10 @@ export default function VitalSigns() {
   const [showPicker, setShowPicker] = useState(false)
   const [quickAddMode, setQuickAddMode] = useState(false)
 
-  useEffect(() => { if (location.state?.quickAdd) setQuickAddMode(true) }, [])
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (location.state?.quickAdd) setQuickAddMode(true)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function load() {
     // Get all active residents

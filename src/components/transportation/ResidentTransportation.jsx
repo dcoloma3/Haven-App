@@ -10,7 +10,7 @@ const STATUS_COLORS = {
   cancelled: 'bg-slate-100 text-slate-500',
 }
 
-export default function ResidentTransportation({ residentId, resident }) {
+export default function ResidentTransportation({ residentId, resident: _resident }) {
   const { communityId, isAdmin } = useCommunity()
   const { profile } = useProfile()
   const [trips, setTrips] = useState([])

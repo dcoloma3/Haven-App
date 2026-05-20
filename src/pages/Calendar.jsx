@@ -93,7 +93,10 @@ export default function Calendar() {
     setEvents(data ?? [])
   }, [year, month, communityId])
 
-  useEffect(() => { fetchEvents() }, [fetchEvents])
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchEvents()
+  }, [fetchEvents])
 
   // ── Fetch upcoming events (next 5 from today) ────────────────────────────────
   useEffect(() => {
@@ -108,7 +111,7 @@ export default function Calendar() {
       .order('event_time', { ascending: true, nullsFirst: true })
       .limit(5)
       .then(({ data }) => setUpcomingEvents(data ?? []))
-  }, [communityId]) // eslint-disable-line
+  }, [communityId])
 
   // ── Fetch active residents for EventForm ─────────────────────────────────────
   useEffect(() => {

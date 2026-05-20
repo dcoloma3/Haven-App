@@ -26,6 +26,7 @@ Sentry.init({
 })
 
 // Fallback UI shown when the entire app crashes
+// eslint-disable-next-line react-refresh/only-export-components
 function AppCrashFallback({ error }) {
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">

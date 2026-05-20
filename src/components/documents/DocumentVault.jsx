@@ -57,7 +57,7 @@ function FileIcon({ type }) {
   )
 }
 
-export default function DocumentVault({ residentId, resident }) {
+export default function DocumentVault({ residentId, resident: _resident }) {
   const { communityId, isAdmin } = useCommunity()
   const { profile } = useProfile()
   const [documents, setDocuments] = useState([])

@@ -58,7 +58,7 @@ function getYesterday() {
   return localDateStr(d)
 }
 
-export default function ADLTracker({ residentId, resident }) {
+export default function ADLTracker({ residentId, resident: _resident }) {
   const { communityId } = useCommunity()
   const { profile } = useProfile()
   const [today] = useState(localDateStr())

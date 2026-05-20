@@ -100,7 +100,7 @@ export default function NotificationLog() {
   async function logManual() {
     if (!manualForm.recipient_name.trim()) return
     setSavingLog(true)
-    const authorName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Staff'
+    const _authorName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Staff'
     const { error } = await supabase.from('notification_log').insert({
       community_id: communityId,
       notification_type: manualForm.notification_type,

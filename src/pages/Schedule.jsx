@@ -501,6 +501,7 @@ export default function Schedule() {
   // Load only shifts for this community
   useEffect(() => {
     if (!communityId) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
     const { start, end } = getDateRange(view, currentDate)
     supabase

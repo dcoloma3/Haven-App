@@ -38,7 +38,7 @@ function isPastDue(dateStr) {
   return dateStr < today
 }
 
-export default function CarePlanList({ residentId, resident }) {
+export default function CarePlanList({ residentId, resident: _resident }) {
   const { communityId, isAdmin } = useCommunity()
   const { profile } = useProfile()
   const [plans, setPlans] = useState([])

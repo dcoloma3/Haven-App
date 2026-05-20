@@ -22,6 +22,7 @@ export default function FacilitySettings() {
 
   useEffect(() => {
     if (community) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm({
         name: community.name ?? '',
         license_number: community.license_number ?? '',

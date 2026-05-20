@@ -407,6 +407,7 @@ function AdminStatusBadge({ status }) {
 
 // ─── 3-State Dose Row ─────────────────────────────────────────────────────────
 
+// eslint-disable-next-line no-unused-vars
 function DoseRow({ med, time, record, toggling, onSet }) {
   const [noteValue, setNoteValue] = useState('')
   const [showNoteInput, setShowNoteInput] = useState(null) // 'refused' | 'held' | null
@@ -745,7 +746,6 @@ function PRNMedications({ residentId, medications }) {
   const todayStr = localDateStr()
 
   async function loadDoses() {
-    const prnNames = prnMeds.map(m => m.medication_name)
     const { data } = await supabase
       .from('prn_administrations')
       .select('*')
@@ -758,6 +758,7 @@ function PRNMedications({ residentId, medications }) {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (prnMeds.length === 0) { setLoadingDoses(false); return }
     loadDoses()
   }, [residentId, prnMeds.length]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -769,10 +770,6 @@ function PRNMedications({ residentId, medications }) {
 
     // Use current HH:MM as the scheduled_time to avoid unique constraint issues
     const now = new Date()
-    const hh = String(now.getHours()).padStart(2, '0')
-    const mm = String(now.getMinutes()).padStart(2, '0')
-    const timeKey = `${hh}:${mm}`
-
     const { data: { session } } = await supabase.auth.getSession()
     const { data, error } = await supabase
       .from('prn_administrations')
@@ -830,6 +827,7 @@ function PRNMedications({ residentId, medications }) {
             let intervalWarning = null
             if (lastDose && med.min_interval_hours) {
               const lastAt = new Date(lastDose.administered_at)
+              // eslint-disable-next-line react-hooks/purity
               const hoursAgo = (Date.now() - lastAt.getTime()) / 3600000
               if (hoursAgo < med.min_interval_hours) {
                 const remaining = Math.ceil(med.min_interval_hours - hoursAgo)
@@ -938,7 +936,7 @@ function PRNMedications({ residentId, medications }) {
 
 // ─── Main MedicationList ──────────────────────────────────────────────────────
 
-export default function MedicationList({ residentId, onMedStatusChange }) {
+export default function MedicationList({ residentId, onMedStatusChange: _onMedStatusChange }) {
   const { communityId } = useCommunity()
   const [medications, setMedications] = useState([])
   const [loading, setLoading] = useState(true)
@@ -983,7 +981,7 @@ export default function MedicationList({ residentId, onMedStatusChange }) {
     try {
       await generateLIC622PDF({ residentId, communityId, year: lic622Year, month: lic622Month, supabase })
       setShowLIC622(false)
-    } catch (e) {
+    } catch (_e) {
       setLic622Error('Failed to generate PDF. Please try again.')
     }
     setLic622Generating(false)

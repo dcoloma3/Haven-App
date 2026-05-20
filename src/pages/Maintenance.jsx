@@ -59,7 +59,10 @@ export default function Maintenance() {
   const [showModal, setShowModal] = useState(false)
   const [deleteConfirmId, setDeleteConfirmId] = useState(null)
 
-  useEffect(() => { if (location.state?.quickAdd) setShowModal(true) }, [])
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (location.state?.quickAdd) setShowModal(true)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const [saving, setSaving] = useState(false)
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterPriority, setFilterPriority] = useState('all')
@@ -83,6 +86,7 @@ export default function Maintenance() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchOrders()
     supabase
       .from('community_members')

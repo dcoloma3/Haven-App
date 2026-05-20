@@ -19,7 +19,7 @@ function drawSection(doc, title, y, pageW, margin) {
   return y + 9
 }
 
-function checkPage(doc, y, pageH, margin, pageW) {
+function checkPage(doc, y, pageH, margin, _pageW) {
   if (y > pageH - 30) {
     doc.addPage()
     // Footer on the new page will be added at end — just reset y
@@ -37,7 +37,7 @@ const STATUS_LABEL = {
 }
 
 // Fetch community data and generate PDF
-export async function generateCompliancePDF({ residentId, communityId, supabase, resident, items, itemMap }) {
+export async function generateCompliancePDF({ residentId: _residentId, communityId, supabase, resident, items: _items, itemMap }) {
   // Fetch community name
   const { data: community } = await supabase
     .from('communities')

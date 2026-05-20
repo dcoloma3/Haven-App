@@ -25,11 +25,13 @@ function isOutOfRange(field, value) {
   return false
 }
 
+// eslint-disable-next-line no-unused-vars
 function isPainRed(value) {
   if (value == null || value === '') return false
   return Number(value) >= 7
 }
 
+// eslint-disable-next-line no-unused-vars
 function isPainAmber(value) {
   if (value == null || value === '') return false
   const v = Number(value)
@@ -82,7 +84,7 @@ const EMPTY_FORM = {
   notes: '',
 }
 
-export default function VitalsLog({ residentId, resident }) {
+export default function VitalsLog({ residentId, resident: _resident }) {
   const { communityId, isAdmin } = useCommunity()
   const { profile } = useProfile()
   const [records, setRecords] = useState([])

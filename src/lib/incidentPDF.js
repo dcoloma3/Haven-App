@@ -55,6 +55,7 @@ function drawSection(doc, title, y, pageW, margin) {
   return y + 9
 }
 
+// eslint-disable-next-line no-unused-vars
 function drawField(doc, label, value, x, y, labelW, maxW) {
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(8)
@@ -73,8 +74,6 @@ export function generateIncidentPDF({ incident, residentName, facilityName, room
   const pageH = 279.4
   const margin = 15
   const contentW = pageW - margin * 2
-  let y = margin
-
   // ── Header ──────────────────────────────────────────────────
   doc.setFillColor(24, 95, 165)
   doc.rect(0, 0, pageW, 20, 'F')
@@ -90,7 +89,7 @@ export function generateIncidentPDF({ incident, residentName, facilityName, room
   if (facilityName) doc.text(facilityName, pageW - margin, 9, { align: 'right' })
   doc.text(`Printed: ${new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}`, pageW - margin, 15, { align: 'right' })
 
-  y = 26
+  let y = 26
 
   // Status badge area
   const statusColors = { open: [59, 130, 246], reviewed: [139, 92, 246], closed: [148, 163, 184] }
@@ -129,7 +128,6 @@ export function generateIncidentPDF({ incident, residentName, facilityName, room
 
   const col1x = margin + 3
   const col2x = margin + contentW / 2 + 3
-  const halfW = contentW / 2 - 6
 
   // Row 1: Date + Time
   doc.setFont('helvetica', 'bold')

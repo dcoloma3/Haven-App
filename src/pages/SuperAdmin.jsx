@@ -444,7 +444,7 @@ function EditUserModal({ user, onClose, onSaved }) {
     }
   }
 
-  async function handleRemove(membershipId, communityName) {
+  async function handleRemove(membershipId, _communityName) {
     if (removing[membershipId] === 'confirm') {
       setRemoving(r => ({ ...r, [membershipId]: 'removing' }))
       await supabase.from('community_members').delete().eq('id', membershipId)
@@ -455,7 +455,7 @@ function EditUserModal({ user, onClose, onSaved }) {
     }
   }
 
-  const displayName = [user.first_name, user.last_name].filter(Boolean).join(' ') || user.full_name || user.email || 'User'
+  const _displayName = [user.first_name, user.last_name].filter(Boolean).join(' ') || user.full_name || user.email || 'User'
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50">
@@ -618,7 +618,7 @@ export default function SuperAdmin() {
     loadStats()
     loadSuperAdmins()
     loadAllUsers()
-  }, [isSuperAdmin, allCommunities])
+  }, [isSuperAdmin, allCommunities]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadAllUsers() {
     const { data: allMemberships } = await supabase

@@ -503,8 +503,6 @@ function ScheduleView() {
   const [weekOffset, setWeekOffset] = useState(0)
 
   const days = getWeekDays(weekOffset)
-  const weekStart = days[0].label
-  const weekEnd   = days[4].label
 
   // Format week label: "May 12–16, 2026" style
   const weekLabel = (() => {

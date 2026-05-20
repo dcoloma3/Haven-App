@@ -54,7 +54,7 @@ export default function Activities() {
   const [attendance, setAttendance] = useState({})
   const [savingAttendance, setSavingAttendance] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
-  const [saveError, setSaveError] = useState('')
+  const [, setSaveError] = useState('')
 
   const [editActivity, setEditActivity] = useState(null)
   const [form, setForm] = useState({ activity_date: localDateStr(), activity_time: '', title: '', description: '', location: '', capacity: '' })

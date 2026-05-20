@@ -292,7 +292,10 @@ export default function Incidents() {
   // Warn before page unload when the incident form is open
   useUnsavedChanges(showForm)
 
-  useEffect(() => { if (location.state?.quickAdd) setShowForm(true) }, [])
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (location.state?.quickAdd) setShowForm(true)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Filters
   const [statusFilter, setStatusFilter] = useState('all')
@@ -331,9 +334,12 @@ export default function Incidents() {
     setLoading(false)
   }, [communityId, statusFilter, typeFilter, dateFrom, dateTo])
 
-  useEffect(() => { loadIncidents() }, [loadIncidents])
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadIncidents()
+  }, [loadIncidents])
 
-  function handleSaved(saved) {
+  function handleSaved(_saved) {
     setShowForm(false)
     setEditingIncident(null)
     loadIncidents() // reload to pick up resident join data

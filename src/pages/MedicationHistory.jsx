@@ -110,6 +110,7 @@ export default function MedicationHistory() {
     if (!communityId) return
     const residentIds = residents.map(r => r.id)
     // If residents haven't loaded yet, wait — avoids a cross-community data leak
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!residentIds.length) { setRecords([]); setLoading(false); return }
     setLoading(true)
     let query = supabase

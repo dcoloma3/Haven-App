@@ -83,7 +83,10 @@ export default function ResidentAppointments({ residentId, communityId }) {
     setLoading(false)
   }, [residentId, communityId])
 
-  useEffect(() => { fetchAppointments() }, [fetchAppointments])
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchAppointments()
+  }, [fetchAppointments])
 
   // ── Fetch residents for EventForm dropdown ────────────────────────────────────
   useEffect(() => {

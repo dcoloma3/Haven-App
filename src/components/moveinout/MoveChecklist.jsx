@@ -47,7 +47,7 @@ const DEFAULT_MOVEOUT_ITEMS = [
   'Room cleared for next resident',
 ]
 
-export default function MoveChecklist({ residentId, resident }) {
+export default function MoveChecklist({ residentId, resident: _resident }) {
   const { communityId } = useCommunity()
   const { profile } = useProfile()
   const [activeType, setActiveType] = useState('move-in')

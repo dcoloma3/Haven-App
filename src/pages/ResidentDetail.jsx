@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { adminKey, isMedDueOnDate, computeResidentStatus } from '../lib/medStatus'
+import { adminKey, computeResidentStatus } from '../lib/medStatus'
 import Layout from '../components/layout/Layout'
 import ResidentAvatar from '../components/residents/ResidentAvatar'
 import ResidentProfile from '../components/residents/ResidentProfile'
@@ -23,7 +23,6 @@ import BillingHistory from '../components/billing/BillingHistory'
 import MoveChecklist from '../components/moveinout/MoveChecklist'
 import ResidentTransportation from '../components/transportation/ResidentTransportation'
 import { useCommunity } from '../context/CommunityContext'
-import { useIsMobile } from '../hooks/useIsMobile'
 import { generateFaceSheetPDF } from '../lib/faceSheetPDF'
 import { localDateStr } from '../lib/dateUtils'
 
@@ -113,7 +112,6 @@ export default function ResidentDetail() {
   const navigate = useNavigate()
   const location = useLocation()
   const { isAdmin, communityId } = useCommunity()
-  const isMobile = useIsMobile()
   const [resident, setResident] = useState(null)
   const [activeTab, setActiveTab] = useState('Profile')
   const [loading, setLoading] = useState(true)
@@ -145,7 +143,7 @@ export default function ResidentDetail() {
         setResident(data)
         setLoading(false)
       })
-  }, [id, communityId])
+  }, [id, communityId, navigate])
 
   // Map old individual tab names → new consolidated tab names
   const TAB_MAP = {
@@ -161,9 +159,11 @@ export default function ResidentDetail() {
   useEffect(() => {
     if (location.state?.openTab) {
       const mapped = TAB_MAP[location.state.openTab] ?? location.state.openTab
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveTab(mapped)
     }
-  }, []) // eslint-disable-line
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Fetch today's med status for the ring indicator
   const refreshMedStatus = useCallback(async () => {
@@ -173,9 +173,12 @@ export default function ResidentDetail() {
     ])
     const administeredSet = new Set((admins ?? []).map(a => adminKey(a.medication_id, a.scheduled_time)))
     setMedStatus(computeResidentStatus(meds ?? [], administeredSet, todayStr))
-  }, [id, todayStr]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [id, todayStr])
 
-  useEffect(() => { refreshMedStatus() }, [refreshMedStatus])
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    refreshMedStatus()
+  }, [refreshMedStatus])
 
   function handleTabClick(tab) {
     setActiveTab(tab)
