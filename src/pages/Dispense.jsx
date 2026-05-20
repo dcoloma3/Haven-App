@@ -204,7 +204,7 @@ function ResidentAvatar({ resident, size = 'md' }) {
   const name = residentName(resident)
   const initials = ((resident.first_name?.[0] ?? '') + (resident.last_name?.[0] ?? '')).toUpperCase()
     || name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
-  const sz = size === 'sm' ? 'w-9 h-9 text-xs' : 'w-10 h-10 text-sm'
+  const sz = size === 'sm' ? 'w-14 h-14 text-sm' : 'w-16 h-16 text-base'
 
   if (resident.avatar_url && !err) {
     return (
@@ -669,10 +669,7 @@ export default function Dispense() {
     })
   }
 
-  // Auto-expand all time slots when data loads
-  useEffect(() => {
-    if (sortedTimes.length > 0) setExpandedTimes(new Set(sortedTimes))
-  }, [sortedTimes.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Time slots start collapsed — user taps to expand each one
 
   async function quickNotGiven(med, time, reason) {
     const key = adminKey(med.id, time)
@@ -972,7 +969,7 @@ export default function Dispense() {
                               {/* ── Resident header row (tap to expand) ── */}
                               <button
                                 onClick={() => toggleResident(time, rid)}
-                                className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
+                                className={`w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors ${
                                   resAllDone ? 'bg-emerald-50/50' : resAllRecorded ? 'bg-rose-50/30' : 'hover:bg-slate-50'
                                 }`}
                               >
