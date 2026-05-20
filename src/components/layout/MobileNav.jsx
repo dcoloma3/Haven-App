@@ -42,19 +42,6 @@ function CalendarIcon({ active }) {
   )
 }
 
-function ProfileIcon({ active }) {
-  return active ? (
-    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
-    </svg>
-  ) : (
-    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-    </svg>
-  )
-}
-
 function MoreIcon({ active }) {
   return (
     <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
@@ -273,14 +260,6 @@ export default function MobileNav() {
           <span className="text-[10px] font-medium tracking-wide">More</span>
         </button>
 
-        <NavLink to="/profile" className={tabCls}>
-          {({ isActive }) => (
-            <>
-              <ProfileIcon active={isActive} />
-              <span className="text-[10px] font-medium tracking-wide">Profile</span>
-            </>
-          )}
-        </NavLink>
       </nav>
     </>
   )
