@@ -45,6 +45,25 @@ function getTodayStr() {
   return new Date().toISOString().split('T')[0]
 }
 
+const DAY_LABELS = { monday: 'Mon', tuesday: 'Tue', wednesday: 'Wed', thursday: 'Thu', friday: 'Fri', saturday: 'Sat', sunday: 'Sun' }
+
+function describeFrequency(med) {
+  if (!med) return '—'
+  const type = med.frequency_type
+  if (!type || type === 'daily') return 'Every day'
+  if (type === 'one_time') return 'One time'
+  if (type === 'prn') return 'As needed'
+  if (type === 'specific_days') {
+    if (!med.frequency_days?.length) return 'Specific days'
+    return med.frequency_days.map(d => DAY_LABELS[d] ?? d).join(', ')
+  }
+  if (type === 'every_x_days') {
+    const n = med.frequency_interval
+    return n ? `Every ${n} day${n !== 1 ? 's' : ''}` : 'Every X days'
+  }
+  return '—'
+}
+
 function datesInRange(fromStr, toStr) {
   const dates = []
   const cur = new Date(fromStr + 'T00:00:00')
@@ -247,8 +266,12 @@ export default function ResidentMedHistory({ residentId, resident }) {
 
       // ── ADMINISTERED ONLY ──────────────────────────────────────────────────
       if (marMode === 'administered') {
+        // Build lookup: medication_id → full med object (for frequency)
+        const medById = new Map(allMedications.map(m => [m.id, m]))
+
         const rows = []
         filteredRoutine.forEach(r => {
+          const fullMed = medById.get(r.medication_id)
           rows.push({
             sortKey: r.administered_date + '_' + (r.scheduled_time ?? ''),
             cells: [
@@ -256,6 +279,7 @@ export default function ResidentMedHistory({ residentId, resident }) {
               r.administered_at ? formatTime(r.administered_at) : fmt12(r.scheduled_time),
               r.medications?.medication_name ?? '—',
               r.medications?.dose ?? '—',
+              describeFrequency(fullMed),
               'Routine',
               '—',
               r.administered_by ? (staffMap[r.administered_by] ?? 'Staff') : '—',
@@ -272,6 +296,7 @@ export default function ResidentMedHistory({ residentId, resident }) {
               formatTime(r.administered_at),
               r.medication_name,
               r.dose ?? '—',
+              'As needed',
               'PRN',
               r.reason,
               r.administered_by ? (staffMap[r.administered_by] ?? 'Staff') : '—',
@@ -283,13 +308,13 @@ export default function ResidentMedHistory({ residentId, resident }) {
 
         autoTable(doc, {
           startY: tableStartY,
-          head: [['Date', 'Time Given', 'Medication', 'Dose', 'Type', 'Reason', 'Given By']],
+          head: [['Date', 'Time Given', 'Medication', 'Dose', 'Frequency', 'Type', 'Reason', 'Given By']],
           body: rows.map(r => r.cells),
-          styles: { fontSize: 8, cellPadding: 2.5 },
-          headStyles: { fillColor: [24, 95, 165], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+          styles: { fontSize: 7.5, cellPadding: 2 },
+          headStyles: { fillColor: [24, 95, 165], textColor: 255, fontStyle: 'bold', fontSize: 7.5 },
           alternateRowStyles: { fillColor: [245, 248, 252] },
           didParseCell(data) {
-            if (data.section === 'body' && data.column.index === 4) {
+            if (data.section === 'body' && data.column.index === 5) {
               if (data.cell.raw === 'PRN') {
                 data.cell.styles.textColor = [124, 58, 237]
                 data.cell.styles.fontStyle = 'bold'
@@ -297,8 +322,9 @@ export default function ResidentMedHistory({ residentId, resident }) {
             }
           },
           columnStyles: {
-            0: { cellWidth: 26 }, 1: { cellWidth: 22 }, 2: { cellWidth: 42 },
-            3: { cellWidth: 20 }, 4: { cellWidth: 18 }, 5: { cellWidth: 32 }, 6: { cellWidth: 30 },
+            0: { cellWidth: 22 }, 1: { cellWidth: 20 }, 2: { cellWidth: 36 },
+            3: { cellWidth: 16 }, 4: { cellWidth: 26 }, 5: { cellWidth: 14 },
+            6: { cellWidth: 26 }, 7: { cellWidth: 22 },
           },
           margin: { left: 14, right: 14 },
         })
@@ -342,6 +368,7 @@ export default function ResidentMedHistory({ residentId, resident }) {
                   fmt12(time),
                   med.medication_name,
                   med.dose ?? '—',
+                  describeFrequency(med),
                   given ? `✓ Given ${record.administered_at ? formatTime(record.administered_at) : ''}` : '✗ Missed',
                   given && record.administered_by ? (staffMap[record.administered_by] ?? 'Staff') : '—',
                   'Routine',
@@ -360,6 +387,7 @@ export default function ResidentMedHistory({ residentId, resident }) {
                 formatTime(prn.administered_at),
                 prn.medication_name,
                 prn.dose ?? '—',
+                'As needed',
                 '✓ Given (PRN)',
                 prn.administered_by ? (staffMap[prn.administered_by] ?? 'Staff') : '—',
                 'PRN',
@@ -373,14 +401,14 @@ export default function ResidentMedHistory({ residentId, resident }) {
 
         autoTable(doc, {
           startY: tableStartY,
-          head: [['Date', 'Scheduled', 'Medication', 'Dose', 'Status', 'Given By', 'Type', 'Reason']],
+          head: [['Date', 'Scheduled', 'Medication', 'Dose', 'Frequency', 'Status', 'Given By', 'Type', 'Reason']],
           body: rows.map(r => r.cells),
-          styles: { fontSize: 7.5, cellPadding: 2.5 },
-          headStyles: { fillColor: [24, 95, 165], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+          styles: { fontSize: 7, cellPadding: 2 },
+          headStyles: { fillColor: [24, 95, 165], textColor: 255, fontStyle: 'bold', fontSize: 7 },
           alternateRowStyles: { fillColor: [245, 248, 252] },
           didParseCell(data) {
             if (data.section === 'body') {
-              if (data.column.index === 4) {
+              if (data.column.index === 5) {
                 const raw = String(data.cell.raw ?? '')
                 if (raw.startsWith('✓')) {
                   data.cell.styles.textColor = [5, 150, 105]
@@ -390,16 +418,16 @@ export default function ResidentMedHistory({ residentId, resident }) {
                   data.cell.styles.fontStyle = 'bold'
                 }
               }
-              if (data.column.index === 6 && data.cell.raw === 'PRN') {
+              if (data.column.index === 7 && data.cell.raw === 'PRN') {
                 data.cell.styles.textColor = [124, 58, 237]
                 data.cell.styles.fontStyle = 'bold'
               }
             }
           },
           columnStyles: {
-            0: { cellWidth: 22 }, 1: { cellWidth: 18 }, 2: { cellWidth: 38 },
-            3: { cellWidth: 16 }, 4: { cellWidth: 32 }, 5: { cellWidth: 26 },
-            6: { cellWidth: 14 }, 7: { cellWidth: 26 },
+            0: { cellWidth: 20 }, 1: { cellWidth: 16 }, 2: { cellWidth: 34 },
+            3: { cellWidth: 14 }, 4: { cellWidth: 24 }, 5: { cellWidth: 28 },
+            6: { cellWidth: 22 }, 7: { cellWidth: 12 }, 8: { cellWidth: 22 },
           },
           margin: { left: 14, right: 14 },
         })
