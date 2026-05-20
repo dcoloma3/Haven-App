@@ -394,15 +394,23 @@ function InviteModal({ communityId: _communityId, currentUserId, inviterName, co
     if (!email.trim()) { setError('Email is required.'); return }
     setSaving(true)
     setError('')
-    const invites = adminCommunityIds.map(cid => ({
-      community_id: cid,
-      email: email.trim().toLowerCase(),
-      role,
-      invited_by: currentUserId,
-    }))
+    const normalizedEmail = email.trim().toLowerCase()
+    // Remove any stale invite for this email first, then insert fresh
+    await supabase
+      .from('community_invites')
+      .delete()
+      .in('community_id', adminCommunityIds)
+      .eq('email', normalizedEmail)
+      .eq('accepted', false)
+
     const { error: inviteErr } = await supabase
       .from('community_invites')
-      .upsert(invites, { onConflict: 'community_id,email', ignoreDuplicates: true })
+      .insert(adminCommunityIds.map(cid => ({
+        community_id: cid,
+        email: normalizedEmail,
+        role,
+        invited_by: currentUserId,
+      })))
     if (inviteErr) { setSaving(false); setError(inviteErr.message); return }
 
     // Send invite email
@@ -411,7 +419,7 @@ function InviteModal({ communityId: _communityId, currentUserId, inviterName, co
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: email.trim().toLowerCase(),
+          email: normalizedEmail,
           role,
           communityName: communityName || 'your community',
           inviterName: inviterName || 'Your manager',
