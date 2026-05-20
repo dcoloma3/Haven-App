@@ -594,7 +594,7 @@ function UserRow({ user, onEdit }) {
 
 export default function SuperAdmin() {
   const navigate = useNavigate()
-  const { allCommunities, memberships, isSuperAdmin, setCommunityId, reloadAllCommunities } = useCommunity()
+  const { allCommunities, memberships, communityId, isSuperAdmin, setCommunityId, reloadAllCommunities } = useCommunity()
   const { profile } = useProfile()
   const [stats, setStats] = useState({})
   const [superAdmins, setSuperAdmins] = useState([])
@@ -716,7 +716,14 @@ export default function SuperAdmin() {
           </span>
           {/* Fix 2 — Back to Dashboard button */}
           <button
-            onClick={() => navigate('/dashboard')}
+            onClick={() => {
+              // communityId was cleared when entering SuperAdmin — restore it from
+              // the user's first membership so ProtectedRoute doesn't redirect to /community
+              if (!communityId && memberships?.length > 0) {
+                setCommunityId(memberships[0].communities.id)
+              }
+              navigate('/dashboard')
+            }}
             className="text-white/70 hover:text-white text-sm flex items-center gap-1.5 transition-colors"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
