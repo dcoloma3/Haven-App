@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf'
+import { localDateStr } from './dateUtils'
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -369,6 +370,6 @@ export async function generateFaceSheetPDF({ residentId, communityId, supabase }
     if (community.address) doc.text(community.address, margin, pageH - 6)
   }
 
-  const dateStr = new Date().toISOString().slice(0, 10)
+  const dateStr = localDateStr()
   doc.save(`FaceSheet_${safe(residentName)}_${dateStr}.pdf`)
 }

@@ -49,7 +49,7 @@ function AppCrashFallback({ error }) {
         </button>
         {import.meta.env.DEV && (
           <pre className="mt-4 text-left text-xs text-red-600 bg-red-50 rounded-lg p-3 overflow-auto max-h-40">
-            {error?.message}
+            {error?.stack ?? error?.message}
           </pre>
         )}
       </div>

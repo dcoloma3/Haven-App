@@ -1,4 +1,4 @@
-import { useEffect, useState, Fragment } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './lib/supabase'
 import { completeTrial } from './lib/trial'
@@ -147,6 +147,7 @@ function ProtectedRoute({ children, trialLocked, featureName, requireCommunity =
 
 export default function App() {
   const [session, setSession] = useState(undefined)
+  const lastIdentifiedId = useRef(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
@@ -154,10 +155,14 @@ export default function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session)
 
-      // Tag Sentry with the signed-in user so error reports show who was affected
+      // Tag Sentry with the signed-in user — guard against token-refresh re-fires
       if (session?.user) {
-        identifyUser({ userId: session.user.id, email: session.user.email })
+        if (session.user.id !== lastIdentifiedId.current) {
+          lastIdentifiedId.current = session.user.id
+          identifyUser({ userId: session.user.id, email: session.user.email })
+        }
       } else {
+        lastIdentifiedId.current = null
         clearUser()
       }
 
@@ -194,7 +199,7 @@ export default function App() {
   if (session === undefined) return <AppLoader />
 
   return (
-    <Fragment>
+    <>
     <BrowserRouter>
       <CommunityProvider>
         <ProfileProvider>
@@ -257,6 +262,6 @@ export default function App() {
       </CommunityProvider>
     </BrowserRouter>
     <SpeedInsights />
-    </Fragment>
+    </>
   )
 }

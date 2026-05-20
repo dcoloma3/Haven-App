@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import { identifyUser } from '../lib/monitoring'
+import { setCommunityTags } from '../lib/monitoring'
 
 const CommunityContext = createContext(null)
 
@@ -157,9 +157,8 @@ export function CommunityProvider({ children }) {
       setCommunityId: (id) => {
         try { id ? localStorage.setItem('haven_community_id', id) : localStorage.removeItem('haven_community_id') } catch {}
         setActiveCommunityId(id)
-        // Keep Sentry community tag in sync so errors show which facility was affected
         const name = memberships?.find(m => m.communities?.id === id)?.communities?.name
-        identifyUser({ userId: '', email: '', communityId: id ?? undefined, communityName: name })
+        setCommunityTags(id, name)
       },
       reload,
       reloadAllCommunities,

@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
 import EventForm from '../calendar/EventForm'
+import { localDateStr } from '../../lib/dateUtils'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function formatDate(dateStr) {
@@ -15,11 +16,6 @@ function formatTime(timeStr) {
   const [h, m] = timeStr.split(':')
   const hour = parseInt(h)
   return `${hour % 12 || 12}:${m} ${hour >= 12 ? 'PM' : 'AM'}`
-}
-
-function todayIso() {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 }
 
 // ─── Single appointment row ───────────────────────────────────────────────────
@@ -70,7 +66,7 @@ export default function ResidentAppointments({ residentId, communityId }) {
   // but EventForm expects the full community list — fetch it)
   const [residents, setResidents] = useState([])
 
-  const today = todayIso()
+  const today = localDateStr()
 
   // ── Fetch this resident's appointments ───────────────────────────────────────
   const fetchAppointments = useCallback(async () => {
@@ -185,7 +181,7 @@ export default function ResidentAppointments({ residentId, communityId }) {
         <EventForm
           residents={residents}
           communityId={communityId}
-          defaultDate={todayIso()}
+          defaultDate={localDateStr()}
           defaultResidentId={residentId}
           onClose={() => setShowAddForm(false)}
           onSaved={handleFormSaved}

@@ -1,32 +1,28 @@
-/**
- * Sentry user/community context helpers.
- *
- * Call `identifyUser()` once after login and `clearUser()` on sign-out.
- * This tags every subsequent error report with who was affected and which
- * community they were managing — making Sentry alerts actionable rather
- * than anonymous.
- */
 import * as Sentry from '@sentry/react'
 
-/**
- * Set Sentry user context after a successful login.
- * @param {{ userId: string, email: string, communityId?: string, communityName?: string }} params
- */
+const TAG_COMMUNITY_ID = 'community_id'
+const TAG_COMMUNITY_NAME = 'community_name'
+
+/** Set Sentry user + community context after login. */
 export function identifyUser({ userId, email, communityId, communityName }) {
   Sentry.setUser({ id: userId, email })
   if (communityId) {
-    Sentry.setTag('community_id', communityId)
-    Sentry.setTag('community_name', communityName ?? 'unknown')
+    Sentry.setTag(TAG_COMMUNITY_ID, communityId)
+    Sentry.setTag(TAG_COMMUNITY_NAME, communityName ?? 'unknown')
   }
 }
 
-/**
- * Clear Sentry user context on sign-out.
- */
+/** Update only the community tags without touching the user identity. */
+export function setCommunityTags(communityId, communityName) {
+  Sentry.setTag(TAG_COMMUNITY_ID, communityId ?? null)
+  Sentry.setTag(TAG_COMMUNITY_NAME, communityName ?? null)
+}
+
+/** Clear Sentry user context on sign-out. */
 export function clearUser() {
   Sentry.setUser(null)
-  Sentry.setTag('community_id', null)
-  Sentry.setTag('community_name', null)
+  Sentry.setTag(TAG_COMMUNITY_ID, null)
+  Sentry.setTag(TAG_COMMUNITY_NAME, null)
 }
 
 /**

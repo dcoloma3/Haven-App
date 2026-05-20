@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import Layout from '../components/layout/Layout'
 import EventForm from '../components/calendar/EventForm'
+import { localDateStr } from '../lib/dateUtils'
 import { useCommunity } from '../context/CommunityContext'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -70,7 +71,7 @@ export default function Calendar() {
   const [events, setEvents] = useState([])
   const [residents, setResidents] = useState([])
   const [selectedDay, setSelectedDay] = useState(
-    () => isoDate(now.getFullYear(), now.getMonth(), now.getDate())
+    () => localDateStr()
   )
   const [showAddForm, setShowAddForm] = useState(false)
   const [addFormDate, setAddFormDate] = useState('')
@@ -97,7 +98,7 @@ export default function Calendar() {
   // ── Fetch upcoming events (next 5 from today) ────────────────────────────────
   useEffect(() => {
     if (!communityId) return
-    const today = isoDate(now.getFullYear(), now.getMonth(), now.getDate())
+    const today = localDateStr()
     supabase
       .from('calendar_events')
       .select('*, residents(id, first_name, last_name, full_name)')
@@ -133,7 +134,7 @@ export default function Calendar() {
   function goToToday() {
     setYear(now.getFullYear())
     setMonth(now.getMonth())
-    setSelectedDay(isoDate(now.getFullYear(), now.getMonth(), now.getDate()))
+    setSelectedDay(localDateStr())
   }
 
   function openAddForm(date) {
@@ -184,7 +185,7 @@ export default function Calendar() {
     }
   })
 
-  const todayStr = isoDate(now.getFullYear(), now.getMonth(), now.getDate())
+  const todayStr = localDateStr()
   const selectedDayEvents = selectedDay ? (eventsByDate[selectedDay] ?? []) : []
   const monthLabel = new Date(year, month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 
