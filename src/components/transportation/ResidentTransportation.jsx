@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useCommunity } from '../../context/CommunityContext'
 import { useProfile } from '../../context/ProfileContext'
+import { localDateStr } from '../../lib/dateUtils'
 
 const STATUS_COLORS = {
   scheduled: 'bg-blue-100 text-blue-700',
@@ -21,7 +22,7 @@ export default function ResidentTransportation({ residentId, resident }) {
   const [form, setForm] = useState({ trip_date: '', departure_time: '', return_time: '', destination: '', purpose: '', driver_name: '', vehicle: '', notes: '', status: 'scheduled' })
 
   const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
-  const today = new Date().toISOString().split('T')[0]
+  const today = localDateStr()
 
   async function fetchTrips() {
     const { data } = await supabase

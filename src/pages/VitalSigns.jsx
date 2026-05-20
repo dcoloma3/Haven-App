@@ -29,6 +29,7 @@ import { supabase } from '../lib/supabase'
 import { useCommunity } from '../context/CommunityContext'
 import { useProfile } from '../context/ProfileContext'
 import Layout from '../components/layout/Layout'
+import { localDateStr } from '../lib/dateUtils'
 
 function isOutOfRange(field, value) {
   if (value == null || value === '') return false
@@ -386,7 +387,7 @@ export default function VitalSigns() {
       margin: { left: 14, right: 14 },
     })
 
-    doc.save(`vital-signs-${new Date().toISOString().split('T')[0]}.pdf`)
+    doc.save(`vital-signs-${localDateStr()}.pdf`)
   }
 
   // Use local midnight for date comparisons — avoids UTC/local off-by-one at day boundaries

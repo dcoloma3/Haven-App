@@ -4,6 +4,7 @@ import autoTable from 'jspdf-autotable'
 import { supabase } from '../../lib/supabase'
 import { isMedDueOnDate } from '../../lib/medStatus'
 import { useCommunity } from '../../context/CommunityContext'
+import { localDateStr } from '../../lib/dateUtils'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -42,7 +43,7 @@ function residentFullName(r) {
 }
 
 function getTodayStr() {
-  return new Date().toISOString().split('T')[0]
+  return localDateStr()
 }
 
 const DAY_LABELS = { monday: 'Mon', tuesday: 'Tue', wednesday: 'Wed', thursday: 'Thu', friday: 'Fri', saturday: 'Sat', sunday: 'Sun' }
@@ -69,7 +70,7 @@ function datesInRange(fromStr, toStr) {
   const cur = new Date(fromStr + 'T00:00:00')
   const end = new Date(toStr + 'T00:00:00')
   while (cur <= end) {
-    dates.push(cur.toISOString().split('T')[0])
+    dates.push(localDateStr(cur))
     cur.setDate(cur.getDate() + 1)
   }
   return dates
@@ -82,20 +83,20 @@ function getDateRange(preset, customFrom, customTo) {
   if (preset === 'week') {
     const d = new Date(today)
     d.setDate(d.getDate() - 6)
-    return { from: d.toISOString().split('T')[0], to: td }
+    return { from: localDateStr(d), to: td }
   }
   if (preset === 'month') {
     const d = new Date(today.getFullYear(), today.getMonth(), 1)
-    return { from: d.toISOString().split('T')[0], to: td }
+    return { from: localDateStr(d), to: td }
   }
   if (preset === 'last_month') {
     const first = new Date(today.getFullYear(), today.getMonth() - 1, 1)
     const last = new Date(today.getFullYear(), today.getMonth(), 0)
-    return { from: first.toISOString().split('T')[0], to: last.toISOString().split('T')[0] }
+    return { from: localDateStr(first), to: localDateStr(last) }
   }
   if (preset === 'year') {
     const d = new Date(today.getFullYear(), 0, 1)
-    return { from: d.toISOString().split('T')[0], to: td }
+    return { from: localDateStr(d), to: td }
   }
   if (preset === 'custom') return { from: customFrom || td, to: customTo || td }
   return { from: td, to: td }

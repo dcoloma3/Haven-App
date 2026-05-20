@@ -26,6 +26,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useCommunity } from '../../context/CommunityContext'
 import { useProfile } from '../../context/ProfileContext'
+import { localDateStr } from '../../lib/dateUtils'
 
 const ADL_CATEGORIES = ['bathing', 'dressing', 'eating', 'mobility', 'continence', 'toileting', 'grooming']
 const ADL_LABELS = {
@@ -54,13 +55,13 @@ function levelColor(val) {
 function getYesterday() {
   const d = new Date()
   d.setDate(d.getDate() - 1)
-  return d.toISOString().split('T')[0]
+  return localDateStr(d)
 }
 
 export default function ADLTracker({ residentId, resident }) {
   const { communityId } = useCommunity()
   const { profile } = useProfile()
-  const [today] = useState(new Date().toISOString().split('T')[0])
+  const [today] = useState(localDateStr())
   const [todayRecord, setTodayRecord] = useState(null)
   const [history, setHistory] = useState([])
   const [loading, setLoading] = useState(true)

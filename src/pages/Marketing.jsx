@@ -755,7 +755,7 @@ function ContactSection() {
     const body = encodeURIComponent(
       `Name: ${form.firstName} ${form.lastName}\nEmail: ${form.email}\nFacility: ${form.facility}\n\nMessage:\n${form.message}`
     )
-    window.location.href = `mailto:domcoloma@gmail.com?subject=${subject}&body=${body}`
+    window.location.href = `mailto:support@haven.care?subject=${subject}&body=${body}`
     setTimeout(() => {
       setSubmitting(false)
       setSent(true)

@@ -25,6 +25,7 @@ import ResidentTransportation from '../components/transportation/ResidentTranspo
 import { useCommunity } from '../context/CommunityContext'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { generateFaceSheetPDF } from '../lib/faceSheetPDF'
+import { localDateStr } from '../lib/dateUtils'
 
 // Consolidated tabs — related sections are grouped within each tab
 const ALL_TABS   = ['Profile', 'Medications', 'Health', 'Contacts', 'Records', 'Billing']
@@ -122,7 +123,7 @@ export default function ResidentDetail() {
   const [generatingPDF, setGeneratingPDF] = useState(false)
   const tabsRef = useRef(null)
 
-  const todayStr = new Date().toISOString().split('T')[0]
+  const todayStr = localDateStr()
 
   const TABS = isAdmin ? ALL_TABS : STAFF_TABS
   const isInactive = resident?.status === 'inactive'

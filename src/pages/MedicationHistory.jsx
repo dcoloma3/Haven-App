@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useCommunity } from '../context/CommunityContext'
 import Layout from '../components/layout/Layout'
+import { localDateStr } from '../lib/dateUtils'
 
 function fmt12(t) {
   const [h, m] = t.split(':').map(Number)
@@ -12,7 +13,7 @@ function fmt12(t) {
 }
 
 function toDateStr(d) {
-  return d.toISOString().split('T')[0]
+  return localDateStr(d)
 }
 
 function formatDisplayDate(dateStr) {

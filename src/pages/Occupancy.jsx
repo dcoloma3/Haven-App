@@ -11,6 +11,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useCommunity } from '../context/CommunityContext'
 import Layout from '../components/layout/Layout'
+import { localDateStr } from '../lib/dateUtils'
 
 const CARE_LEVEL_COLORS = {
   AL:      'bg-blue-100 text-blue-700',
@@ -101,7 +102,7 @@ export default function Occupancy() {
 
   function openAdd() {
     setEditProspect(null)
-    setForm({ ...emptyForm, inquiry_date: new Date().toISOString().split('T')[0] })
+    setForm({ ...emptyForm, inquiry_date: localDateStr() })
     setShowModal(true)
   }
 

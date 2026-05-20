@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useCommunity } from '../../context/CommunityContext'
 import { useProfile } from '../../context/ProfileContext'
+import { localDateStr } from '../../lib/dateUtils'
 
 const INCIDENT_TYPES = [
   { value: 'fall', label: 'Fall' },
@@ -101,7 +102,7 @@ export default function IncidentForm({ residentId, residentName, roomNumber, inc
   const { communityId } = useCommunity()
   const { profile } = useProfile()
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = localDateStr()
   const now = new Date().toTimeString().slice(0, 5)
 
   // When no residentId is provided, user must search for one

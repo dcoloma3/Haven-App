@@ -6,6 +6,7 @@ import IncidentForm from '../components/incidents/IncidentForm'
 import { useCommunity } from '../context/CommunityContext'
 import { generateIncidentPDF } from '../lib/incidentPDF'
 import { useUnsavedChanges } from '../hooks/useUnsavedChanges'
+import { localDateStr } from '../lib/dateUtils'
 
 const TYPE_LABELS = {
   fall: 'Fall',
@@ -272,10 +273,10 @@ function IncidentRow({ incident, isAdmin, onEdit, onStatusChange, onDelete, onRe
 
 function getThisMonthStart() {
   const d = new Date()
-  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0]
+  return localDateStr(new Date(d.getFullYear(), d.getMonth(), 1))
 }
 function getToday() {
-  return new Date().toISOString().split('T')[0]
+  return localDateStr()
 }
 
 export default function Incidents() {

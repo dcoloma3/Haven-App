@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import Layout from '../components/layout/Layout'
 import { useCommunity } from '../context/CommunityContext'
 import { HelpIcon } from '../components/ui/Tooltip'
+import { localDateStr } from '../lib/dateUtils'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -23,7 +24,7 @@ function fmtShort(t) {
 }
 
 function toDateStr(d) {
-  return d.toISOString().split('T')[0]
+  return localDateStr(d)
 }
 
 function formatDisplayDate(d) {
@@ -76,6 +77,20 @@ function isMedDueOnDate(med, dateStr) {
     return diffDays >= 0 && diffDays % med.frequency_interval === 0
   }
   return true
+}
+
+// Given an ISO timestamp and a list of 'HH:MM' slot strings, return the nearest slot
+function findNearestSlot(administeredAt, slots) {
+  if (!slots.length) return null
+  const d = new Date(administeredAt)
+  const adminMin = d.getHours() * 60 + d.getMinutes()
+  let best = null, bestDiff = Infinity
+  slots.forEach(slot => {
+    const [h, m] = slot.split(':').map(Number)
+    const diff = Math.abs(adminMin - h * 60 - m)
+    if (diff < bestDiff) { bestDiff = diff; best = slot }
+  })
+  return best
 }
 
 const RESIDENT_COLS = 'id, full_name, first_name, middle_name, last_name, room_number, avatar_url, status, date_of_birth'
@@ -570,6 +585,8 @@ export default function Dispense() {
   const [dispenseTab, setDispenseTab] = useState('routine')
   // Medication IDs scoped to this community (for scoping administration queries)
   const [communityMedIds, setCommunityMedIds] = useState([])
+  // PRN administrations for the selected date (shown read-only in routine slots)
+  const [prnAdmins, setPrnAdmins] = useState([])
 
   const dateStr = toDateStr(date)
   const isToday = toDateStr(today) === dateStr
@@ -635,6 +652,19 @@ export default function Dispense() {
       })
   }, [dateStr, communityMedIds])
 
+  // Fetch PRN administrations for the selected date (to overlay in routine time slots)
+  useEffect(() => {
+    if (!communityId) return
+    supabase
+      .from('prn_administrations')
+      .select(`*, residents!resident_id(id, full_name, first_name, middle_name, last_name, room_number, avatar_url, date_of_birth)`)
+      .eq('community_id', communityId)
+      .gte('administered_at', `${dateStr}T00:00:00`)
+      .lte('administered_at', `${dateStr}T23:59:59`)
+      .order('administered_at')
+      .then(({ data }) => setPrnAdmins(data ?? []))
+  }, [communityId, dateStr])
+
   // Group: time → residentId → { resident, meds[] }
   const timeGroups = useMemo(() => {
     const groups = {}
@@ -650,6 +680,22 @@ export default function Dispense() {
   }, [medications, dateStr])
 
   const sortedTimes = useMemo(() => Object.keys(timeGroups).sort(), [timeGroups])
+
+  // Map each PRN administration to its nearest routine time slot
+  // Result: { [slotTime]: { [residentId]: { resident, admins[] } } }
+  const prnBySlot = useMemo(() => {
+    if (!sortedTimes.length || !prnAdmins.length) return {}
+    const result = {}
+    prnAdmins.forEach(admin => {
+      const slot = findNearestSlot(admin.administered_at, sortedTimes)
+      if (!slot) return
+      if (!result[slot]) result[slot] = {}
+      const rid = admin.resident_id
+      if (!result[slot][rid]) result[slot][rid] = { resident: admin.residents, admins: [] }
+      result[slot][rid].admins.push(admin)
+    })
+    return result
+  }, [prnAdmins, sortedTimes])
 
   // First incomplete time slot — used for "Due up next" indicator
   // A slot is complete when every med is either administered OR recorded as refused/withheld
@@ -959,10 +1005,16 @@ export default function Dispense() {
               const timeStatus = calcStatus(allMedsAtTime, time, administered)
               const isOpen = expandedTimes.has(time)
 
-              const residentList = Object.entries(residentGroups)
-                .sort(([, a], [, b]) => residentName(a.resident ?? {}).localeCompare(residentName(b.resident ?? {})))
+              // Merge routine residents with PRN-only residents for this slot
+              const slotPrns = prnBySlot[time] ?? {}
+              const allRids = new Set([...Object.keys(residentGroups), ...Object.keys(slotPrns)])
+              const residentList = [...allRids].map(rid => [rid, {
+                resident: residentGroups[rid]?.resident ?? slotPrns[rid]?.resident,
+                meds: residentGroups[rid]?.meds ?? [],
+                prnAdmins: slotPrns[rid]?.admins ?? [],
+              }]).sort(([, a], [, b]) => residentName(a.resident ?? {}).localeCompare(residentName(b.resident ?? {})))
 
-              const totalResidents = residentList.length
+              const totalResidents = Object.keys(residentGroups).length
               const totalMedsAtTime = allMedsAtTime.length
 
               return (
@@ -1011,15 +1063,16 @@ export default function Dispense() {
                     {/* ── Resident rows — two-level accordion ── */}
                     {isOpen && (
                       <div className={`border-t ${dividerCls(timeStatus)}`}>
-                        {residentList.map(([rid, { resident, meds }], rIdx) => {
+                        {residentList.map(([rid, { resident, meds, prnAdmins: residentPrns }], rIdx) => {
                           if (!resident) return null
                           const resKey = `${time}::${rid}`
                           const isResOpen = expandedResidents.has(resKey)
                           const resDone = meds.filter(m => administered.has(adminKey(m.id, time))).length
                           const resNotGiven = meds.filter(m => notGiven.has(adminKey(m.id, time))).length
                           const resTotal = meds.length
-                          const resAllDone = resDone === resTotal
-                          const resAllRecorded = resDone + resNotGiven === resTotal
+                          const isPrnOnly = resTotal === 0 && residentPrns.length > 0
+                          const resAllDone = !isPrnOnly && resDone === resTotal
+                          const resAllRecorded = !isPrnOnly && resDone + resNotGiven === resTotal
 
                           return (
                             <div key={rid} className={`${rIdx !== 0 ? `border-t ${dividerCls(timeStatus)}` : ''}`}>
@@ -1028,6 +1081,7 @@ export default function Dispense() {
                               <button
                                 onClick={() => toggleResident(time, rid)}
                                 className={`w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors ${
+                                  isPrnOnly ? 'bg-violet-50/40 hover:bg-violet-50/70' :
                                   resAllDone ? 'bg-emerald-50/50' : resAllRecorded ? 'bg-rose-50/30' : 'hover:bg-slate-50'
                                 }`}
                               >
@@ -1044,10 +1098,19 @@ export default function Dispense() {
                                       <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded flex-shrink-0">{getAge(resident.date_of_birth)}y</span>
                                     )}
                                   </div>
-                                  <p className="text-xs text-slate-400 mt-0.5">
-                                    {resTotal} {resTotal === 1 ? 'med' : 'meds'} · {resDone}/{resTotal} given
-                                    {resAllDone && <span className="ml-1.5 text-emerald-600 font-semibold">✓ Complete</span>}
-                                  </p>
+                                  {isPrnOnly ? (
+                                    <p className="text-xs text-violet-600 font-medium mt-0.5">
+                                      {residentPrns.length} PRN {residentPrns.length === 1 ? 'dose' : 'doses'} given
+                                    </p>
+                                  ) : (
+                                    <p className="text-xs text-slate-400 mt-0.5">
+                                      {resTotal} {resTotal === 1 ? 'med' : 'meds'} · {resDone}/{resTotal} given
+                                      {resAllDone && <span className="ml-1.5 text-emerald-600 font-semibold">✓ Complete</span>}
+                                      {residentPrns.length > 0 && (
+                                        <span className="ml-1.5 text-violet-500 font-medium">· {residentPrns.length} PRN</span>
+                                      )}
+                                    </p>
+                                  )}
                                 </div>
                                 <ChevronIcon open={isResOpen} />
                               </button>
@@ -1175,6 +1238,35 @@ export default function Dispense() {
                                       </div>
                                     )
                                   })}
+
+                                  {/* ── PRN administrations (read-only) ── */}
+                                  {residentPrns.map((admin, aIdx) => (
+                                    <div
+                                      key={admin.id}
+                                      className={`px-4 py-3 bg-violet-50/50 border-t border-violet-100 flex items-start gap-3`}
+                                    >
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                          <span className="text-[10px] font-bold text-violet-600 bg-violet-100 px-1.5 py-0.5 rounded-full uppercase tracking-wide flex-shrink-0">PRN</span>
+                                          <p className="text-sm font-semibold text-slate-700 truncate">
+                                            {admin.medication_name}{admin.dose ? ` · ${admin.dose}` : ''}
+                                          </p>
+                                        </div>
+                                        <p className="text-xs text-violet-600 mt-0.5">
+                                          Given at {new Date(admin.administered_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                                          {admin.reason ? ` · ${admin.reason}` : ''}
+                                        </p>
+                                      </div>
+                                      <Link
+                                        to={`/residents/${rid}`}
+                                        onClick={e => e.stopPropagation()}
+                                        className="text-xs text-slate-400 hover:text-[#185FA5] transition-colors flex-shrink-0 mt-0.5"
+                                        title="View profile"
+                                      >
+                                        Profile →
+                                      </Link>
+                                    </div>
+                                  ))}
                                 </div>
                               )}
                             </div>

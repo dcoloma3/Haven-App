@@ -23,6 +23,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useCommunity } from '../../context/CommunityContext'
 import { useProfile } from '../../context/ProfileContext'
+import { localDateStr } from '../../lib/dateUtils'
 
 const STATUS_COLORS = {
   active: 'bg-emerald-100 text-emerald-700',
@@ -33,7 +34,7 @@ const STATUS_COLORS = {
 function isPastDue(dateStr) {
   if (!dateStr) return false
   // Compare calendar dates in local time (not UTC) to avoid off-by-one at midnight
-  const today = new Date().toISOString().split('T')[0]
+  const today = localDateStr()
   return dateStr < today
 }
 

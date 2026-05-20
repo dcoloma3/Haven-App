@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { isMedDueOnDate } from '../lib/medStatus'
+import { localDateStr } from '../lib/dateUtils'
 
 const FAMILY_TYPE_LABELS = {
   fall: 'Fall',
@@ -38,8 +39,8 @@ export default function FamilyView() {
       const resident = access.residents
       if (!resident) { setState('invalid'); return }
       const communityName = resident?.communities?.name || null
-      const today = new Date().toISOString().split('T')[0]
-      const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]
+      const today = localDateStr()
+      const sevenDaysAgo = localDateStr(new Date(Date.now() - 7 * 86400000))
 
       const [{ data: calendarEvents }, { data: admins }, { data: meds }, { data: shiftNotes }, { data: incidents }] = await Promise.all([
         // FIX 1: query calendar_events instead of appointments
@@ -84,7 +85,7 @@ export default function FamilyView() {
         // For each of the last 7 days, count expected vs actual
         for (let i = 0; i < 7; i++) {
           const d = new Date(Date.now() - i * 86400000)
-          const dateStr = d.toISOString().split('T')[0]
+          const dateStr = localDateStr(d)
           for (const med of medsArr) {
             if (!isMedDueOnDate(med, dateStr)) continue
             for (const time of (med.scheduled_times || [])) {

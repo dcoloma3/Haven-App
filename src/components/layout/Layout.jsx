@@ -3,7 +3,6 @@ import { useLocation } from 'react-router-dom'
 import Navbar from './Navbar'
 import Sidebar from './Sidebar'
 import MobileNav from './MobileNav'
-import QuickAdd from './QuickAdd'
 import TrialBanner from './TrialBanner'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import { useCommunity } from '../../context/CommunityContext'
@@ -74,8 +73,7 @@ export default function Layout({ children }) {
       {/* Mobile bottom nav */}
       {isMobile && <MobileNav />}
 
-      {/* Mobile floating quick-add FAB */}
-      {isMobile && <QuickAdd />}
+
     </div>
   )
 }

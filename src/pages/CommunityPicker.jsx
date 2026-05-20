@@ -4,6 +4,7 @@ import { useCommunity } from '../context/CommunityContext'
 import HavenLogo from '../components/layout/HavenLogo'
 import AppLoader from '../components/ui/AppLoader'
 import { supabase } from '../lib/supabase'
+import CreateCommunityModal from '../components/community/CreateCommunityModal'
 
 function CommunityAvatar({ name }) {
   const initials = name
@@ -39,11 +40,20 @@ export default function CommunityPicker() {
   const { memberships, setCommunityId } = useCommunity()
   const navigate = useNavigate()
   const [navigating, setNavigating] = useState(false)
+  const [showCreate, setShowCreate] = useState(false)
+
+  const isAnyAdmin = memberships.some(m => m.role === 'admin')
 
   function handleSelect(id) {
     setNavigating(true)
     setCommunityId(id)
     setTimeout(() => navigate('/dashboard', { replace: true }), 350)
+  }
+
+  function handlePickerCreated(newId) {
+    setShowCreate(false)
+    setCommunityId(newId)
+    navigate('/dashboard', { state: { newCommunity: true } })
   }
 
   if (navigating) return <AppLoader />
@@ -116,6 +126,18 @@ export default function CommunityPicker() {
           )}
 
           <div className="px-6 py-4 border-t border-slate-100">
+            {isAnyAdmin && (
+              <button
+                onClick={() => setShowCreate(true)}
+                className="w-full flex items-center justify-center gap-1.5 text-sm text-[#185FA5] font-medium hover:text-[#0C447C] transition-colors mb-3"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Add a community
+              </button>
+            )}
             <button
               onClick={() => supabase.auth.signOut()}
               className="w-full text-sm text-slate-400 hover:text-slate-600 font-medium transition-colors"
@@ -125,6 +147,13 @@ export default function CommunityPicker() {
           </div>
         </div>
       </div>
+
+      {showCreate && (
+        <CreateCommunityModal
+          onClose={() => setShowCreate(false)}
+          onCreated={handlePickerCreated}
+        />
+      )}
     </div>
   )
 }

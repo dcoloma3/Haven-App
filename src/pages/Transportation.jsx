@@ -29,6 +29,7 @@ import { supabase } from '../lib/supabase'
 import { useCommunity } from '../context/CommunityContext'
 import { useProfile } from '../context/ProfileContext'
 import Layout from '../components/layout/Layout'
+import { localDateStr } from '../lib/dateUtils'
 
 const STATUS_COLORS = {
   scheduled: 'bg-blue-100 text-blue-700',
@@ -59,10 +60,10 @@ export default function Transportation() {
   const [saving, setSaving] = useState(false)
   const [tripError, setTripError] = useState('')
   const [residentSearch, setResidentSearch] = useState('')
-  const [form, setForm] = useState({ resident_id: '', trip_date: new Date().toISOString().split('T')[0], departure_time: '', return_time: '', destination: '', purpose: '', driver_name: '', vehicle: '', notes: '', status: 'scheduled' })
+  const [form, setForm] = useState({ resident_id: '', trip_date: localDateStr(), departure_time: '', return_time: '', destination: '', purpose: '', driver_name: '', vehicle: '', notes: '', status: 'scheduled' })
 
   const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
-  const today = new Date().toISOString().split('T')[0]
+  const today = localDateStr()
 
   async function load() {
     const [{ data: tripsData }, { data: residentsData }] = await Promise.all([

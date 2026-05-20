@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './lib/supabase'
 import { completeTrial } from './lib/trial'
+import { identifyUser, clearUser } from './lib/monitoring'
 import { FacilityProvider } from './context/FacilityContext'
 import { ProfileProvider, useProfile } from './context/ProfileContext'
 import { CommunityProvider, useCommunity } from './context/CommunityContext'
@@ -151,6 +152,13 @@ export default function App() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session)
+
+      // Tag Sentry with the signed-in user so error reports show who was affected
+      if (session?.user) {
+        identifyUser({ userId: session.user.id, email: session.user.email })
+      } else {
+        clearUser()
+      }
 
       // After email confirmation, complete the trial setup if pending data exists
       if (session?.user && (event === 'SIGNED_IN' || event === 'USER_UPDATED')) {

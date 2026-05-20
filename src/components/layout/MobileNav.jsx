@@ -186,18 +186,22 @@ export default function MobileNav() {
 
       {/* More drawer — slides up */}
       {showMore && (
-        <div className="fixed bottom-[60px] left-0 right-0 z-50 bg-white border-t border-slate-200 rounded-t-2xl shadow-2xl"
-          style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }}
+        <div className="fixed bottom-[60px] left-0 right-0 z-50 bg-white border-t border-slate-200 rounded-t-2xl shadow-2xl max-h-[80vh] overflow-y-auto"
+          style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}
         >
           <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-slate-100">
-            <p className="text-sm font-semibold text-slate-700">More Pages</p>
+            <p className="text-sm font-semibold text-slate-700">More</p>
             <button onClick={() => setShowMore(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
               </svg>
             </button>
           </div>
-          <div className="grid grid-cols-4 gap-1 px-3 py-3">
+
+          {/* Pages */}
+          <div className="px-4 pt-4 pb-1">
+          </div>
+          <div className="grid grid-cols-4 gap-1 px-3 pb-3">
             {morePages.map(page => {
               const isActive = location.pathname === page.path
               return (

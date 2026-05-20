@@ -37,12 +37,13 @@ import { supabase } from '../lib/supabase'
 import { useCommunity } from '../context/CommunityContext'
 import { useProfile } from '../context/ProfileContext'
 import Layout from '../components/layout/Layout'
+import { localDateStr } from '../lib/dateUtils'
 
 export default function Activities() {
   const { communityId, isAdmin } = useCommunity()
   const { profile } = useProfile()
   const navigate = useNavigate()
-  const today = new Date().toISOString().split('T')[0]
+  const today = localDateStr()
   const [activities, setActivities] = useState([])
   const [loading, setLoading] = useState(true)
   const [filterDate, setFilterDate] = useState(today)
@@ -56,7 +57,7 @@ export default function Activities() {
   const [saveError, setSaveError] = useState('')
 
   const [editActivity, setEditActivity] = useState(null)
-  const [form, setForm] = useState({ activity_date: new Date().toISOString().split('T')[0], activity_time: '', title: '', description: '', location: '', capacity: '' })
+  const [form, setForm] = useState({ activity_date: localDateStr(), activity_time: '', title: '', description: '', location: '', capacity: '' })
 
   const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
 

@@ -24,6 +24,7 @@ import { supabase } from '../lib/supabase'
 import { useCommunity } from '../context/CommunityContext'
 import { useProfile } from '../context/ProfileContext'
 import Layout from '../components/layout/Layout'
+import { localDateStr } from '../lib/dateUtils'
 
 const SHIFT_COLORS = {
   Morning: 'bg-amber-100 text-amber-700',
@@ -52,7 +53,7 @@ export default function ShiftLog() {
   useEffect(() => { if (location.state?.quickAdd) setShowModal(true) }, [])
   const [saving, setSaving] = useState(false)
   const [filterShift, setFilterShift] = useState('All')
-  const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0])
+  const [filterDate, setFilterDate] = useState(localDateStr())
   const [form, setForm] = useState({ shift: currentShift(), content: '', resident_id: '', is_pinned: false })
   const [residentSearch, setResidentSearch] = useState('')
 
@@ -211,8 +212,8 @@ export default function ShiftLog() {
         {/* Date: Today shortcut + date picker */}
         <div className="flex items-center gap-1.5 ml-auto flex-shrink-0">
           <button
-            onClick={() => setFilterDate(new Date().toISOString().split('T')[0])}
-            className={`px-3 py-2 text-xs font-semibold rounded-xl border transition-colors ${filterDate === new Date().toISOString().split('T')[0] ? 'bg-[#185FA5] text-white border-[#185FA5]' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+            onClick={() => setFilterDate(localDateStr())}
+            className={`px-3 py-2 text-xs font-semibold rounded-xl border transition-colors ${filterDate === localDateStr() ? 'bg-[#185FA5] text-white border-[#185FA5]' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
           >
             Today
           </button>

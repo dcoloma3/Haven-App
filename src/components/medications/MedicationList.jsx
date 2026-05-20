@@ -8,10 +8,12 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useCommunity } from '../../context/CommunityContext'
 import { adminKey, isMedDueOnDate } from '../../lib/medStatus'
+import { generateLIC622PDF } from '../../lib/lic622PDF'
+import { localDateStr } from '../../lib/dateUtils'
 
 const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
 
-function getTodayStr() { return new Date().toISOString().split('T')[0] }
+function getTodayStr() { return localDateStr() }
 
 function ChevronIcon({ open }) {
   return (
@@ -64,6 +66,7 @@ function describeFrequency(med) {
 const EMPTY_FORM = {
   medication_name: '',
   dose: '',
+  route: '',
   frequency: '',
   notes: '',
   scheduled_times: [],
@@ -75,6 +78,21 @@ const EMPTY_FORM = {
   indication: '',
   min_interval_hours: '',
 }
+
+const ROUTES = [
+  { value: '',            label: 'Select route…' },
+  { value: 'Oral',        label: 'Oral (by mouth)' },
+  { value: 'Sublingual',  label: 'Sublingual (under tongue)' },
+  { value: 'Topical',     label: 'Topical (skin)' },
+  { value: 'Transdermal', label: 'Transdermal (patch)' },
+  { value: 'Inhaled',     label: 'Inhaled' },
+  { value: 'Nasal',       label: 'Nasal' },
+  { value: 'Ophthalmic',  label: 'Ophthalmic (eye)' },
+  { value: 'Otic',        label: 'Otic (ear)' },
+  { value: 'Rectal',      label: 'Rectal' },
+  { value: 'Injection',   label: 'Injection' },
+  { value: 'Other',       label: 'Other' },
+]
 
 // ─── Medication Modal (Add / Edit) ────────────────────────────────────────────
 
@@ -139,6 +157,7 @@ function MedicationModal({ residentId, communityId, medication, onClose, onSaved
     const payload = {
       medication_name: form.medication_name,
       dose: form.dose || null,
+      route: form.route || null,
       frequency: form.frequency || null,
       notes: form.notes || null,
       scheduled_times: freqType === 'prn' ? [] : finalTimes,
@@ -179,9 +198,17 @@ function MedicationModal({ residentId, communityId, medication, onClose, onSaved
             <input required className={inputCls} value={form.medication_name ?? ''} onChange={e => set('medication_name', e.target.value)} />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Dose</label>
-            <input className={inputCls} value={form.dose ?? ''} onChange={e => set('dose', e.target.value)} placeholder="e.g. 500mg" />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Dose</label>
+              <input className={inputCls} value={form.dose ?? ''} onChange={e => set('dose', e.target.value)} placeholder="e.g. 500mg" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Route</label>
+              <select className={inputCls} value={form.route ?? ''} onChange={e => set('route', e.target.value)}>
+                {ROUTES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+              </select>
+            </div>
           </div>
 
           <div>
@@ -530,14 +557,27 @@ function DoseRow({ med, time, record, toggling, onSet }) {
   )
 }
 
-// ─── Today's Medications Section ─────────────────────────────────────────────
+// Given a time string 'HH:MM' and a list of slot strings, return the nearest slot
+function findNearestSlot(timeStr, slots) {
+  if (!slots.length) return null
+  const [h, m] = timeStr.split(':').map(Number)
+  const adminMin = h * 60 + m
+  let best = null, bestDiff = Infinity
+  slots.forEach(slot => {
+    const [sh, sm] = slot.split(':').map(Number)
+    const diff = Math.abs(adminMin - sh * 60 - sm)
+    if (diff < bestDiff) { bestDiff = diff; best = slot }
+  })
+  return best
+}
 
-function TodayMedications({ residentId, medications, onStatusChange }) {
+// ─── Today's Medications Section (read-only status view) ─────────────────────
+
+function TodayMedications({ residentId, medications }) {
   const [open, setOpen] = useState(false)
   const [administered, setAdministered] = useState(new Map())
-  const [toggling, setToggling] = useState(new Set())
+  const [prnAdmins, setPrnAdmins] = useState([])
   const [loadingAdmins, setLoadingAdmins] = useState(true)
-  // Live date — updates at midnight so overnight staff always see the correct day
   const [todayStr, setTodayStr] = useState(getTodayStr)
   useEffect(() => {
     const id = setInterval(() => {
@@ -550,90 +590,50 @@ function TodayMedications({ residentId, medications, onStatusChange }) {
   const todayMeds = medications.filter(m => isMedDueOnDate(m, todayStr))
 
   useEffect(() => {
-    if (todayMeds.length === 0) { setLoadingAdmins(false); return }
-    supabase
-      .from('medication_administrations')
-      .select('*')
-      .eq('resident_id', residentId)
-      .eq('administered_date', todayStr)
-      .then(({ data }) => {
-        const map = new Map()
-        ;(data ?? []).forEach(r => map.set(adminKey(r.medication_id, r.scheduled_time), r))
-        setAdministered(map)
-        setLoadingAdmins(false)
-      })
+    const fetchAll = async () => {
+      const [adminRes, prnRes] = await Promise.all([
+        todayMeds.length > 0
+          ? supabase.from('medication_administrations').select('*').eq('resident_id', residentId).eq('administered_date', todayStr)
+          : Promise.resolve({ data: [] }),
+        supabase.from('prn_administrations').select('*').eq('resident_id', residentId)
+          .gte('administered_at', `${todayStr}T00:00:00`)
+          .lte('administered_at', `${todayStr}T23:59:59`)
+          .order('administered_at'),
+      ])
+      const map = new Map()
+      ;(adminRes.data ?? []).forEach(r => map.set(adminKey(r.medication_id, r.scheduled_time), r))
+      setAdministered(map)
+      setPrnAdmins(prnRes.data ?? [])
+      setLoadingAdmins(false)
+    }
+    fetchAll()
   }, [residentId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Handle set/update/delete of a dose record
-  async function handleSet(med, time, newStatus, note) {
-    const key = adminKey(med.id, time)
-    if (toggling.has(key)) return
-    setToggling(prev => new Set(prev).add(key))
-
-    if (newStatus === null) {
-      // Remove the record
-      const record = administered.get(key)
-      if (record) {
-        await supabase.from('medication_administrations').delete().eq('id', record.id)
-      }
-      setAdministered(prev => { const n = new Map(prev); n.delete(key); return n })
-    } else {
-      const existingRecord = administered.get(key)
-      const { data: { session } } = await supabase.auth.getSession()
-      const payload = {
-        medication_id: med.id,
-        resident_id: residentId,
-        scheduled_time: time,
-        administered_date: todayStr,
-        administered_by: session?.user?.id ?? null,
-        admin_status: newStatus,
-        admin_notes: note ?? null,
-      }
-
-      if (existingRecord) {
-        // Update existing
-        const { data } = await supabase
-          .from('medication_administrations')
-          .update({ admin_status: newStatus, admin_notes: note ?? null })
-          .eq('id', existingRecord.id)
-          .select()
-          .single()
-        if (data) {
-          setAdministered(prev => { const n = new Map(prev); n.set(key, data); return n })
-        }
-      } else {
-        // Insert new
-        const tempRecord = { ...payload, id: 'temp' }
-        setAdministered(prev => { const n = new Map(prev); n.set(key, tempRecord); return n })
-        const { data } = await supabase
-          .from('medication_administrations')
-          .insert([payload])
-          .select()
-          .single()
-        if (data) {
-          setAdministered(prev => { const n = new Map(prev); n.set(key, data); return n })
-        }
-      }
-    }
-
-    setToggling(prev => { const n = new Set(prev); n.delete(key); return n })
-    if (onStatusChange) onStatusChange()
-  }
-
-  const todayLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-
-  // Flatten to time-sorted rows
-  const rows = []
+  // Flatten routine meds to time-sorted rows
+  const routineRows = []
   todayMeds.forEach(med => {
     ;(med.scheduled_times ?? []).forEach(time => {
-      rows.push({ med, time })
+      routineRows.push({ isPrn: false, med, time, key: adminKey(med.id, time) })
     })
   })
-  rows.sort((a, b) => a.time.localeCompare(b.time))
+  routineRows.sort((a, b) => a.time.localeCompare(b.time))
 
-  const totalDoses = rows.length
-  // Count as documented if any status is present (given, refused, held)
-  const documentedDoses = rows.filter(({ med, time }) => administered.has(adminKey(med.id, time))).length
+  // Build slot list from routine rows, assign PRN admins to nearest slot
+  const availableSlots = [...new Set(routineRows.map(r => r.time))]
+  const prnRows = prnAdmins.map(admin => {
+    const d = new Date(admin.administered_at)
+    const hh = String(d.getHours()).padStart(2, '0')
+    const mm = String(d.getMinutes()).padStart(2, '0')
+    const adminTimeStr = `${hh}:${mm}`
+    const slot = availableSlots.length ? findNearestSlot(adminTimeStr, availableSlots) : adminTimeStr
+    return { isPrn: true, admin, time: slot, key: `prn::${admin.id}` }
+  })
+
+  // Merge and sort all rows by assigned time
+  const allRows = [...routineRows, ...prnRows].sort((a, b) => a.time.localeCompare(b.time))
+
+  const totalDoses = routineRows.length
+  const documentedDoses = routineRows.filter(r => administered.has(r.key)).length
 
   return (
     <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden mb-4 opacity-80">
@@ -643,14 +643,17 @@ function TodayMedications({ residentId, medications, onStatusChange }) {
         className="w-full px-5 py-3.5 flex items-center justify-between gap-2 text-left hover:bg-slate-50 transition-colors"
       >
         <div>
-          <h2 className="font-medium text-slate-500 text-sm">Today's Medications</h2>
-          <p className="text-[11px] text-slate-400 mt-0.5">Log doses in the Dispense tab</p>
+          <h2 className="font-medium text-slate-500 text-sm">Today's Status</h2>
+          <p className="text-[11px] text-slate-400 mt-0.5">Use the Dispense tab to log doses</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {totalDoses > 0 && !loadingAdmins && (
             <span className={`text-xs font-semibold ${documentedDoses === totalDoses ? 'text-emerald-600' : documentedDoses > 0 ? 'text-amber-500' : 'text-slate-400'}`}>
               {documentedDoses}/{totalDoses}
             </span>
+          )}
+          {prnAdmins.length > 0 && !loadingAdmins && (
+            <span className="text-xs font-semibold text-violet-500">{prnAdmins.length} PRN</span>
           )}
           <ChevronIcon open={open} />
         </div>
@@ -660,24 +663,62 @@ function TodayMedications({ residentId, medications, onStatusChange }) {
         <>
           {loadingAdmins && <p className="text-slate-400 text-sm px-5 py-4 border-t border-slate-100">Loading…</p>}
 
-          {!loadingAdmins && todayMeds.length === 0 && (
+          {!loadingAdmins && allRows.length === 0 && (
             <p className="text-sm text-slate-400 px-5 py-4 border-t border-slate-100">No medications scheduled for today.</p>
           )}
 
-          {!loadingAdmins && rows.length > 0 && (
+          {!loadingAdmins && allRows.length > 0 && (
             <div className="divide-y divide-slate-100 border-t border-slate-100">
-              {rows.map(({ med, time }) => {
-                const key = adminKey(med.id, time)
+              {allRows.map(row => {
+                if (row.isPrn) {
+                  const { admin } = row
+                  return (
+                    <div key={row.key} className="px-5 py-3 bg-violet-50/40 flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] font-bold text-violet-600 bg-violet-100 px-1.5 py-0.5 rounded-full uppercase tracking-wide flex-shrink-0">PRN</span>
+                          <p className="text-sm font-medium text-slate-700 truncate">
+                            {admin.medication_name}{admin.dose ? ` · ${admin.dose}` : ''}
+                          </p>
+                        </div>
+                        <p className="text-xs text-violet-600 mt-0.5">
+                          Given at {new Date(admin.administered_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                          {admin.reason ? ` · ${admin.reason}` : ''}
+                        </p>
+                      </div>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-violet-100 text-violet-700 flex-shrink-0">Given</span>
+                    </div>
+                  )
+                }
+
+                const { med, time, key } = row
                 const record = administered.get(key) ?? null
+                const status = record?.admin_status ?? null
                 return (
-                  <DoseRow
-                    key={key}
-                    med={med}
-                    time={time}
-                    record={record}
-                    toggling={toggling}
-                    onSet={handleSet}
-                  />
+                  <div key={key} className={`px-5 py-3 flex items-center justify-between gap-3 ${status === 'given' ? 'bg-emerald-50/40' : status === 'refused' ? 'bg-red-50/30' : status === 'held' ? 'bg-amber-50/30' : ''}`}>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-medium truncate ${status === 'given' ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
+                        {med.medication_name}
+                      </p>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        {[med.dose, fmt12(time)].filter(Boolean).join(' · ')}
+                      </p>
+                      {status === 'given' && record?.administered_at && (
+                        <p className="text-xs text-emerald-600 mt-0.5">
+                          Given at {new Date(record.administered_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                        </p>
+                      )}
+                      {record?.admin_notes && (
+                        <p className="text-xs text-slate-400 mt-0.5 italic">{record.admin_notes}</p>
+                      )}
+                    </div>
+                    <div className="flex-shrink-0">
+                      {status === 'given' && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">Given</span>}
+                      {status === 'refused' && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">Refused</span>}
+                      {status === 'held' && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">Held</span>}
+                      {!status && <span className="text-xs text-slate-300">Pending</span>}
+                    </div>
+                  </div>
                 )
               })}
             </div>
@@ -701,7 +742,7 @@ function PRNMedications({ residentId, medications }) {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
 
-  const todayStr = new Date().toISOString().split('T')[0]
+  const todayStr = localDateStr()
 
   async function loadDoses() {
     const prnNames = prnMeds.map(m => m.medication_name)
@@ -905,6 +946,12 @@ export default function MedicationList({ residentId, onMedStatusChange }) {
   const [editing, setEditing] = useState(null)
   const [openManage, setOpenManage] = useState(true)
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const [showLIC622, setShowLIC622] = useState(false)
+  const [lic622Generating, setLic622Generating] = useState(false)
+  const [lic622Error, setLic622Error] = useState('')
+  const today = new Date()
+  const [lic622Year, setLic622Year] = useState(today.getFullYear())
+  const [lic622Month, setLic622Month] = useState(today.getMonth() + 1)
 
   useEffect(() => {
     supabase
@@ -930,8 +977,107 @@ export default function MedicationList({ residentId, onMedStatusChange }) {
     setEditing(null)
   }
 
+  async function handleGenerateLIC622() {
+    setLic622Generating(true)
+    setLic622Error('')
+    try {
+      await generateLIC622PDF({ residentId, communityId, year: lic622Year, month: lic622Month, supabase })
+      setShowLIC622(false)
+    } catch (e) {
+      setLic622Error('Failed to generate PDF. Please try again.')
+    }
+    setLic622Generating(false)
+  }
+
+  const MONTHS = [
+    'January','February','March','April','May','June',
+    'July','August','September','October','November','December'
+  ]
+  const yearOptions = []
+  for (let y = today.getFullYear() + 1; y >= today.getFullYear() - 3; y--) yearOptions.push(y)
+
   return (
     <div>
+      {/* ── LIC 622 Month Picker Modal ── */}
+      {showLIC622 && (
+        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-sm">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+              <div>
+                <h2 className="font-semibold text-slate-800">Download LIC 622</h2>
+                <p className="text-xs text-slate-400 mt-0.5">Medication Administration Record</p>
+              </div>
+              <button onClick={() => setShowLIC622(false)} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Month</label>
+                  <select
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent"
+                    value={lic622Month}
+                    onChange={e => setLic622Month(Number(e.target.value))}
+                  >
+                    {MONTHS.map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Year</label>
+                  <select
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent"
+                    value={lic622Year}
+                    onChange={e => setLic622Year(Number(e.target.value))}
+                  >
+                    {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="bg-slate-50 rounded-xl px-4 py-3 text-xs text-slate-500 space-y-1">
+                <p>The PDF will include:</p>
+                <ul className="list-disc list-inside space-y-0.5 mt-1">
+                  <li>All scheduled medications for this resident</li>
+                  <li>Staff initials for every dose given</li>
+                  <li>R / H / NG codes for refused, held, or not-given doses</li>
+                  <li>Facility name, license number, and resident info</li>
+                </ul>
+              </div>
+              {lic622Error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{lic622Error}</p>}
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowLIC622(false)}
+                  className="flex-1 border border-slate-300 text-slate-700 rounded-lg py-2 text-sm hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleGenerateLIC622}
+                  disabled={lic622Generating}
+                  className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-lg py-2 text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  {lic622Generating ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                      </svg>
+                      Generating…
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                      </svg>
+                      Download PDF
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Manage Medications ── */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden mb-4">
         {/* Header — always visible, Add button in header */}
@@ -946,15 +1092,27 @@ export default function MedicationList({ residentId, onMedStatusChange }) {
             )}
             <ChevronIcon open={openManage} />
           </button>
-          <button
-            onClick={() => setShowAdd(true)}
-            className="flex items-center gap-1 bg-[#185FA5] hover:bg-[#0C447C] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
-          >
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-            Add Medication
-          </button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={() => setShowLIC622(true)}
+              title="Download LIC 622"
+              className="flex items-center gap-1 border border-slate-300 text-slate-600 hover:bg-slate-50 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              LIC 622
+            </button>
+            <button
+              onClick={() => setShowAdd(true)}
+              className="flex items-center gap-1 bg-[#185FA5] hover:bg-[#0C447C] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Add Medication
+            </button>
+          </div>
         </div>
 
         {openManage && (
@@ -1050,12 +1208,11 @@ export default function MedicationList({ residentId, onMedStatusChange }) {
         />
       )}
 
-      {/* ── Today's Dispense Section (de-emphasized) ── */}
+      {/* ── Today's Status (read-only — log doses in Dispense tab) ── */}
       {!loading && (
         <TodayMedications
           residentId={residentId}
           medications={medications.filter(m => m.frequency_type !== 'prn')}
-          onStatusChange={onMedStatusChange}
         />
       )}
 

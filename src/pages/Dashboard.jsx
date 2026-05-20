@@ -10,6 +10,7 @@ import { useIsMobile } from '../hooks/useIsMobile'
 import { adminKey, computeResidentStatus, ringBoxShadow, RING_COLOR } from '../lib/medStatus'
 import { StatCardSkeleton, ResidentCardSkeleton, ResidentRowSkeleton } from '../components/ui/Skeleton'
 import WelcomeModal from '../components/onboarding/WelcomeModal'
+import { localDateStr } from '../lib/dateUtils'
 
 function fmtUpdated(dateStr) {
   if (!dateStr) return null
@@ -124,7 +125,7 @@ export default function Dashboard() {
   const [showFormer, setShowFormer] = useState(false)
   const [search, setSearch] = useState('')
   const [medStatusMap, setMedStatusMap] = useState({})
-  const [todayStr, setTodayStr] = useState(() => new Date().toISOString().split('T')[0])
+  const [todayStr, setTodayStr] = useState(() => localDateStr())
   const [openIncidentCount, setOpenIncidentCount] = useState(0)
   const [highSeverityCount, setHighSeverityCount] = useState(0)
   const [apptCount, setApptCount] = useState(0)
@@ -132,9 +133,11 @@ export default function Dashboard() {
   const [expiringCertCount, setExpiringCertCount] = useState(0)
   const [showWelcome, setShowWelcome] = useState(false)
   const [welcomeChecked, setWelcomeChecked] = useState(false)
+  const [showNewCommunityBanner, setShowNewCommunityBanner] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
   const unauthorized = location.state?.unauthorized
+  const newCommunity = location.state?.newCommunity
   const openAddResident = location.state?.openAddResident || new URLSearchParams(location.search).get('openAddResident')
   const { facility } = useFacility()
   const { communityId, community, isAdmin } = useCommunity()
@@ -154,10 +157,18 @@ export default function Dashboard() {
     if (openAddResident) setShowForm(true)
   }, [openAddResident])
 
+  useEffect(() => {
+    if (newCommunity) {
+      setShowNewCommunityBanner(true)
+      // Clear the state flag so a page refresh doesn't re-show the banner
+      navigate('/dashboard', { replace: true, state: {} })
+    }
+  }, [newCommunity]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Keep todayStr in sync — updates when the clock rolls past midnight
   useEffect(() => {
     const interval = setInterval(() => {
-      const newDate = new Date().toISOString().split('T')[0]
+      const newDate = localDateStr()
       setTodayStr(prev => prev !== newDate ? newDate : prev)
     }, 60000)
     return () => clearInterval(interval)
@@ -169,7 +180,7 @@ export default function Dashboard() {
     async function fetchSummaryStats() {
       const in30Days = new Date()
       in30Days.setDate(in30Days.getDate() + 30)
-      const in30Str = in30Days.toISOString().split('T')[0]
+      const in30Str = localDateStr(in30Days)
 
       const [{ data: incidents }, { data: appts }, { data: prospects }, { data: certs }] = await Promise.all([
         supabase.from('incidents').select('id, severity').eq('community_id', communityId).eq('status', 'open'),
@@ -254,6 +265,23 @@ export default function Dashboard() {
         <div className="flex items-center justify-between bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-4 py-3 mb-4 text-sm">
           <span>You don't have permission to access that page.</span>
           <button onClick={() => navigate('/dashboard', { replace: true, state: {} })} className="text-amber-600 hover:text-amber-800 font-medium ml-4 flex-shrink-0">Dismiss</button>
+        </div>
+      )}
+
+      {showNewCommunityBanner && (
+        <div className="flex items-start justify-between bg-[#E6F1FB] border border-[#185FA5]/20 rounded-xl px-4 py-3 mb-4 gap-3">
+          <div>
+            <p className="text-sm font-semibold text-[#042C53]">Welcome to {community?.name}!</p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              This is a fresh community. Start by adding residents, then set up medications and invite your staff.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowNewCommunityBanner(false)}
+            className="text-slate-400 hover:text-slate-600 flex-shrink-0 text-xl leading-none mt-0.5"
+          >
+            &times;
+          </button>
         </div>
       )}
 
