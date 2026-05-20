@@ -746,7 +746,7 @@ export default function LiveDemo() {
         <div className="flex-1 mx-4">
           <div className="rounded-md px-3 py-1 flex items-center gap-1.5 max-w-xs mx-auto" style={{ backgroundColor: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.35)' }}>
             <svg className="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            <span style={{ fontSize: 11 }}>app.haven.care</span>
+            <span style={{ fontSize: 11 }}>havencare.app</span>
           </div>
         </div>
       </div>

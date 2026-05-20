@@ -11,7 +11,7 @@ export default function TrialLockedFeature({ featureName = 'This feature' }) {
   const body = encodeURIComponent(
     `Hey Haven! 👋\n\nI'm currently on a free trial for ${community?.name || 'my community'} and I'd love to unlock the full app! I'm especially interested in ${featureName}.\n\nCould you reach out to help me get set up? Looking forward to it!\n\n— ${profile?.full_name || ''}`
   )
-  const mailtoLink = `mailto:support@haven.care?subject=${subject}&body=${body}`
+  const mailtoLink = `mailto:support@havencare.app?subject=${subject}&body=${body}`
 
   return (
     <div className="flex flex-col items-center justify-center py-20 px-6 text-center">

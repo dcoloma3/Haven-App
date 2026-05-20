@@ -754,7 +754,7 @@ function ContactSection() {
       if (!res.ok) throw new Error('Failed to send')
       setSent(true)
     } catch {
-      alert('Something went wrong. Please email us directly at support@haven.care')
+      alert('Something went wrong. Please email us directly at support@havencare.app')
     } finally {
       setSubmitting(false)
     }

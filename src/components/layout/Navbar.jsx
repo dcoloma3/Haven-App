@@ -163,7 +163,7 @@ function UserMenu({ profile, isAdmin, isSuperAdmin }) {
             <Link to="/profile" onClick={() => setOpen(false)} className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
               My profile
             </Link>
-            <a href="mailto:support@haven.care?subject=Haven App Support" onClick={() => setOpen(false)}
+            <a href="mailto:support@havencare.app?subject=Haven App Support" onClick={() => setOpen(false)}
               className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors border-t border-slate-100">
               Contact support
             </a>

@@ -13,8 +13,8 @@ export default async function handler(req, res) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: 'Haven Website <noreply@haven.care>',
-      to: ['support@haven.care'],
+      from: 'Haven Website <noreply@havencare.app>',
+      to: ['support@havencare.app'],
       reply_to: email,
       subject: `New inquiry — ${firstName} ${lastName}${facility ? ` · ${facility}` : ''}`,
       text: `From: ${firstName} ${lastName} <${email}>\nFacility: ${facility || '—'}\n\n${message}`,

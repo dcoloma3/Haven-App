@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 
 const EFFECTIVE_DATE = 'May 14, 2026'
-const CONTACT_EMAIL = 'support@haven.care'
+const CONTACT_EMAIL = 'support@havencare.app'
 
 function Section({ title, children }) {
   return (

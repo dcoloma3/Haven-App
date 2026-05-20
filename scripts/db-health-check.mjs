@@ -150,7 +150,7 @@ async function sendEmail(subject, html) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: 'Haven Health Monitor <monitor@haven.care>',
+      from: 'Haven Health Monitor <monitor@havencare.app>',
       to: [ALERT_EMAIL],
       subject,
       html,

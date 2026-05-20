@@ -85,8 +85,8 @@ export default function CommunityPicker() {
               <p className="text-sm font-medium text-slate-700 mb-1">No communities yet</p>
               <p className="text-sm text-slate-400">
                 Contact{' '}
-                <a href="mailto:support@haven.care" className="text-[#185FA5] hover:underline">
-                  support@haven.care
+                <a href="mailto:support@havencare.app" className="text-[#185FA5] hover:underline">
+                  support@havencare.app
                 </a>{' '}
                 to get set up.
               </p>

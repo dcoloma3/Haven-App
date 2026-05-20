@@ -20,7 +20,7 @@ export default function TrialBanner() {
   const body = encodeURIComponent(
     `Hey Haven! 👋\n\nMy free trial for ${community.name} is coming to an end and I'm really enjoying it so far! I'd love to learn more about getting full access and finding the right plan for my community.\n\nFeel free to reach out anytime — looking forward to connecting!\n\n— ${profile?.full_name || ''}`
   )
-  const mailtoLink = `mailto:support@haven.care?subject=${subject}&body=${body}`
+  const mailtoLink = `mailto:support@havencare.app?subject=${subject}&body=${body}`
 
   const colors = isUrgent
     ? { bar: 'bg-red-600',   text: 'text-white',           badge: 'bg-red-800 text-red-100',    btn: 'bg-white text-red-700 hover:bg-red-50' }

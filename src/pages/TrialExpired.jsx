@@ -10,7 +10,7 @@ export default function TrialExpired() {
   const body = encodeURIComponent(
     `Hey Haven! 👋\n\nMy free trial for ${community?.name || 'my community'} just wrapped up and I have to say — I really loved it! I'd love to keep the momentum going and learn more about what a full subscription looks like for us.\n\nPlease reach out whenever you get a chance. Excited to continue!\n\n— ${profile?.full_name || ''}`
   )
-  const mailtoLink = `mailto:support@haven.care?subject=${subject}&body=${body}`
+  const mailtoLink = `mailto:support@havencare.app?subject=${subject}&body=${body}`
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
@@ -52,11 +52,11 @@ export default function TrialExpired() {
           </svg>
           <span className="text-sm text-slate-500">Or call us: </span>
           {/* TODO: Add Google Voice support number here — see TASKS.md item #1 */}
-          <span className="font-medium text-slate-600">support@haven.care</span>
+          <span className="font-medium text-slate-600">support@havencare.app</span>
         </div>
 
         <div className="border-t border-slate-100 pt-4">
-          <p className="text-xs text-slate-400 mb-3">support@haven.care · app.haven.care</p>
+          <p className="text-xs text-slate-400 mb-3">support@havencare.app · havencare.app</p>
           <button
             onClick={() => supabase.auth.signOut()}
             className="text-xs text-slate-400 hover:text-slate-600 transition-colors"

@@ -7,7 +7,7 @@
  * Emails a full report via Resend.
  *
  * Required env vars (GitHub Secrets):
- *   AUDIT_EMAIL        — test account email (e.g. auditor@haven.care)
+ *   AUDIT_EMAIL        — test account email (e.g. auditor@havencare.app)
  *   AUDIT_PASSWORD     — test account password
  *   ANTHROPIC_API_KEY  — for visual screenshot analysis
  *   RESEND_API_KEY     — for email delivery
@@ -305,7 +305,7 @@ const subject = totalIssues > 0
 const emailRes = await fetch('https://api.resend.com/emails', {
   method: 'POST',
   headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-  body: JSON.stringify({ from: 'Haven Auditor <monitor@haven.care>', to: [ALERT_EMAIL], subject, html }),
+  body: JSON.stringify({ from: 'Haven Auditor <monitor@havencare.app>', to: [ALERT_EMAIL], subject, html }),
 })
 
 if (!emailRes.ok) {
