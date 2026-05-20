@@ -579,12 +579,14 @@ export default function Dashboard() {
                 </div>
                 <div className="px-3 py-2.5">
                   <p className="font-semibold text-slate-800 truncate text-sm">{getResidentFullName(r)}</p>
+                  {age !== null && !showFormer && (
+                    <p className="text-xs text-slate-400 mt-0.5">{age} yrs old</p>
+                  )}
                   <div className="flex items-center justify-between mt-0.5">
                     <p className="text-xs text-slate-400">Room {r.room_number || '—'}</p>
-                    {r.care_level && !showFormer
-                      ? <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-semibold ${CARE_LEVEL_COLORS[r.care_level] || 'bg-slate-100 text-slate-600'}`}>{r.care_level}</span>
-                      : age !== null && <p className="text-xs text-slate-500 font-medium">{age} yrs</p>
-                    }
+                    {r.care_level && !showFormer && (
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-semibold ${CARE_LEVEL_COLORS[r.care_level] || 'bg-slate-100 text-slate-600'}`}>{r.care_level}</span>
+                    )}
                   </div>
                   {!showFormer && r.updated_at && (
                     <p className="text-[10px] text-slate-300 mt-1">{fmtUpdated(r.updated_at)}</p>
