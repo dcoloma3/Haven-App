@@ -644,12 +644,16 @@ export default function Dispense() {
   const sortedTimes = useMemo(() => Object.keys(timeGroups).sort(), [timeGroups])
 
   // First incomplete time slot — used for "Due up next" indicator
+  // A slot is complete when every med is either administered OR recorded as refused/withheld
   const nextDueTime = useMemo(() => {
     return sortedTimes.find(time => {
       const allMedsAtTime = Object.values(timeGroups[time]).flatMap(rg => rg.meds)
-      return calcStatus(allMedsAtTime, time, administered) !== 'all'
+      return allMedsAtTime.some(m => {
+        const key = adminKey(m.id, time)
+        return !administered.has(key) && !notGiven.has(key)
+      })
     }) ?? null
-  }, [sortedTimes, timeGroups, administered])
+  }, [sortedTimes, timeGroups, administered, notGiven])
 
   const { totalMeds, totalDone } = useMemo(() => {
     let totalMeds = 0, totalDone = 0
