@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './lib/supabase'
 import { completeTrial } from './lib/trial'
@@ -10,38 +10,39 @@ import { CommunityProvider, useCommunity } from './context/CommunityContext'
 import RequireAdmin from './components/auth/RequireAdmin'
 import RequireSuperAdmin from './components/auth/RequireSuperAdmin'
 import AppLoader from './components/ui/AppLoader'
-import Login from './pages/Login'
-import Marketing from './pages/Marketing'
-import Onboarding from './pages/Onboarding'
-import CommunityPicker from './pages/CommunityPicker'
-import Dashboard from './pages/Dashboard'
-import ResidentDetail from './pages/ResidentDetail'
-import Calendar from './pages/Calendar'
-import FacilitySettings from './pages/FacilitySettings'
-import StaffDirectory from './pages/StaffDirectory'
-import MyProfile from './pages/MyProfile'
-import Schedule from './pages/Schedule'
-import Dispense from './pages/Dispense'
-import Incidents from './pages/Incidents'
-import SuperAdmin from './pages/SuperAdmin'
-import ProfileCompletion from './pages/ProfileCompletion'
-import VitalSigns from './pages/VitalSigns'
-import ShiftLog from './pages/ShiftLog'
-import Billing from './pages/Billing'
-import Occupancy from './pages/Occupancy'
-import Certifications from './pages/Certifications'
-import NotificationLog from './pages/NotificationLog'
-import Maintenance from './pages/Maintenance'
-import Transportation from './pages/Transportation'
-import Activities from './pages/Activities'
-import FamilyView from './pages/FamilyView'
-import MedicationHistory from './pages/MedicationHistory'
-import PrivacyPolicy from './pages/PrivacyPolicy'
-import TermsOfService from './pages/TermsOfService'
-import Signup from './pages/Signup'
-import TrialExpired from './pages/TrialExpired'
-import TrialLockedFeature from './pages/TrialLockedFeature'
-import ResetPassword from './pages/ResetPassword'
+
+const Login             = lazy(() => import('./pages/Login'))
+const Marketing         = lazy(() => import('./pages/Marketing'))
+const Onboarding        = lazy(() => import('./pages/Onboarding'))
+const CommunityPicker   = lazy(() => import('./pages/CommunityPicker'))
+const Dashboard         = lazy(() => import('./pages/Dashboard'))
+const ResidentDetail    = lazy(() => import('./pages/ResidentDetail'))
+const Calendar          = lazy(() => import('./pages/Calendar'))
+const FacilitySettings  = lazy(() => import('./pages/FacilitySettings'))
+const StaffDirectory    = lazy(() => import('./pages/StaffDirectory'))
+const MyProfile         = lazy(() => import('./pages/MyProfile'))
+const Schedule          = lazy(() => import('./pages/Schedule'))
+const Dispense          = lazy(() => import('./pages/Dispense'))
+const Incidents         = lazy(() => import('./pages/Incidents'))
+const SuperAdmin        = lazy(() => import('./pages/SuperAdmin'))
+const ProfileCompletion = lazy(() => import('./pages/ProfileCompletion'))
+const VitalSigns        = lazy(() => import('./pages/VitalSigns'))
+const ShiftLog          = lazy(() => import('./pages/ShiftLog'))
+const Billing           = lazy(() => import('./pages/Billing'))
+const Occupancy         = lazy(() => import('./pages/Occupancy'))
+const Certifications    = lazy(() => import('./pages/Certifications'))
+const NotificationLog   = lazy(() => import('./pages/NotificationLog'))
+const Maintenance       = lazy(() => import('./pages/Maintenance'))
+const Transportation    = lazy(() => import('./pages/Transportation'))
+const Activities        = lazy(() => import('./pages/Activities'))
+const FamilyView        = lazy(() => import('./pages/FamilyView'))
+const MedicationHistory = lazy(() => import('./pages/MedicationHistory'))
+const PrivacyPolicy     = lazy(() => import('./pages/PrivacyPolicy'))
+const TermsOfService    = lazy(() => import('./pages/TermsOfService'))
+const Signup            = lazy(() => import('./pages/Signup'))
+const TrialExpired      = lazy(() => import('./pages/TrialExpired'))
+const TrialLockedFeature = lazy(() => import('./pages/TrialLockedFeature'))
+const ResetPassword     = lazy(() => import('./pages/ResetPassword'))
 
 function NoMembershipScreen() {
   return (
@@ -204,6 +205,7 @@ export default function App() {
       <CommunityProvider>
         <ProfileProvider>
           <FacilityProvider>
+            <Suspense fallback={<AppLoader />}>
             <Routes>
               <Route path="/" element={<Marketing />} />
               <Route path="/login" element={session ? <Navigate to="/dashboard" replace /> : <Login />} />
@@ -257,6 +259,7 @@ export default function App() {
               <Route path="/superadmin" element={session ? <ProtectedRoute requireCommunity={false}><RequireSuperAdmin><SuperAdmin /></RequireSuperAdmin></ProtectedRoute> : <Navigate to="/login" replace />} />
               <Route path="*" element={<Navigate to={session ? '/dashboard' : '/'} replace />} />
             </Routes>
+            </Suspense>
           </FacilityProvider>
         </ProfileProvider>
       </CommunityProvider>
