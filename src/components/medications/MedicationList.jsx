@@ -811,6 +811,14 @@ function PRNMedications({ residentId, medications }) {
                         </>
                       )}
                     </div>
+                    {med.notes && (
+                      <div className="flex items-start gap-1.5 mt-2 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-2">
+                        <svg className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-px" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                        </svg>
+                        <p className="text-xs text-amber-800 leading-relaxed font-medium">{med.notes}</p>
+                      </div>
+                    )}
                     {intervalWarning && (
                       <p className="text-xs text-amber-600 font-medium mt-1">⚠ {intervalWarning}</p>
                     )}
