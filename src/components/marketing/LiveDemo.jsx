@@ -81,6 +81,25 @@ const INIT_INCIDENTS = [
   { id: 4, resId: 3, date: 'May 3, 2026',  type: 'Skin Integrity',      severity: 'Minor',    status: 'Resolved', desc: 'Stage 1 pressure area noted on coccyx during routine skin assessment. Wound care protocol initiated. Area fully resolved within 5 days. Documentation filed.' },
 ]
 
+// ─── Helper: compute med status dot color for a resident ─────────────────────
+// Returns: 'green' | 'amber' | 'red' | 'gray'
+function getMedStatusColor(resId, meds) {
+  const routineMeds = meds.filter(m => m.resId === resId && !m.prn)
+  if (routineMeds.length === 0) return 'gray'
+  const allGiven = routineMeds.every(m => m.given)
+  if (allGiven) return 'green'
+  const someGiven = routineMeds.some(m => m.given)
+  if (someGiven) return 'amber'
+  return 'red'
+}
+
+const MED_DOT_COLOR = {
+  green: '#16A34A',
+  amber: '#D97706',
+  red:   '#DC2626',
+  gray:  '#94a3b8',
+}
+
 // ─── Shared UI pieces ─────────────────────────────────────────────────────────
 
 function Avatar({ initials, color, size = 32, fontSize }) {
@@ -105,9 +124,9 @@ function StatusBadge({ status, color }) {
 
 function LevelBadge({ level }) {
   const map = {
-    AL:      { bg: '#e0f2fe', color: '#0369a1' },
-    MC:      { bg: '#fce7f3', color: '#be185d' },
-    IL:      { bg: '#dcfce7', color: '#15803d' },
+    AL:      { bg: '#dbeafe', color: '#1d4ed8' },
+    MC:      { bg: '#f3e8ff', color: '#7e22ce' },
+    IL:      { bg: '#d1fae5', color: '#065f46' },
     SNF:     { bg: '#fef9c3', color: '#a16207' },
     Hospice: { bg: '#f1f5f9', color: '#64748b' },
   }
@@ -119,34 +138,102 @@ function LevelBadge({ level }) {
 
 // ─── Demo Sidebar ─────────────────────────────────────────────────────────────
 
-const NAV = [
-  { key: 'residents', label: 'Residents', icon: (
-    <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-    </svg>
-  )},
-  { key: 'dispense', label: 'Medications', icon: (
-    <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/>
-      <line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
-    </svg>
-  )},
-  { key: 'schedule', label: 'Schedule', icon: (
-    <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/>
-      <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-    </svg>
-  )},
-  { key: 'incidents', label: 'Incidents', icon: (
-    <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-      <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-    </svg>
-  )},
+const NAV_ITEMS = [
+  {
+    key: 'dashboard',
+    label: 'Dashboard',
+    disabled: false,
+    icon: (
+      <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        <polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+    ),
+  },
+  {
+    key: 'residents',
+    label: 'Residents',
+    disabled: false,
+    icon: (
+      <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+    ),
+  },
+  {
+    key: 'dispense',
+    label: 'Dispense',
+    disabled: false,
+    icon: (
+      <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M10.5 20H4a2 2 0 0 1-2-2V5c0-1.1.9-2 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H20a2 2 0 0 1 2 2v3"/>
+        <circle cx="18" cy="18" r="3"/>
+        <path d="M18 15v3l2 1"/>
+      </svg>
+    ),
+  },
+  {
+    key: 'incidents',
+    label: 'Incidents',
+    disabled: false,
+    icon: (
+      <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+    ),
+  },
+  {
+    key: 'calendar',
+    label: 'Calendar',
+    disabled: true,
+    icon: (
+      <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+        <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>
+    ),
+  },
+  {
+    key: 'schedule',
+    label: 'Schedule',
+    disabled: true,
+    icon: (
+      <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+      </svg>
+    ),
+  },
+  {
+    key: 'staff',
+    label: 'Staff',
+    disabled: true,
+    icon: (
+      <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+    ),
+  },
+  {
+    key: 'settings',
+    label: 'Settings',
+    disabled: true,
+    icon: (
+      <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    ),
+  },
 ]
 
+// Only the active (non-disabled) nav items — used for the mobile tab bar
+const ACTIVE_NAV = NAV_ITEMS.filter(n => !n.disabled)
+
 function DemoSidebar({ active, onNav }) {
+  const [tooltip, setTooltip] = useState(null)
+
   return (
     <div className="hidden sm:flex flex-col flex-shrink-0" style={{ width: 180, backgroundColor: C.sidebar, borderRight: '1px solid rgba(255,255,255,0.06)' }}>
       {/* Logo */}
@@ -166,24 +253,56 @@ function DemoSidebar({ active, onNav }) {
       </div>
       {/* Nav */}
       <nav className="flex-1 py-2">
-        {NAV.map(item => (
-          <button
-            key={item.key}
-            type="button"
-            onClick={() => onNav(item.key)}
-            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left transition-colors"
-            style={{
-              backgroundColor: active === item.key ? C.sidebarActive : 'transparent',
-              color: active === item.key ? 'white' : 'rgba(255,255,255,0.5)',
-              fontSize: 13,
-              fontWeight: active === item.key ? 600 : 400,
-              borderLeft: active === item.key ? `2px solid #378ADD` : '2px solid transparent',
-            }}
-          >
-            {item.icon}
-            {item.label}
-          </button>
-        ))}
+        {NAV_ITEMS.map(item => {
+          if (item.disabled) {
+            return (
+              <div
+                key={item.key}
+                className="relative"
+                onMouseEnter={() => setTooltip(item.key)}
+                onMouseLeave={() => setTooltip(null)}
+              >
+                <div
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 opacity-40 cursor-not-allowed"
+                  style={{
+                    color: 'rgba(255,255,255,0.5)',
+                    fontSize: 13,
+                    borderLeft: '2px solid transparent',
+                  }}
+                >
+                  {item.icon}
+                  {item.label}
+                </div>
+                {tooltip === item.key && (
+                  <div
+                    className="absolute left-full top-1/2 -translate-y-1/2 ml-2 z-50 whitespace-nowrap rounded-lg px-2.5 py-1.5 pointer-events-none"
+                    style={{ backgroundColor: '#1e293b', color: 'rgba(255,255,255,0.85)', fontSize: 11, boxShadow: '0 4px 12px rgba(0,0,0,0.4)' }}
+                  >
+                    Available in full app
+                  </div>
+                )}
+              </div>
+            )
+          }
+          return (
+            <button
+              key={item.key}
+              type="button"
+              onClick={() => onNav(item.key)}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left transition-colors"
+              style={{
+                backgroundColor: active === item.key ? C.sidebarActive : 'transparent',
+                color: active === item.key ? 'white' : 'rgba(255,255,255,0.5)',
+                fontSize: 13,
+                fontWeight: active === item.key ? 600 : 400,
+                borderLeft: active === item.key ? `2px solid #378ADD` : '2px solid transparent',
+              }}
+            >
+              {item.icon}
+              {item.label}
+            </button>
+          )
+        })}
       </nav>
       {/* Demo badge */}
       <div className="px-4 py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
@@ -199,7 +318,8 @@ function DemoSidebar({ active, onNav }) {
 // ─── Demo Navbar ──────────────────────────────────────────────────────────────
 
 function DemoNavbar({ view }) {
-  const label = NAV.find(n => n.key === view)?.label ?? ''
+  const item = NAV_ITEMS.find(n => n.key === view)
+  const label = item?.label ?? ''
   return (
     <div className="flex items-center justify-between px-5 py-2.5 flex-shrink-0" style={{ backgroundColor: 'white', borderBottom: '1px solid #e2e8f0', minHeight: 48 }}>
       <div>
@@ -216,10 +336,123 @@ function DemoNavbar({ view }) {
   )
 }
 
+// ─── View: Dashboard ──────────────────────────────────────────────────────────
+
+function DashboardView({ meds, onNav, onSelectResident }) {
+  // Frank W. (id=8) has a high-severity open incident (id=2, severity Moderate)
+  const highIncident = INIT_INCIDENTS.find(i => i.status === 'Open' && i.severity === 'Moderate')
+  const highIncidentResident = highIncident ? RESIDENTS.find(r => r.id === highIncident.resId) : null
+
+  const pendingRoutineMeds = meds.filter(m => !m.prn && !m.given)
+  const pendingMedCount = pendingRoutineMeds.length
+
+  const openIncidentCount = INIT_INCIDENTS.filter(i => i.status === 'Open').length
+
+  const stats = [
+    { icon: '🏠', label: 'Residents',           val: RESIDENTS.length, bg: '#dbeafe', color: '#1d4ed8', onClick: null },
+    { icon: '💊', label: 'Meds Pending',         val: pendingMedCount,  bg: pendingMedCount > 0 ? '#fef3c7' : '#dcfce7', color: pendingMedCount > 0 ? '#d97706' : '#15803d', onClick: () => onNav('dispense') },
+    { icon: '🛡', label: 'Open Incident',        val: openIncidentCount, bg: openIncidentCount > 0 ? '#fee2e2' : '#dcfce7', color: openIncidentCount > 0 ? '#dc2626' : '#15803d', onClick: () => onNav('incidents') },
+    { icon: '📅', label: "Today's Appointments", val: 2,                bg: '#dbeafe', color: '#1d4ed8', onClick: null },
+  ]
+
+  return (
+    <div className="flex-1 overflow-y-auto" style={{ backgroundColor: C.bg }}>
+      <div className="p-4 sm:p-5 space-y-4">
+        {/* Alert banner */}
+        {highIncident && (
+          <div
+            className="flex items-center justify-between rounded-xl px-4 py-3"
+            style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca' }}
+          >
+            <div className="flex items-center gap-2.5">
+              <span style={{ fontSize: 16 }}>⚠</span>
+              <div>
+                <p className="font-semibold text-red-700" style={{ fontSize: 13 }}>
+                  1 high-severity incident requires attention
+                </p>
+                <p className="text-red-500" style={{ fontSize: 11 }}>
+                  {highIncidentResident?.name} · {highIncident.type}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => onNav('incidents')}
+              className="font-semibold flex items-center gap-1 transition-colors hover:text-red-800"
+              style={{ fontSize: 12, color: '#dc2626', flexShrink: 0 }}
+            >
+              View
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+          </div>
+        )}
+
+        {/* Stat pills */}
+        <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+          {stats.map((s, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={s.onClick ?? undefined}
+              className="flex items-center gap-2 rounded-full px-3.5 py-2 flex-shrink-0 transition-all"
+              style={{
+                backgroundColor: s.bg,
+                border: `1px solid ${s.color}30`,
+                cursor: s.onClick ? 'pointer' : 'default',
+              }}
+            >
+              <span style={{ fontSize: 14 }}>{s.icon}</span>
+              <span className="font-bold" style={{ fontSize: 14, color: s.color }}>{s.val}</span>
+              <span className="font-medium" style={{ fontSize: 11, color: s.color + 'cc' }}>{s.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Resident cards grid */}
+        <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+          {RESIDENTS.map(r => {
+            const medStatus = getMedStatusColor(r.id, meds)
+            const dotColor = MED_DOT_COLOR[medStatus]
+            return (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => { onNav('residents'); onSelectResident(r.id) }}
+                className="bg-white rounded-2xl border border-slate-200 overflow-hidden text-left hover:shadow-md hover:-translate-y-0.5 transition-all"
+              >
+                {/* Avatar area — portrait 3:4 */}
+                <div className="relative w-full" style={{ aspectRatio: '3/4', backgroundColor: '#E6F1FB' }}>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="font-bold select-none" style={{ fontSize: 32, color: '#185FA5' }}>{r.initials}</span>
+                  </div>
+                  {/* Med status dot */}
+                  <div
+                    className="absolute bottom-2 right-2 rounded-full"
+                    style={{ width: 10, height: 10, backgroundColor: dotColor, border: '2px solid white', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }}
+                  />
+                </div>
+                {/* Info below avatar */}
+                <div className="px-2.5 pt-2 pb-2.5">
+                  <p className="font-bold text-slate-800 truncate" style={{ fontSize: 12 }}>{r.name}</p>
+                  <p className="text-slate-400" style={{ fontSize: 11 }}>{r.age} yrs · Room {r.room}</p>
+                  <div className="flex items-center justify-between mt-1">
+                    <LevelBadge level={r.level} />
+                  </div>
+                  <p style={{ fontSize: 10, color: '#94a3b8', marginTop: 3 }}>Updated today</p>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── View: Residents ──────────────────────────────────────────────────────────
 
-function ResidentsView({ meds }) {
-  const [selected, setSelected] = useState(null)
+function ResidentsView({ meds, initialSelected }) {
+  const [selected, setSelected] = useState(initialSelected ?? null)
   const [careFilter, setCareFilter] = useState('All')
 
   const filterOptions = ['All', 'AL', 'IL', 'MC']
@@ -256,7 +489,7 @@ function ResidentsView({ meds }) {
             ))}
           </div>
 
-          {/* Care level filter — fully working */}
+          {/* Care level filter */}
           <div className="flex items-center gap-1.5 mb-4">
             {filterOptions.map(opt => {
               const isActive = careFilter === opt
@@ -293,29 +526,41 @@ function ResidentsView({ meds }) {
             {filteredResidents.length === 0 ? (
               <div className="px-4 py-8 text-center text-slate-400 text-xs">No residents in this category</div>
             ) : (
-              filteredResidents.map((r, i) => (
-                <button
-                  key={r.id}
-                  type="button"
-                  onClick={() => setSelected(selected === r.id ? null : r.id)}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50"
-                  style={{
-                    borderBottom: i < filteredResidents.length - 1 ? '1px solid #f1f5f9' : 'none',
-                    backgroundColor: selected === r.id ? '#f0f7ff' : undefined,
-                  }}
-                >
-                  <Avatar initials={r.initials} color={r.color} size={36} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-semibold text-slate-800 truncate" style={{ fontSize: 13 }}>{r.name}</p>
-                      <LevelBadge level={r.level} />
+              filteredResidents.map((r, i) => {
+                const medStatus = getMedStatusColor(r.id, meds)
+                const dotColor = MED_DOT_COLOR[medStatus]
+                return (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => setSelected(selected === r.id ? null : r.id)}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50"
+                    style={{
+                      borderBottom: i < filteredResidents.length - 1 ? '1px solid #f1f5f9' : 'none',
+                      backgroundColor: selected === r.id ? '#f0f7ff' : undefined,
+                    }}
+                  >
+                    {/* Avatar with med dot */}
+                    <div className="relative flex-shrink-0">
+                      <Avatar initials={r.initials} color={r.color} size={36} />
+                      <div
+                        className="absolute bottom-0 right-0 rounded-full"
+                        style={{ width: 9, height: 9, backgroundColor: dotColor, border: '2px solid white' }}
+                      />
                     </div>
-                    <p className="text-slate-400" style={{ fontSize: 11 }}>Age {r.age} · Room {r.room}</p>
-                  </div>
-                  <StatusBadge status={r.status} color={r.statusColor} />
-                  <svg className="w-4 h-4 text-slate-300 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
-                </button>
-              ))
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-slate-800 truncate" style={{ fontSize: 13 }}>{r.name}</p>
+                        <LevelBadge level={r.level} />
+                      </div>
+                      <p className="text-slate-400" style={{ fontSize: 11 }}>Age {r.age} · Room {r.room}</p>
+                      <p style={{ fontSize: 10, color: '#94a3b8' }}>Updated today</p>
+                    </div>
+                    <StatusBadge status={r.status} color={r.statusColor} />
+                    <svg className="w-4 h-4 text-slate-300 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
+                  </button>
+                )
+              })
             )}
           </div>
         </div>
@@ -364,7 +609,7 @@ function ResidentsView({ meds }) {
   )
 }
 
-// ─── View: Medications ────────────────────────────────────────────────────────
+// ─── View: Medications (grouped by time slot) ─────────────────────────────────
 
 function DispenseView({ meds, toggleMed }) {
   const [activeTab, setActiveTab] = useState('Routine')
@@ -374,10 +619,18 @@ function DispenseView({ meds, toggleMed }) {
   const pending = visibleMeds.filter(m => !m.given).length
   const total   = visibleMeds.length
 
-  const grouped = RESIDENTS.map(r => ({
-    resident: r,
-    meds: visibleMeds.filter(m => m.resId === r.id),
-  })).filter(g => g.meds.length > 0)
+  // Get sorted unique time slots
+  const timeSlots = [...new Set(visibleMeds.map(m => m.time))].sort((a, b) => {
+    // Sort by time: 8:00 AM before 9:00 PM; PRN last
+    if (a === 'PRN') return 1
+    if (b === 'PRN') return -1
+    const parse = t => {
+      const [time, period] = t.split(' ')
+      const [h, min] = time.split(':').map(Number)
+      return (period === 'PM' && h !== 12 ? h + 12 : h) * 60 + min
+    }
+    return parse(a) - parse(b)
+  })
 
   return (
     <div className="flex-1 overflow-y-auto" style={{ backgroundColor: C.bg }}>
@@ -410,13 +663,12 @@ function DispenseView({ meds, toggleMed }) {
           </div>
         </div>
 
-        {/* Date bar + Routine / PRN tabs */}
+        {/* Date bar + Routine / PRN toggle */}
         <div className="flex items-center justify-between bg-white rounded-xl px-4 py-2.5 border border-slate-200 mb-4">
           <div className="flex items-center gap-2">
             <svg className="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             <span className="font-semibold text-slate-700" style={{ fontSize: 13 }}>Thursday, May 14, 2026</span>
           </div>
-          {/* Working Routine / PRN toggle */}
           <div className="flex gap-1" role="group" aria-label="Medication type">
             {['Routine', 'PRN'].map(tab => (
               <button
@@ -436,61 +688,92 @@ function DispenseView({ meds, toggleMed }) {
           </div>
         </div>
 
-        {/* Grouped by resident */}
-        <div className="space-y-3">
-          {grouped.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-slate-200 px-4 py-8 text-center text-slate-400 text-xs">
-              No {activeTab === 'PRN' ? 'PRN' : 'routine'} medications for today
-            </div>
-          ) : (
-            grouped.map(({ resident: r, meds: rMeds }) => {
-              const allGiven = rMeds.every(m => m.given)
+        {/* Grouped by time slot */}
+        {timeSlots.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-slate-200 px-4 py-8 text-center text-slate-400 text-xs">
+            No {activeTab === 'PRN' ? 'PRN' : 'routine'} medications for today
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+            {timeSlots.map((time, tIdx) => {
+              const medsAtTime = visibleMeds.filter(m => m.time === time)
+              // Group by resident
+              const residentsAtTime = RESIDENTS
+                .map(r => ({ resident: r, meds: medsAtTime.filter(m => m.resId === r.id) }))
+                .filter(g => g.meds.length > 0)
+
+              const totalAtTime = medsAtTime.length
+              const resCount = residentsAtTime.length
+
               return (
-                <div key={r.id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-                  <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100">
-                    <div className="flex items-center gap-2.5">
-                      <Avatar initials={r.initials} color={r.color} size={28} />
-                      <span className="font-semibold text-slate-800" style={{ fontSize: 13 }}>{r.name}</span>
-                      <span className="text-slate-400" style={{ fontSize: 11 }}>Room {r.room}</span>
-                    </div>
+                <div key={time} style={{ borderBottom: tIdx < timeSlots.length - 1 ? '1px solid #e2e8f0' : 'none' }}>
+                  {/* Time slot header */}
+                  <div
+                    className="flex items-center gap-3 px-4 py-2"
+                    style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}
+                  >
+                    <svg className="w-3.5 h-3.5 flex-shrink-0" style={{ color: C.primary }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span className="font-bold" style={{ fontSize: 13, color: C.primary }}>{time}</span>
                     <span
-                      className="font-medium rounded-full px-2 py-0.5"
-                      style={{ fontSize: 11, backgroundColor: allGiven ? '#dcfce7' : '#fef9c3', color: allGiven ? '#15803d' : '#a16207' }}
+                      className="rounded-full px-2 py-0.5 font-medium"
+                      style={{ fontSize: 10, backgroundColor: '#e2e8f0', color: '#64748b' }}
                     >
-                      {rMeds.filter(m => m.given).length}/{rMeds.length} given
+                      {resCount} resident{resCount !== 1 ? 's' : ''} · {totalAtTime} med{totalAtTime !== 1 ? 's' : ''}
                     </span>
                   </div>
-                  {rMeds.map(m => (
-                    <div key={m.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition-colors" style={{ borderBottom: '1px solid #f8fafc' }}>
-                      <div className="flex-1">
-                        <p className="font-semibold text-slate-700" style={{ fontSize: 12 }}>
-                          {m.med} <span className="font-normal text-slate-400">{m.dose}</span>
-                        </p>
-                        <p className="text-slate-400" style={{ fontSize: 11 }}>{m.time} · {m.route}</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => toggleMed(m.id)}
-                        className="flex items-center gap-1.5 font-semibold rounded-lg px-3 py-1.5 transition-all active:scale-95"
-                        style={{
-                          fontSize: 11,
-                          backgroundColor: m.given ? '#dcfce7' : C.primary,
-                          color: m.given ? '#15803d' : 'white',
-                          border: m.given ? '1px solid #86efac' : 'none',
-                        }}
-                      >
-                        {m.given
-                          ? <><svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg> Given</>
-                          : 'Mark Given'
-                        }
-                      </button>
+
+                  {/* Resident + med rows */}
+                  {residentsAtTime.map(({ resident: r, meds: rMeds }, rIdx) => (
+                    <div key={r.id}>
+                      {rMeds.map((m, mIdx) => (
+                        <div
+                          key={m.id}
+                          className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition-colors"
+                          style={{ borderBottom: (rIdx < residentsAtTime.length - 1 || mIdx < rMeds.length - 1) ? '1px solid #f8fafc' : 'none' }}
+                        >
+                          {mIdx === 0 ? (
+                            <Avatar initials={r.initials} color={r.color} size={28} />
+                          ) : (
+                            <div style={{ width: 28, flexShrink: 0 }} />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            {mIdx === 0 && (
+                              <div className="flex items-center gap-1.5 mb-0.5">
+                                <span className="font-semibold text-slate-800" style={{ fontSize: 12 }}>{r.name}</span>
+                                <span className="text-slate-400" style={{ fontSize: 11 }}>· Room {r.room}</span>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-slate-700" style={{ fontSize: 11 }}>{m.med}</span>
+                              <span className="text-slate-500" style={{ fontSize: 11 }}>{m.dose}</span>
+                              <span className="text-slate-400" style={{ fontSize: 11 }}>· {m.route}</span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => toggleMed(m.id)}
+                            className="flex items-center gap-1.5 font-semibold rounded-lg px-3 py-1.5 transition-all active:scale-95 flex-shrink-0"
+                            style={{
+                              fontSize: 11,
+                              backgroundColor: m.given ? '#dcfce7' : C.primary,
+                              color: m.given ? '#15803d' : 'white',
+                              border: m.given ? '1px solid #86efac' : 'none',
+                            }}
+                          >
+                            {m.given
+                              ? <><svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg> Given</>
+                              : 'Mark Given'
+                            }
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   ))}
                 </div>
               )
-            })
-          )}
-        </div>
+            })}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -504,7 +787,6 @@ function ScheduleView() {
 
   const days = getWeekDays(weekOffset)
 
-  // Format week label: "May 12–16, 2026" style
   const weekLabel = (() => {
     const start = new Date(BASE_WEEK_MS + weekOffset * 7 * 86400000)
     const end   = new Date(BASE_WEEK_MS + (weekOffset * 7 + 4) * 86400000)
@@ -547,7 +829,6 @@ function ScheduleView() {
               </button>
             )}
           </div>
-          {/* Working Daily / Weekly / Monthly toggle */}
           <div className="flex gap-1" role="group" aria-label="Schedule view">
             {['Daily', 'Weekly', 'Monthly'].map(v => (
               <button
@@ -567,58 +848,56 @@ function ScheduleView() {
           </div>
         </div>
 
-        {/* Grid — horizontally scrollable on mobile */}
+        {/* Grid */}
         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden overflow-x-auto">
           <div style={{ minWidth: 480 }}>
-          {/* Header */}
-          <div className="grid px-4 py-2.5 border-b border-slate-100" style={{ gridTemplateColumns: '120px repeat(5, 1fr)', backgroundColor: '#f8fafc' }}>
-            <span className="font-semibold text-slate-400 uppercase tracking-wide" style={{ fontSize: 10 }}>Staff</span>
-            {days.map(d => {
-              const isToday = weekOffset === 0 && d.dateStr === TODAY_STR
-              return (
-                <span key={d.label} className="text-center font-semibold uppercase tracking-wide" style={{ fontSize: 10, color: isToday ? C.primary : '#94a3b8' }}>
-                  {isToday ? `${d.label} ●` : d.label}
-                </span>
-              )
-            })}
-          </div>
-          {/* Rows */}
-          {STAFF.map((s, i) => (
-            <div
-              key={s.id}
-              className="grid items-center px-4 py-3"
-              style={{ gridTemplateColumns: '120px repeat(5, 1fr)', borderBottom: i < STAFF.length - 1 ? '1px solid #f1f5f9' : 'none' }}
-            >
-              <div className="flex items-center gap-2.5">
-                <Avatar initials={s.initials} color={s.color} size={30} />
-                <div>
-                  <p className="font-semibold text-slate-700" style={{ fontSize: 12 }}>{s.name}</p>
-                  <p className="text-slate-400" style={{ fontSize: 10 }}>{s.role}</p>
-                </div>
-              </div>
-              {s.shifts.map((sh, j) => {
-                const style = SHIFT_STYLE[sh]
-                const isToday = weekOffset === 0 && j === 2
+            <div className="grid px-4 py-2.5 border-b border-slate-100" style={{ gridTemplateColumns: '120px repeat(5, 1fr)', backgroundColor: '#f8fafc' }}>
+              <span className="font-semibold text-slate-400 uppercase tracking-wide" style={{ fontSize: 10 }}>Staff</span>
+              {days.map(d => {
+                const isToday = weekOffset === 0 && d.dateStr === TODAY_STR
                 return (
-                  <div key={j} className="flex justify-center">
-                    <span
-                      className="font-semibold rounded-md px-2 py-1 text-center"
-                      style={{
-                        fontSize: 11,
-                        backgroundColor: style.bg,
-                        color: style.color,
-                        minWidth: 36,
-                        boxShadow: isToday ? `0 0 0 1.5px ${style.color}40` : 'none',
-                      }}
-                    >
-                      {style.label}
-                    </span>
-                  </div>
+                  <span key={d.label} className="text-center font-semibold uppercase tracking-wide" style={{ fontSize: 10, color: isToday ? C.primary : '#94a3b8' }}>
+                    {isToday ? `${d.label} ●` : d.label}
+                  </span>
                 )
               })}
             </div>
-          ))}
-          </div>{/* end minWidth wrapper */}
+            {STAFF.map((s, i) => (
+              <div
+                key={s.id}
+                className="grid items-center px-4 py-3"
+                style={{ gridTemplateColumns: '120px repeat(5, 1fr)', borderBottom: i < STAFF.length - 1 ? '1px solid #f1f5f9' : 'none' }}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Avatar initials={s.initials} color={s.color} size={30} />
+                  <div>
+                    <p className="font-semibold text-slate-700" style={{ fontSize: 12 }}>{s.name}</p>
+                    <p className="text-slate-400" style={{ fontSize: 10 }}>{s.role}</p>
+                  </div>
+                </div>
+                {s.shifts.map((sh, j) => {
+                  const style = SHIFT_STYLE[sh]
+                  const isToday = weekOffset === 0 && j === 2
+                  return (
+                    <div key={j} className="flex justify-center">
+                      <span
+                        className="font-semibold rounded-md px-2 py-1 text-center"
+                        style={{
+                          fontSize: 11,
+                          backgroundColor: style.bg,
+                          color: style.color,
+                          minWidth: 36,
+                          boxShadow: isToday ? `0 0 0 1.5px ${style.color}40` : 'none',
+                        }}
+                      >
+                        {style.label}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Legend */}
@@ -672,7 +951,7 @@ function IncidentsView() {
             ))}
           </div>
           {incidents.map((inc, i) => {
-            const r = RESIDENTS.find(r => r.id === inc.resId)
+            const r = RESIDENTS.find(res => res.id === inc.resId)
             const isOpen = inc.status === 'Open'
             const isHigh = inc.severity === 'Moderate'
             return (
@@ -729,10 +1008,20 @@ function IncidentsView() {
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 export default function LiveDemo() {
-  const [view, setView] = useState('residents')
-  // Lift meds state up so ResidentsView stats stay in sync with Dispense actions
+  const [view, setView] = useState('dashboard')
+  const [selectedResident, setSelectedResident] = useState(null)
+  // Lift meds state up so all views stay in sync
   const [meds, setMeds] = useState(INIT_MEDS)
   const toggleMed = id => setMeds(prev => prev.map(m => m.id === id ? { ...m, given: !m.given } : m))
+
+  const handleNav = key => {
+    setView(key)
+    if (key !== 'residents') setSelectedResident(null)
+  }
+
+  const handleSelectResident = resId => {
+    setSelectedResident(resId)
+  }
 
   return (
     <div className="rounded-2xl overflow-hidden h-[500px] sm:h-[580px]" style={{ boxShadow: '0 40px 100px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.08)' }}>
@@ -751,7 +1040,7 @@ export default function LiveDemo() {
         </div>
       </div>
 
-      {/* Mobile top bar — logo + tab navigation */}
+      {/* Mobile top bar — logo + tab navigation (active nav items only) */}
       <div className="sm:hidden flex items-stretch flex-shrink-0" style={{ backgroundColor: C.sidebar, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         {/* Logo */}
         <div className="flex items-center gap-1.5 px-3 flex-shrink-0" style={{ borderRight: '1px solid rgba(255,255,255,0.07)' }}>
@@ -763,12 +1052,12 @@ export default function LiveDemo() {
           </svg>
           <span className="text-white font-semibold" style={{ fontSize: 12, letterSpacing: '-0.3px' }}>haven</span>
         </div>
-        {/* Tabs */}
-        {NAV.map(item => (
+        {/* Tabs — active items only */}
+        {ACTIVE_NAV.map(item => (
           <button
             key={item.key}
             type="button"
-            onClick={() => setView(item.key)}
+            onClick={() => handleNav(item.key)}
             className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors"
             style={{
               color: view === item.key ? 'white' : 'rgba(255,255,255,0.4)',
@@ -783,15 +1072,16 @@ export default function LiveDemo() {
         ))}
       </div>
 
-      {/* App shell — fills remaining height after chrome bar (desktop) or mobile tab bar */}
+      {/* App shell */}
       <div className="flex flex-1 min-h-0 overflow-hidden" style={{ height: 'calc(100% - 37px)' }}>
-        <DemoSidebar active={view} onNav={setView} />
+        <DemoSidebar active={view} onNav={handleNav} />
         <div className="flex flex-col flex-1 min-w-0">
           <DemoNavbar view={view} />
-          {view === 'residents' && <ResidentsView meds={meds} />}
-          {view === 'dispense'  && <DispenseView meds={meds} toggleMed={toggleMed} />}
-          {view === 'schedule'  && <ScheduleView />}
-          {view === 'incidents' && <IncidentsView />}
+          {view === 'dashboard'  && <DashboardView meds={meds} onNav={handleNav} onSelectResident={handleSelectResident} />}
+          {view === 'residents'  && <ResidentsView meds={meds} initialSelected={selectedResident} />}
+          {view === 'dispense'   && <DispenseView meds={meds} toggleMed={toggleMed} />}
+          {view === 'schedule'   && <ScheduleView />}
+          {view === 'incidents'  && <IncidentsView />}
         </div>
       </div>
     </div>

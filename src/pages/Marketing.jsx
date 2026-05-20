@@ -151,10 +151,7 @@ function MarketingNav({ scrollTo }) {
         <div className="flex items-center justify-end gap-3">
           <Link
             to="/login"
-            className="hidden md:block text-sm transition-colors"
-            style={{ color: 'rgba(255,255,255,0.6)' }}
-            onMouseEnter={e => e.currentTarget.style.color = 'white'}
-            onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
+            className="text-sm font-semibold px-4 py-2 rounded-lg border border-white/30 text-white/90 hover:bg-white/10 transition-colors"
           >
             Sign in
           </Link>
@@ -638,11 +635,13 @@ function PricingSection({ scrollTo }) {
           </div>
         </div>
 
-        {/* Cards — Pro first on mobile */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-          <div className="order-2 md:order-1"><PricingCard plan={PLANS[0]} annual={annual} scrollTo={scrollTo} /></div>
-          <div className="order-1 md:order-2"><PricingCard plan={PLANS[1]} annual={annual} scrollTo={scrollTo} /></div>
-          <div className="order-3 md:order-3"><PricingCard plan={PLANS[2]} annual={annual} scrollTo={scrollTo} /></div>
+        {/* Cards — horizontal scroll on mobile, 3-col grid on desktop */}
+        <div className="overflow-x-auto -mx-4 px-4 pb-2 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
+          <div className="flex gap-4 md:grid md:grid-cols-3 md:gap-6 md:items-start" style={{ minWidth: 'max-content' }}>
+            <div className="w-72 md:w-auto order-2 md:order-1"><PricingCard plan={PLANS[0]} annual={annual} scrollTo={scrollTo} /></div>
+            <div className="w-72 md:w-auto order-1 md:order-2"><PricingCard plan={PLANS[1]} annual={annual} scrollTo={scrollTo} /></div>
+            <div className="w-72 md:w-auto order-3 md:order-3"><PricingCard plan={PLANS[2]} annual={annual} scrollTo={scrollTo} /></div>
+          </div>
         </div>
       </div>
     </section>
