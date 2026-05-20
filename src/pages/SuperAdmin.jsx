@@ -709,28 +709,21 @@ export default function SuperAdmin() {
       {/* Header */}
       <div style={{ backgroundColor: '#042C53' }} className="px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <HavenLogo variant="white" />
-          <div className="w-px h-5 bg-white/20" />
-          <span className="bg-amber-400 text-[#042C53] text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wide">
-            Owner Panel
-          </span>
-          {/* Fix 2 — Back to Dashboard button */}
           <button
             onClick={() => {
-              // communityId was cleared when entering SuperAdmin — restore it from
-              // the user's first membership so ProtectedRoute doesn't redirect to /community
               if (!communityId && memberships?.length > 0) {
                 setCommunityId(memberships[0].communities.id)
               }
               navigate('/dashboard')
             }}
-            className="text-white/70 hover:text-white text-sm flex items-center gap-1.5 transition-colors"
+            className="hover:opacity-80 transition-opacity"
           >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-            Back to Dashboard
+            <HavenLogo variant="white" />
           </button>
+          <div className="w-px h-5 bg-white/20" />
+          <span className="bg-amber-400 text-[#042C53] text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wide">
+            Owner Panel
+          </span>
         </div>
         <div className="flex items-center gap-3">
           <button
