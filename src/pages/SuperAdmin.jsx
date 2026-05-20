@@ -178,7 +178,7 @@ function DeleteCommunityModal({ community, onClose, onDeleted, reloadAllCommunit
 }
 
 // Fix 3 & 4 — Updated CommunityRow with plan badge and delete link
-function CommunityRow({ c, s, isMine, onEnter, onDelete }) {
+function CommunityRow({ c, s, isMine, grouped, onEnter, onDelete }) {
   return (
     <div className={`flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors ${isMine ? 'bg-amber-50/40' : ''}`}>
       {/* Icon */}
@@ -209,10 +209,10 @@ function CommunityRow({ c, s, isMine, onEnter, onDelete }) {
           )}
         </div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
-          {!isMine && (
+          {!isMine && !grouped && (
             <span className="text-xs text-slate-500">Manager: <span className="text-slate-700 font-medium">{s?.adminName ?? '—'}</span></span>
           )}
-          {!isMine && <span className="text-xs text-slate-400">·</span>}
+          {!isMine && !grouped && <span className="text-xs text-slate-400">·</span>}
           <span className="text-xs text-slate-500"><span className="text-slate-700 font-medium">{s?.residentCount ?? 0}</span> resident{s?.residentCount !== 1 ? 's' : ''}</span>
           <span className="text-xs text-slate-400">·</span>
           <span className="text-xs text-slate-500"><span className="text-slate-700 font-medium">{s?.staffCount ?? 0}</span> staff</span>
@@ -807,20 +807,53 @@ export default function SuperAdmin() {
               <p className="text-sm text-slate-400">No customer communities yet.</p>
               <p className="text-xs text-slate-400 mt-1">Use <strong>Invite Admin</strong> to onboard your first client.</p>
             </div>
-          ) : (
-            <div className="divide-y divide-slate-100">
-              {customerCommunities.map(c => (
-                <CommunityRow
-                  key={c.id}
-                  c={c}
-                  s={stats[c.id]}
-                  isMine={false}
-                  onEnter={enterCommunity}
-                  onDelete={setDeleteTarget}
-                />
-              ))}
-            </div>
-          )}
+          ) : (() => {
+            // Group by manager name; unnamed goes last
+            const groups = {}
+            customerCommunities.forEach(c => {
+              const mgr = stats[c.id]?.adminName ?? '—'
+              if (!groups[mgr]) groups[mgr] = []
+              groups[mgr].push(c)
+            })
+            const sortedManagers = Object.keys(groups).sort((a, b) => {
+              if (a === '—') return 1
+              if (b === '—') return -1
+              return a.localeCompare(b)
+            })
+            return (
+              <div>
+                {sortedManagers.map(mgr => (
+                  <div key={mgr}>
+                    {/* Manager group header */}
+                    <div className="flex items-center gap-2 px-5 py-2 bg-slate-50 border-y border-slate-100 sticky top-0">
+                      <svg className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                      </svg>
+                      <span className="text-xs font-semibold text-slate-600">
+                        {mgr === '—' ? 'No manager assigned' : mgr}
+                      </span>
+                      <span className="text-xs text-slate-400 font-medium ml-1">
+                        · {groups[mgr].length} {groups[mgr].length === 1 ? 'community' : 'communities'}
+                      </span>
+                    </div>
+                    <div className="divide-y divide-slate-100">
+                      {groups[mgr].map(c => (
+                        <CommunityRow
+                          key={c.id}
+                          c={c}
+                          s={stats[c.id]}
+                          isMine={false}
+                          grouped
+                          onEnter={enterCommunity}
+                          onDelete={setDeleteTarget}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          })()}
         </div>
 
         {/* Trials Dashboard */}
