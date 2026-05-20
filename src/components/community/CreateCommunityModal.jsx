@@ -16,21 +16,16 @@ export default function CreateCommunityModal({ onClose, onCreated }) {
     if (!form.name.trim()) { setError('Community name is required.'); return }
     setSaving(true)
     setError('')
-    const { data: { session } } = await supabase.auth.getSession()
-    const { data: community, error: err } = await supabase
-      .from('communities')
-      .insert([{
-        name: form.name.trim(),
-        address: form.address || null,
-        phone: form.phone || null,
-        license_number: form.license_number || null,
-        email: form.email || null,
-        website: form.website || null,
-      }])
-      .select()
-      .single()
+    const { data: community, error: err } = await supabase.rpc('create_community', {
+      p_name: form.name.trim(),
+      p_address: form.address || null,
+      p_phone: form.phone || null,
+      p_license_number: form.license_number || null,
+      p_email: form.email || null,
+      p_website: form.website || null,
+    })
     if (err) { setError(err.message); setSaving(false); return }
-    await supabase.from('community_members').insert([{ community_id: community.id, user_id: session.user.id, role: 'admin' }])
+    if (!community?.id) { setError('Failed to create community. Please try again.'); setSaving(false); return }
     await reload()
     setSaving(false)
     onCreated(community.id)
