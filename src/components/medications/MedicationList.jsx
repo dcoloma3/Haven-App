@@ -533,7 +533,7 @@ function DoseRow({ med, time, record, toggling, onSet }) {
 // ─── Today's Medications Section ─────────────────────────────────────────────
 
 function TodayMedications({ residentId, medications, onStatusChange }) {
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useState(false)
   const [administered, setAdministered] = useState(new Map())
   const [toggling, setToggling] = useState(new Set())
   const [loadingAdmins, setLoadingAdmins] = useState(true)
@@ -636,19 +636,19 @@ function TodayMedications({ residentId, medications, onStatusChange }) {
   const documentedDoses = rows.filter(({ med, time }) => administered.has(adminKey(med.id, time))).length
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden mb-4">
+    <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden mb-4 opacity-80">
       {/* Header — clickable to collapse */}
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full px-5 py-4 flex items-center justify-between gap-2 text-left hover:bg-slate-50 transition-colors"
+        className="w-full px-5 py-3.5 flex items-center justify-between gap-2 text-left hover:bg-slate-50 transition-colors"
       >
         <div>
-          <h2 className="font-semibold text-slate-800">Today's Medications</h2>
-          <p className="text-xs text-slate-400 mt-0.5">{todayLabel}</p>
+          <h2 className="font-medium text-slate-500 text-sm">Today's Medications</h2>
+          <p className="text-[11px] text-slate-400 mt-0.5">Log doses in the Dispense tab</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {totalDoses > 0 && !loadingAdmins && (
-            <span className={`text-sm font-semibold ${documentedDoses === totalDoses ? 'text-emerald-600' : documentedDoses > 0 ? 'text-amber-500' : 'text-slate-400'}`}>
+            <span className={`text-xs font-semibold ${documentedDoses === totalDoses ? 'text-emerald-600' : documentedDoses > 0 ? 'text-amber-500' : 'text-slate-400'}`}>
               {documentedDoses}/{totalDoses}
             </span>
           )}
@@ -693,7 +693,7 @@ function TodayMedications({ residentId, medications, onStatusChange }) {
 function PRNMedications({ residentId, medications }) {
   const prnMeds = medications.filter(m => m.frequency_type === 'prn')
 
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(true)
   const [todayDoses, setTodayDoses] = useState([]) // array of medication_administrations records
   const [loadingDoses, setLoadingDoses] = useState(true)
   const [givingId, setGivingId] = useState(null) // which med has "Give Now" open
@@ -895,7 +895,7 @@ export default function MedicationList({ residentId, onMedStatusChange }) {
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
   const [editing, setEditing] = useState(null)
-  const [openManage, setOpenManage] = useState(false)
+  const [openManage, setOpenManage] = useState(true)
 
   useEffect(() => {
     supabase
@@ -923,49 +923,33 @@ export default function MedicationList({ residentId, onMedStatusChange }) {
 
   return (
     <div>
-      {/* ── Today's Dispense Section ── */}
-      {!loading && (
-        <TodayMedications
-          residentId={residentId}
-          medications={medications.filter(m => m.frequency_type !== 'prn')}
-          onStatusChange={onMedStatusChange}
-        />
-      )}
-
-      {/* ── PRN / As-Needed Section ── */}
-      {!loading && (
-        <PRNMedications
-          residentId={residentId}
-          medications={medications}
-        />
-      )}
-
       {/* ── Manage Medications ── */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-        {/* Header — clickable to collapse */}
-        <button
-          onClick={() => setOpenManage(o => !o)}
-          className="w-full px-5 py-4 flex items-center justify-between gap-2 text-left hover:bg-slate-50 transition-colors"
-        >
-          <h2 className="font-medium text-slate-700">Manage Medications</h2>
-          <div className="flex items-center gap-2 flex-shrink-0">
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden mb-4">
+        {/* Header — always visible, Add button in header */}
+        <div className="px-5 py-4 flex items-center justify-between gap-2">
+          <button
+            onClick={() => setOpenManage(o => !o)}
+            className="flex items-center gap-2 flex-1 text-left"
+          >
+            <h2 className="font-semibold text-slate-800">Medications</h2>
             {!loading && medications.length > 0 && (
-              <span className="text-xs text-slate-400">{medications.length} med{medications.length !== 1 ? 's' : ''}</span>
+              <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">{medications.length}</span>
             )}
             <ChevronIcon open={openManage} />
-          </div>
-        </button>
+          </button>
+          <button
+            onClick={() => setShowAdd(true)}
+            className="flex items-center gap-1 bg-[#185FA5] hover:bg-[#0C447C] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
+          >
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Add Medication
+          </button>
+        </div>
 
         {openManage && (
-          <div className="px-5 pb-5 border-t border-slate-100">
-            <div className="flex items-center justify-end pt-4 mb-3">
-              <button
-                onClick={e => { e.stopPropagation(); setShowAdd(true) }}
-                className="text-sm text-[#185FA5] hover:text-[#0C447C] transition-colors"
-              >
-                + Add Medication
-              </button>
-            </div>
+          <div className="px-5 pt-4 pb-5 border-t border-slate-100">
 
             {loading && <p className="text-slate-400 text-sm">Loading…</p>}
             {!loading && medications.length === 0 && <p className="text-sm text-slate-400">No medications listed.</p>}
@@ -1026,6 +1010,23 @@ export default function MedicationList({ residentId, onMedStatusChange }) {
           </div>
         )}
       </div>
+
+      {/* ── PRN / As-Needed Section ── */}
+      {!loading && (
+        <PRNMedications
+          residentId={residentId}
+          medications={medications}
+        />
+      )}
+
+      {/* ── Today's Dispense Section (de-emphasized) ── */}
+      {!loading && (
+        <TodayMedications
+          residentId={residentId}
+          medications={medications.filter(m => m.frequency_type !== 'prn')}
+          onStatusChange={onMedStatusChange}
+        />
+      )}
 
       {showAdd && <MedicationModal residentId={residentId} communityId={communityId} onClose={() => setShowAdd(false)} onSaved={handleSaved} />}
       {editing && <MedicationModal residentId={residentId} communityId={communityId} medication={editing} onClose={() => setEditing(null)} onSaved={handleSaved} />}
