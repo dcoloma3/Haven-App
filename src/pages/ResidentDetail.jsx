@@ -268,32 +268,17 @@ export default function ResidentDetail() {
         <ResidentAvatar resident={resident} onUpdate={setResident} medStatus={medStatus} />
         <div className="flex-1 min-w-0">
           <h1 className="text-xl font-bold text-slate-800">{fullName}</h1>
-          <div className="flex items-center gap-2 mt-0.5">
-            <p className="text-sm text-slate-400">
-              Room {resident.room_number || '—'}
-              {(() => {
-                if (!resident.date_of_birth) return null
-                const [y, m, d] = resident.date_of_birth.split('-').map(Number)
-                const today = new Date()
-                let age = today.getFullYear() - y
-                if (today.getMonth() + 1 < m || (today.getMonth() + 1 === m && today.getDate() < d)) age--
-                return <span className="ml-1 text-slate-400">· {age} yrs</span>
-              })()}
-            </p>
-            <button
-              onClick={handleFaceSheet}
-              disabled={generatingPDF}
-              title={generatingPDF ? 'Generating…' : 'Download Face Sheet'}
-              className="flex items-center gap-1 text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-40"
-            >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 6 2 18 2 18 9"/>
-                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
-                <rect x="6" y="14" width="12" height="8"/>
-              </svg>
-              <span className="text-xs">{generatingPDF ? 'Generating…' : 'Face Sheet'}</span>
-            </button>
-          </div>
+          <p className="text-sm text-slate-400 mt-0.5">
+            Room {resident.room_number || '—'}
+            {(() => {
+              if (!resident.date_of_birth) return null
+              const [y, m, d] = resident.date_of_birth.split('-').map(Number)
+              const today = new Date()
+              let age = today.getFullYear() - y
+              if (today.getMonth() + 1 < m || (today.getMonth() + 1 === m && today.getDate() < d)) age--
+              return <span className="ml-1 text-slate-400">· {age} yrs</span>
+            })()}
+          </p>
         </div>
       </div>
 
@@ -324,7 +309,7 @@ export default function ResidentDetail() {
       {/* Tab content — multiple components grouped per tab */}
       {activeTab === 'Profile' && (
         <div className="space-y-8">
-          <ResidentProfile resident={resident} onUpdate={setResident} />
+          <ResidentProfile resident={resident} onUpdate={setResident} onFaceSheet={handleFaceSheet} generatingPDF={generatingPDF} />
           <div className="border-t border-slate-100 pt-6">
             <DietaryProfile residentId={id} resident={resident} />
           </div>

@@ -46,7 +46,7 @@ const ADMISSION_TYPE_OPTIONS = [
   'Other',
 ]
 
-export default function ResidentProfile({ resident, onUpdate }) {
+export default function ResidentProfile({ resident, onUpdate, onFaceSheet, generatingPDF }) {
   const { communityId } = useCommunity()
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState({})
@@ -117,6 +117,21 @@ export default function ResidentProfile({ resident, onUpdate }) {
               >
                 + Add Calendar Event
               </button>
+              {onFaceSheet && (
+                <button
+                  onClick={onFaceSheet}
+                  disabled={generatingPDF}
+                  title={generatingPDF ? 'Generating…' : 'Download Face Sheet'}
+                  className="flex items-center gap-1 text-sm text-slate-500 hover:text-[#185FA5] transition-colors disabled:opacity-40"
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="6 9 6 2 18 2 18 9"/>
+                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                    <rect x="6" y="14" width="12" height="8"/>
+                  </svg>
+                  {generatingPDF ? 'Generating…' : 'Face Sheet'}
+                </button>
+              )}
               <button onClick={startEdit} className="text-sm text-[#185FA5] hover:text-[#0C447C] transition-colors">Edit</button>
             </div>
           </div>
