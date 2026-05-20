@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { completeTrial } from '../lib/trial'
 import HavenLogo from '../components/layout/HavenLogo'
@@ -9,8 +9,13 @@ const labelCls = 'block text-sm font-medium text-slate-700 mb-1'
 
 export default function Signup() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const inviteEmail = searchParams.get('email') ?? ''
+  const inviteCommunity = searchParams.get('community') ?? ''
+  const isStaffInvite = !!inviteEmail
+
   const [form, setForm] = useState({
-    firstName: '', lastName: '', email: '', password: '',
+    firstName: '', lastName: '', email: inviteEmail, password: '',
     communityName: '', residentCount: '',
   })
   const [showPassword, setShowPassword] = useState(false)
@@ -26,8 +31,8 @@ export default function Signup() {
     if (!form.firstName.trim() || !form.lastName.trim()) return setError('Please enter your first and last name.')
     if (!form.email.trim()) return setError('Email is required.')
     if (form.password.length < 6) return setError('Password must be at least 6 characters.')
-    if (!form.communityName.trim()) return setError('Community name is required.')
-    if (!form.residentCount) return setError('Please select an approximate resident count.')
+    if (!isStaffInvite && !form.communityName.trim()) return setError('Community name is required.')
+    if (!isStaffInvite && !form.residentCount) return setError('Please select an approximate resident count.')
 
     setLoading(true)
     try {
@@ -47,27 +52,38 @@ export default function Signup() {
       const userId = authData.user?.id
 
       if (authData.session && userId) {
-        // Email confirmation disabled — set up trial immediately
-        await completeTrial({
-          userId,
-          email: form.email.trim(),
-          firstName: form.firstName.trim(),
-          lastName: form.lastName.trim(),
-          communityName: form.communityName.trim(),
-          residentCount: parseInt(form.residentCount),
-        })
-        navigate('/dashboard', { replace: true })
+        if (isStaffInvite) {
+          // Staff invite — onboarding handles joining the community
+          navigate('/onboarding', { replace: true })
+        } else {
+          // Facility owner — set up trial immediately
+          await completeTrial({
+            userId,
+            email: form.email.trim(),
+            firstName: form.firstName.trim(),
+            lastName: form.lastName.trim(),
+            communityName: form.communityName.trim(),
+            residentCount: parseInt(form.residentCount),
+          })
+          navigate('/dashboard', { replace: true })
+        }
       } else if (userId) {
-        // Email confirmation required — store setup data for after confirmation
-        localStorage.setItem('haven_trial_pending', JSON.stringify({
-          communityName: form.communityName.trim(),
-          residentCount: parseInt(form.residentCount),
-          firstName: form.firstName.trim(),
-          lastName: form.lastName.trim(),
-          email: form.email.trim(),
-        }))
-        setCheckEmail(true)
-        setLoading(false)
+        if (isStaffInvite) {
+          // Staff invite with email confirmation — just show check email screen
+          setCheckEmail(true)
+          setLoading(false)
+        } else {
+          // Facility owner with email confirmation — store setup data
+          localStorage.setItem('haven_trial_pending', JSON.stringify({
+            communityName: form.communityName.trim(),
+            residentCount: parseInt(form.residentCount),
+            firstName: form.firstName.trim(),
+            lastName: form.lastName.trim(),
+            email: form.email.trim(),
+          }))
+          setCheckEmail(true)
+          setLoading(false)
+        }
       } else {
         throw new Error('Something went wrong. Please try again.')
       }
@@ -106,10 +122,23 @@ export default function Signup() {
           <HavenLogo />
         </div>
 
-        <div className="mb-6">
-          <h1 className="text-xl font-semibold text-slate-800 mb-1">Start your free trial</h1>
-          <p className="text-sm text-slate-500">14 days free · No credit card · Up to 6 residents</p>
-        </div>
+        {isStaffInvite ? (
+          <div className="mb-6 flex items-start gap-3 bg-[#E6F1FB] border border-[#185FA5]/20 rounded-xl px-4 py-3">
+            <svg className="w-5 h-5 text-[#185FA5] flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            <div>
+              <p className="text-sm font-semibold text-[#185FA5]">You've been invited to join {inviteCommunity || 'a community'}</p>
+              <p className="text-xs text-[#185FA5]/80 mt-0.5">Create your account below to get started.</p>
+            </div>
+          </div>
+        ) : (
+          <div className="mb-6">
+            <h1 className="text-xl font-semibold text-slate-800 mb-1">Start your free trial</h1>
+            <p className="text-sm text-slate-500">14 days free · No credit card · Up to 6 residents</p>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <div className="grid grid-cols-2 gap-3">
@@ -139,9 +168,10 @@ export default function Signup() {
             <label className={labelCls}>Email <span className="text-red-500">*</span></label>
             <input
               type="email"
-              className={inputCls}
+              className={`${inputCls} ${isStaffInvite ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`}
               value={form.email}
-              onChange={e => set('email', e.target.value)}
+              onChange={e => !isStaffInvite && set('email', e.target.value)}
+              readOnly={isStaffInvite}
               placeholder="jane@facility.com"
               autoComplete="email"
             />
@@ -180,33 +210,37 @@ export default function Signup() {
             </div>
           </div>
 
-          <div>
-            <label className={labelCls}>Community / Facility name <span className="text-red-500">*</span></label>
-            <input
-              className={inputCls}
-              value={form.communityName}
-              onChange={e => set('communityName', e.target.value)}
-              placeholder="Sunrise Senior Living"
-            />
-          </div>
+          {!isStaffInvite && (
+            <>
+              <div>
+                <label className={labelCls}>Community / Facility name <span className="text-red-500">*</span></label>
+                <input
+                  className={inputCls}
+                  value={form.communityName}
+                  onChange={e => set('communityName', e.target.value)}
+                  placeholder="Sunrise Senior Living"
+                />
+              </div>
 
-          <div>
-            <label className={labelCls}>Approximate number of residents <span className="text-red-500">*</span></label>
-            <select
-              className={inputCls}
-              value={form.residentCount}
-              onChange={e => set('residentCount', e.target.value)}
-            >
-              <option value="">Select a range…</option>
-              <option value="6">1–6 residents</option>
-              <option value="12">7–12 residents</option>
-              <option value="18">13–18 residents</option>
-              <option value="30">19–30 residents</option>
-              <option value="50">31–50 residents</option>
-              <option value="100">51–100 residents</option>
-              <option value="200">100+ residents</option>
-            </select>
-          </div>
+              <div>
+                <label className={labelCls}>Approximate number of residents <span className="text-red-500">*</span></label>
+                <select
+                  className={inputCls}
+                  value={form.residentCount}
+                  onChange={e => set('residentCount', e.target.value)}
+                >
+                  <option value="">Select a range…</option>
+                  <option value="6">1–6 residents</option>
+                  <option value="12">7–12 residents</option>
+                  <option value="18">13–18 residents</option>
+                  <option value="30">19–30 residents</option>
+                  <option value="50">31–50 residents</option>
+                  <option value="100">51–100 residents</option>
+                  <option value="200">100+ residents</option>
+                </select>
+              </div>
+            </>
+          )}
 
           {error && (
             <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{error}</p>
@@ -217,7 +251,9 @@ export default function Signup() {
             disabled={loading}
             className="w-full bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white font-medium py-2.5 rounded-xl text-sm transition-colors"
           >
-            {loading ? 'Setting up your trial…' : 'Start free trial →'}
+            {loading
+              ? (isStaffInvite ? 'Creating account…' : 'Setting up your trial…')
+              : (isStaffInvite ? 'Create account →' : 'Start free trial →')}
           </button>
         </form>
 

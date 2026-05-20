@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useCommunity } from '../context/CommunityContext'
@@ -44,6 +44,8 @@ export default function Onboarding() {
   })
 
   const [showResidentPrompt, setShowResidentPrompt] = useState(false)
+  const [showMoreDetails, setShowMoreDetails] = useState(false)
+  const detailsRef = useRef(null)
 
   useEffect(() => {
     async function init() {
@@ -214,7 +216,9 @@ export default function Onboarding() {
         {step === 1 && (
           <>
             <h1 className="text-xl font-semibold text-slate-800 mb-1">Welcome to Haven</h1>
-            <p className="text-sm text-slate-500 mb-6">Let's start with some basic information about you.</p>
+            <p className="text-sm text-slate-500 mb-6">
+              {isStaff ? 'Confirm your name and you\'re ready to go.' : 'Let\'s start with some basic information about you.'}
+            </p>
 
             <div className="space-y-4">
               <div>
@@ -222,38 +226,87 @@ export default function Onboarding() {
                 <input className={inputCls} value={personal.full_name} onChange={e => setP('full_name', e.target.value)} placeholder="Jane Doe" />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={labelCls}>Date of Birth</label>
-                  <input type="date" className={inputCls} value={personal.date_of_birth} onChange={e => setP('date_of_birth', e.target.value)} />
-                </div>
-                <div>
-                  <label className={labelCls}>Phone</label>
-                  <input type="tel" className={inputCls} value={personal.phone} onChange={e => setP('phone', e.target.value)} placeholder="(555) 000-0000" />
-                </div>
-              </div>
+              {/* Staff: collapse optional details behind a toggle */}
+              {isStaff ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMoreDetails(s => !s)
+                      if (!showMoreDetails) setTimeout(() => detailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50)
+                    }}
+                    className="flex items-center gap-1.5 text-sm text-[#185FA5] font-medium"
+                  >
+                    <svg
+                      className={`w-4 h-4 transition-transform ${showMoreDetails ? 'rotate-90' : ''}`}
+                      viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                    >
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                    {showMoreDetails ? 'Hide optional details' : 'Add more details (optional)'}
+                  </button>
 
-              <div>
-                <label className={labelCls}>Address</label>
-                <input className={inputCls} value={personal.address} onChange={e => setP('address', e.target.value)} placeholder="123 Main St, City, CA 90000" />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={labelCls}>Emergency Contact Name</label>
-                  <input className={inputCls} value={personal.emergency_contact_name} onChange={e => setP('emergency_contact_name', e.target.value)} placeholder="John Doe" />
-                </div>
-                <div>
-                  <label className={labelCls}>Emergency Contact Phone</label>
-                  <input type="tel" className={inputCls} value={personal.emergency_contact_phone} onChange={e => setP('emergency_contact_phone', e.target.value)} placeholder="(555) 000-0000" />
-                </div>
-              </div>
-
-              {isStaff && (
-                <div>
-                  <label className={labelCls}>Hire Date</label>
-                  <input type="date" className={inputCls} value={personal.hire_date} onChange={e => setP('hire_date', e.target.value)} />
-                </div>
+                  {showMoreDetails && (
+                    <div ref={detailsRef} className="space-y-4 pt-1">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className={labelCls}>Date of Birth</label>
+                          <input type="date" className={inputCls} value={personal.date_of_birth} onChange={e => setP('date_of_birth', e.target.value)} />
+                        </div>
+                        <div>
+                          <label className={labelCls}>Phone</label>
+                          <input type="tel" className={inputCls} value={personal.phone} onChange={e => setP('phone', e.target.value)} placeholder="(555) 000-0000" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className={labelCls}>Address</label>
+                        <input className={inputCls} value={personal.address} onChange={e => setP('address', e.target.value)} placeholder="123 Main St, City, CA 90000" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className={labelCls}>Emergency Contact Name</label>
+                          <input className={inputCls} value={personal.emergency_contact_name} onChange={e => setP('emergency_contact_name', e.target.value)} placeholder="John Doe" />
+                        </div>
+                        <div>
+                          <label className={labelCls}>Emergency Contact Phone</label>
+                          <input type="tel" className={inputCls} value={personal.emergency_contact_phone} onChange={e => setP('emergency_contact_phone', e.target.value)} placeholder="(555) 000-0000" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className={labelCls}>Hire Date</label>
+                        <input type="date" className={inputCls} value={personal.hire_date} onChange={e => setP('hire_date', e.target.value)} />
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                /* Admin: show all fields */
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className={labelCls}>Date of Birth</label>
+                      <input type="date" className={inputCls} value={personal.date_of_birth} onChange={e => setP('date_of_birth', e.target.value)} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Phone</label>
+                      <input type="tel" className={inputCls} value={personal.phone} onChange={e => setP('phone', e.target.value)} placeholder="(555) 000-0000" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Address</label>
+                    <input className={inputCls} value={personal.address} onChange={e => setP('address', e.target.value)} placeholder="123 Main St, City, CA 90000" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className={labelCls}>Emergency Contact Name</label>
+                      <input className={inputCls} value={personal.emergency_contact_name} onChange={e => setP('emergency_contact_name', e.target.value)} placeholder="John Doe" />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Emergency Contact Phone</label>
+                      <input type="tel" className={inputCls} value={personal.emergency_contact_phone} onChange={e => setP('emergency_contact_phone', e.target.value)} placeholder="(555) 000-0000" />
+                    </div>
+                  </div>
+                </>
               )}
             </div>
           </>

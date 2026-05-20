@@ -493,14 +493,12 @@ export default function Incidents() {
           <div className="flex flex-col items-center gap-3">
             <p className="text-slate-400 text-sm">No incident reports found</p>
             <button onClick={clearFilters} className="text-sm text-[#185FA5] hover:underline">Clear filters</button>
-            {isAdmin && (
-              <button
-                onClick={() => { setEditingIncident(null); setShowForm(true) }}
-                className="bg-[#042C53] hover:bg-[#0B3D6E] text-white rounded-xl px-4 py-2 text-sm font-semibold transition-colors"
-              >
-                + New Report
-              </button>
-            )}
+            <button
+              onClick={() => { setEditingIncident(null); setShowForm(true) }}
+              className="bg-[#042C53] hover:bg-[#0B3D6E] text-white rounded-xl px-4 py-2 text-sm font-semibold transition-colors"
+            >
+              + New Report
+            </button>
           </div>
         </div>
       )}

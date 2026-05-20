@@ -380,7 +380,7 @@ function StaffModal({ member, communityId, currentUserId, onClose, onSaved, onDe
 
 // ─── Invite Modal ─────────────────────────────────────────────────────────────
 
-function InviteModal({ communityId: _communityId, currentUserId, onClose, onInvited }) {
+function InviteModal({ communityId: _communityId, currentUserId, inviterName, communityName, onClose, onInvited }) {
   const { memberships } = useCommunity()
   const [email, setEmail] = useState('')
   const [role, setRole] = useState('staff')
@@ -403,8 +403,23 @@ function InviteModal({ communityId: _communityId, currentUserId, onClose, onInvi
     const { error: inviteErr } = await supabase
       .from('community_invites')
       .upsert(invites, { onConflict: 'community_id,email', ignoreDuplicates: true })
+    if (inviteErr) { setSaving(false); setError(inviteErr.message); return }
+
+    // Send invite email
+    try {
+      await fetch('/api/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          role,
+          communityName: communityName || 'your community',
+          inviterName: inviterName || 'Your manager',
+        }),
+      })
+    } catch (_err) { /* email failure is non-fatal — invite row already created */ }
+
     setSaving(false)
-    if (inviteErr) { setError(inviteErr.message); return }
     setSuccess(true)
     onInvited()
   }
@@ -424,18 +439,17 @@ function InviteModal({ communityId: _communityId, currentUserId, onClose, onInvi
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
               </div>
-              <p className="font-medium text-slate-800 mb-1">Invite created!</p>
-              <p className="text-sm text-slate-500 mb-1">
-                Share the app link with <strong>{email}</strong>. When they sign up, they'll automatically join your community as <strong>{role}</strong>.
+              <p className="font-medium text-slate-800 mb-1">Invite sent!</p>
+              <p className="text-sm text-slate-500">
+                An email was sent to <strong>{email}</strong>. They'll join as <strong>{role === 'admin' ? 'Manager' : 'Staff'}</strong> when they create their account.
               </p>
-              <p className="text-xs font-mono bg-slate-100 rounded-lg px-3 py-2 mt-3 break-all">{window.location.origin}</p>
-              <button onClick={onClose} className="mt-4 bg-[#042C53] text-white text-sm font-medium px-5 py-2 rounded-lg hover:bg-[#0B3D6E] transition-colors">Done</button>
+              <button onClick={onClose} className="mt-5 bg-[#042C53] text-white text-sm font-medium px-5 py-2 rounded-lg hover:bg-[#0B3D6E] transition-colors">Done</button>
             </div>
           ) : (
             <>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
-                <input type="email" className={inputCls} value={email} onChange={e => setEmail(e.target.value)} placeholder="jane@example.com" />
+                <input type="email" className={inputCls} value={email} onChange={e => setEmail(e.target.value)} placeholder="jane@example.com" autoFocus />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
@@ -445,13 +459,13 @@ function InviteModal({ communityId: _communityId, currentUserId, onClose, onInvi
                 </select>
               </div>
               <p className="text-xs text-slate-400 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
-                Share the app link with this person. When they sign up using this email address, they'll automatically join your community.
+                We'll email them a personalized link. They'll automatically join your community when they sign up.
               </p>
               {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
               <div className="flex gap-3">
                 <button onClick={onClose} className="flex-1 border border-slate-300 text-slate-700 rounded-lg py-2 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
                 <button onClick={handleInvite} disabled={saving} className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-lg py-2 text-sm font-medium transition-colors">
-                  {saving ? 'Creating…' : 'Create Invite'}
+                  {saving ? 'Sending…' : 'Send Invite'}
                 </button>
               </div>
             </>
@@ -465,12 +479,14 @@ function InviteModal({ communityId: _communityId, currentUserId, onClose, onInvi
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function StaffDirectory() {
-  const { communityId, isAdmin, reload: reloadCommunity } = useCommunity()
+  const { communityId, community, isAdmin, reload: reloadCommunity } = useCommunity()
   const { profile: currentProfile } = useProfile()
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
   const [showInvite, setShowInvite] = useState(false)
   const [editing, setEditing] = useState(null)
+  const [pendingInvites, setPendingInvites] = useState([])
+  const [resendingId, setResendingId] = useState(null)
 
   async function loadMembers() {
     if (!communityId) return
@@ -502,14 +518,50 @@ export default function StaffDirectory() {
     setLoading(false)
   }
 
+  async function loadPendingInvites() {
+    if (!communityId || !isAdmin) return
+    const { data } = await supabase
+      .from('community_invites')
+      .select('*')
+      .eq('community_id', communityId)
+      .eq('accepted', false)
+      .order('created_at', { ascending: false })
+    setPendingInvites(data ?? [])
+  }
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadMembers()
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadPendingInvites()
   }, [communityId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleSaved() { await loadMembers(); setEditing(null) }
   function handleDeleted(memberId) { setMembers(prev => prev.filter(m => m.memberId !== memberId)); setEditing(null) }
   async function handleTransfer() { await loadMembers(); await reloadCommunity() }
+
+  async function handleRevoke(inviteId) {
+    await supabase.from('community_invites').delete().eq('id', inviteId)
+    setPendingInvites(prev => prev.filter(i => i.id !== inviteId))
+  }
+
+  async function handleResend(invite) {
+    setResendingId(invite.id)
+    try {
+      await fetch('/api/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: invite.email,
+          role: invite.role,
+          communityName: community?.name ?? 'your community',
+          inviterName: currentProfile?.full_name ?? 'Your manager',
+        }),
+      })
+    } finally {
+      setResendingId(null)
+    }
+  }
 
   // Split into my card and the rest
   const [search, setSearch] = useState('')
@@ -589,6 +641,54 @@ export default function StaffDirectory() {
               {isAdmin && <p className="text-sm mt-1">Click "+ Invite Staff" to add someone.</p>}
             </div>
           )}
+
+          {/* Pending Invites — admin only */}
+          {isAdmin && pendingInvites.length > 0 && (
+            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden mt-4">
+              <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2">
+                <svg className="w-4 h-4 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+                </svg>
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                  Pending Invites · {pendingInvites.length}
+                </p>
+              </div>
+              {pendingInvites.map((inv, i) => (
+                <div key={inv.id} className={`flex items-center gap-3 px-4 py-3 ${i !== 0 ? 'border-t border-slate-100' : ''}`}>
+                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-slate-700 font-medium truncate">{inv.email}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <RoleBadge role={inv.role} />
+                      <span className="text-xs text-slate-400">
+                        Invited {new Date(inv.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => handleResend(inv)}
+                      disabled={resendingId === inv.id}
+                      className="text-xs font-medium text-[#185FA5] hover:text-[#0C447C] disabled:opacity-50 transition-colors"
+                    >
+                      {resendingId === inv.id ? 'Sending…' : 'Resend'}
+                    </button>
+                    <span className="text-slate-200">|</span>
+                    <button
+                      onClick={() => handleRevoke(inv.id)}
+                      className="text-xs font-medium text-slate-400 hover:text-red-500 transition-colors"
+                    >
+                      Revoke
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </>
       )}
 
@@ -596,8 +696,10 @@ export default function StaffDirectory() {
         <InviteModal
           communityId={communityId}
           currentUserId={currentProfile?.user_id}
+          inviterName={currentProfile?.full_name ?? ''}
+          communityName={community?.name ?? ''}
           onClose={() => setShowInvite(false)}
-          onInvited={loadMembers}
+          onInvited={() => { loadMembers(); loadPendingInvites() }}
         />
       )}
 
