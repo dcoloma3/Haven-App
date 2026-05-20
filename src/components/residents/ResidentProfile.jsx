@@ -101,6 +101,16 @@ export default function ResidentProfile({ resident, onUpdate, onFaceSheet, gener
 
   const currentColor = getColor(resident.color)
 
+  const [imgError, setImgError] = useState(false)
+  const hasPhoto = resident.avatar_url && !imgError
+
+  function getInitials(r) {
+    if (r.first_name || r.last_name) {
+      return ((r.first_name?.[0] ?? '') + (r.last_name?.[0] ?? '')).toUpperCase()
+    }
+    return (r.full_name || '').split(' ').map(n => n[0]).filter(Boolean).join('').slice(0, 2).toUpperCase()
+  }
+
   if (!editing) {
     return (
       <>
@@ -134,6 +144,25 @@ export default function ResidentProfile({ resident, onUpdate, onFaceSheet, gener
               )}
               <button onClick={startEdit} className="text-sm text-[#185FA5] hover:text-[#0C447C] transition-colors">Edit</button>
             </div>
+          </div>
+
+          {/* Large profile photo */}
+          <div className="flex justify-center mb-6">
+            {hasPhoto ? (
+              <img
+                src={resident.avatar_url}
+                alt=""
+                onError={() => setImgError(true)}
+                className="w-40 h-40 rounded-full object-cover ring-4 ring-slate-100"
+              />
+            ) : (
+              <div
+                className="w-40 h-40 rounded-full flex items-center justify-center text-4xl font-semibold ring-4 ring-slate-100"
+                style={{ backgroundColor: currentColor.chipBg, color: currentColor.chipText }}
+              >
+                {getInitials(resident)}
+              </div>
+            )}
           </div>
 
           {/* Personal Info */}
