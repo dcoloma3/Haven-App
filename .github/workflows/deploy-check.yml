@@ -1,0 +1,73 @@
+name: Deploy Smoke Test
+
+on:
+  push:
+    branches: [main]
+  # Allow manual trigger
+  workflow_dispatch:
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    name: Verify production is healthy after deploy
+
+    steps:
+      - name: Wait for Vercel deployment to finish
+        # Vercel typically deploys in 60-90 seconds
+        run: sleep 90
+
+      - name: Check — marketing page loads
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://the-haven-app.vercel.app/)
+          echo "Marketing page status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "❌ Marketing page returned $STATUS"
+            exit 1
+          fi
+          echo "✅ Marketing page OK"
+
+      - name: Check — login page loads
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://the-haven-app.vercel.app/login)
+          echo "Login page status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "❌ Login page returned $STATUS"
+            exit 1
+          fi
+          echo "✅ Login page OK"
+
+      - name: Check — app bundle is served (not a blank page)
+        run: |
+          BODY=$(curl -s https://the-haven-app.vercel.app/)
+          if echo "$BODY" | grep -q '<div id="root">'; then
+            echo "✅ App root element present"
+          else
+            echo "❌ App root element missing — possible blank page deploy"
+            exit 1
+          fi
+
+      - name: Check — assets load (CSS + JS bundles exist)
+        run: |
+          BODY=$(curl -s https://the-haven-app.vercel.app/)
+          # Extract one JS bundle URL from the HTML and verify it loads
+          JS_URL=$(echo "$BODY" | grep -o 'src="/assets/[^"]*\.js"' | head -1 | sed 's/src="//;s/"//')
+          if [ -z "$JS_URL" ]; then
+            echo "⚠️  Could not find JS bundle URL — skipping asset check"
+          else
+            ASSET_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://the-haven-app.vercel.app${JS_URL}")
+            echo "JS bundle status: $ASSET_STATUS"
+            if [ "$ASSET_STATUS" != "200" ]; then
+              echo "❌ JS bundle returned $ASSET_STATUS"
+              exit 1
+            fi
+            echo "✅ JS bundle OK"
+          fi
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "🚨 Smoke test FAILED after deploy to main."
+          echo "Check https://the-haven-app.vercel.app manually."
+          echo "Sentry may have more details on what broke."
+          # If you add RESEND_API_KEY and ALERT_EMAIL to GitHub Secrets,
+          # you can add an email step here too.

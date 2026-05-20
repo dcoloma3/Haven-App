@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Fragment } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './lib/supabase'
 import { completeTrial } from './lib/trial'
 import { identifyUser, clearUser } from './lib/monitoring'
+import { SpeedInsights } from '@vercel/speed-insights/react'
 import { FacilityProvider } from './context/FacilityContext'
 import { ProfileProvider, useProfile } from './context/ProfileContext'
 import { CommunityProvider, useCommunity } from './context/CommunityContext'
@@ -193,6 +194,7 @@ export default function App() {
   if (session === undefined) return <AppLoader />
 
   return (
+    <Fragment>
     <BrowserRouter>
       <CommunityProvider>
         <ProfileProvider>
@@ -254,5 +256,7 @@ export default function App() {
         </ProfileProvider>
       </CommunityProvider>
     </BrowserRouter>
+    <SpeedInsights />
+    </Fragment>
   )
 }
