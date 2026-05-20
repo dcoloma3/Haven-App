@@ -194,9 +194,11 @@ export default function Dashboard() {
       .select('*')
       .eq('community_id', communityId)
       .eq('status', showFormer ? 'inactive' : 'active')
-      .order('full_name')
       .then(({ data }) => {
-        setResidents(data ?? [])
+        const sorted = (data ?? []).sort((a, b) =>
+          getResidentFullName(a).localeCompare(getResidentFullName(b))
+        )
+        setResidents(sorted)
         setLoading(false)
       })
   }, [communityId, showFormer])
@@ -207,11 +209,13 @@ export default function Dashboard() {
   useEffect(() => {
     if (!communityId || showFormer) return
     async function fetchMedStatuses() {
-      const [{ data: meds }, { data: admins }] = await Promise.all([
+      const [{ data: meds }, { data: admins }, { data: activeResidents }] = await Promise.all([
         supabase.from('medications').select('id, resident_id, scheduled_times, frequency_type, frequency_days, frequency_interval, start_date, end_date').eq('community_id', communityId),
         supabase.from('medication_administrations').select('medication_id, scheduled_time, resident_id').eq('administered_date', todayStr),
+        supabase.from('residents').select('id').eq('community_id', communityId).eq('status', 'active'),
       ])
       if (!meds) return
+      const activeIds = new Set((activeResidents ?? []).map(r => r.id))
       const statusMap = {}
       const medsByResident = {}
       meds.forEach(m => {
@@ -224,6 +228,7 @@ export default function Dashboard() {
         adminsByResident[a.resident_id].add(adminKey(a.medication_id, a.scheduled_time))
       })
       Object.entries(medsByResident).forEach(([rid, rMeds]) => {
+        if (!activeIds.has(rid)) return // skip former/inactive residents
         statusMap[rid] = computeResidentStatus(rMeds, adminsByResident[rid] ?? new Set(), todayStr)
       })
       setMedStatusMap(statusMap)

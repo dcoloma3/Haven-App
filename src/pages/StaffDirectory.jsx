@@ -231,8 +231,15 @@ function StaffModal({ member, communityId, currentUserId, onClose, onSaved, onDe
   }
 
   async function handleTransfer() {
-    await supabase.from('community_members').update({ role: 'admin' }).eq('id', memberId)
-    await supabase.from('community_members').update({ role: 'staff' }).eq('community_id', communityId).eq('user_id', currentUserId)
+    const { error: err1 } = await supabase
+      .from('community_members').update({ role: 'admin' }).eq('id', memberId)
+    if (err1) { setError('Transfer failed. Please try again.'); return }
+
+    const { error: err2 } = await supabase
+      .from('community_members').update({ role: 'staff' })
+      .eq('community_id', communityId).eq('user_id', currentUserId)
+    if (err2) { setError('Transfer partially failed. Please check roles manually.'); return }
+
     onTransfer()
     onClose()
   }
@@ -242,8 +249,8 @@ function StaffModal({ member, communityId, currentUserId, onClose, onSaved, onDe
   const displayName = [form.first_name, form.last_name].filter(Boolean).join(' ') || form.full_name || 'Staff Member'
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4 py-6" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-lg max-h-[92vh] flex flex-col" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
           <h2 className="font-semibold text-slate-800">{displayName}</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
@@ -403,8 +410,8 @@ function InviteModal({ communityId, currentUserId, onClose, onInvited }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-md" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
           <h2 className="font-semibold text-slate-800">Invite Staff Member</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>

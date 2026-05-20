@@ -12,7 +12,8 @@ export default function MyProfile() {
   const { isAdmin } = useCommunity()
 
   const [form, setForm] = useState({
-    full_name: profile?.full_name ?? '',
+    first_name: profile?.first_name ?? '',
+    last_name: profile?.last_name ?? '',
     phone: profile?.phone ?? '',
     emergency_contact_name: profile?.emergency_contact_name ?? '',
     emergency_contact_phone: profile?.emergency_contact_phone ?? '',
@@ -32,8 +33,11 @@ export default function MyProfile() {
     setError('')
     setSaved(false)
 
+    const full_name = [form.first_name, form.last_name].filter(Boolean).join(' ')
     const payload = {
-      full_name: form.full_name || null,
+      first_name: form.first_name || null,
+      last_name: form.last_name || null,
+      full_name: full_name || null,
       phone: form.phone || null,
       emergency_contact_name: form.emergency_contact_name || null,
       emergency_contact_phone: form.emergency_contact_phone || null,
@@ -73,8 +77,8 @@ export default function MyProfile() {
           {/* Read-only identity info */}
           <div className="pb-4 border-b border-slate-100 flex items-center gap-4">
             <div className="w-14 h-14 rounded-full bg-[#E6F1FB] text-[#185FA5] font-semibold text-lg flex items-center justify-center flex-shrink-0">
-              {form.full_name
-                ? form.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+              {(form.first_name || form.last_name)
+                ? ((form.first_name?.[0] ?? '') + (form.last_name?.[0] ?? '')).toUpperCase()
                 : (profile.email?.[0] ?? '?').toUpperCase()}
             </div>
             <div>
@@ -92,8 +96,12 @@ export default function MyProfile() {
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Personal Info</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
-                <input className={inputCls} value={form.full_name} onChange={e => set('full_name', e.target.value)} placeholder="Your full name" />
+                <label className="block text-sm font-medium text-slate-700 mb-1">First Name</label>
+                <input className={inputCls} value={form.first_name} onChange={e => set('first_name', e.target.value)} placeholder="First name" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Last Name</label>
+                <input className={inputCls} value={form.last_name} onChange={e => set('last_name', e.target.value)} placeholder="Last name" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>

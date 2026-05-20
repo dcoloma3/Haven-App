@@ -904,6 +904,7 @@ export default function MedicationList({ residentId, onMedStatusChange }) {
   const [showAdd, setShowAdd] = useState(false)
   const [editing, setEditing] = useState(null)
   const [openManage, setOpenManage] = useState(true)
+  const [confirmDelete, setConfirmDelete] = useState(null)
 
   useEffect(() => {
     supabase
@@ -1007,7 +1008,29 @@ export default function MedicationList({ residentId, onMedStatusChange }) {
                         </div>
                         <div className="flex items-center gap-3 flex-shrink-0 mt-0.5">
                           <button onClick={() => setEditing(med)} className="text-xs text-[#185FA5] hover:text-[#0C447C] transition-colors">Edit</button>
-                          <button onClick={() => handleDelete(med.id)} className="text-xs text-red-400 hover:text-red-600 transition-colors">Delete</button>
+                          {confirmDelete === med.id ? (
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => { handleDelete(med.id); setConfirmDelete(null) }}
+                                className="text-xs text-red-600 font-semibold hover:text-red-800 transition-colors"
+                              >
+                                Yes, delete
+                              </button>
+                              <button
+                                onClick={() => setConfirmDelete(null)}
+                                className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setConfirmDelete(med.id)}
+                              className="text-xs text-red-400 hover:text-red-600 transition-colors"
+                            >
+                              Delete
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
