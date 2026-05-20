@@ -255,8 +255,8 @@ function IncidentRow({ incident, isAdmin, onEdit, onStatusChange, onDelete, onRe
       )}
 
       {deleteConfirmOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full">
+        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl p-6 w-full sm:max-w-sm">
             <h3 className="font-semibold text-slate-800 mb-2">Delete incident report?</h3>
             <p className="text-sm text-slate-500 mb-5">This cannot be undone.</p>
             <div className="flex gap-3">

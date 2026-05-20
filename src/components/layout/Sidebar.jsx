@@ -184,19 +184,14 @@ export default function Sidebar({ collapsed, onToggle }) {
       <nav className="flex-1 px-2 pb-4 space-y-0.5 overflow-y-auto overflow-x-hidden">
         <NavItem to="/dashboard"    label="Residents"   icon={ResidentsIcon}  collapsed={collapsed} />
         <NavItem to="/dispense"     label="Dispense"    icon={DispenseIcon}   collapsed={collapsed} />
-        {isAdmin && (
-          <NavItem to="/calendar"   label="Calendar"    icon={CalendarIcon}   collapsed={collapsed} />
-        )}
+        <NavItem to="/calendar"     label="Calendar"    icon={CalendarIcon}   collapsed={collapsed} />
         <NavItem to="/incidents"    label="Incidents"   icon={IncidentsIcon}  collapsed={collapsed} />
         <NavItem to="/vitals"       label="Vitals"      icon={VitalsIcon}     collapsed={collapsed} />
         <NavItem to="/shift-log"    label="Shift Log"   icon={ShiftLogIcon}   collapsed={collapsed} />
         <NavItem to="/maintenance"  label="Maintenance" icon={MaintenanceIcon} collapsed={collapsed} />
         <NavItem to="/transportation" label="Transport" icon={TransportIcon}  collapsed={collapsed} />
         <NavItem to="/activities"   label="Activities"  icon={ActivitiesIcon} collapsed={collapsed} />
-
-        {isAdmin && (
-          <NavItem to="/staff"      label="Staff"       icon={StaffIcon}      collapsed={collapsed} />
-        )}
+        <NavItem to="/staff"        label="Staff"       icon={StaffIcon}      collapsed={collapsed} />
 
         {/* Manager section */}
         {isAdmin && (

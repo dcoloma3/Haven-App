@@ -268,7 +268,17 @@ export default function ResidentDetail() {
         <ResidentAvatar resident={resident} onUpdate={setResident} medStatus={medStatus} />
         <div className="flex-1 min-w-0">
           <h1 className="text-xl font-bold text-slate-800 truncate">{fullName}</h1>
-          <p className="text-sm text-slate-400 mt-0.5">Room {resident.room_number || '—'}</p>
+          <p className="text-sm text-slate-400 mt-0.5">
+            Room {resident.room_number || '—'}
+            {(() => {
+              if (!resident.date_of_birth) return null
+              const [y, m, d] = resident.date_of_birth.split('-').map(Number)
+              const today = new Date()
+              let age = today.getFullYear() - y
+              if (today.getMonth() + 1 < m || (today.getMonth() + 1 === m && today.getDate() < d)) age--
+              return <span className="ml-2 text-slate-400">· {age} yrs</span>
+            })()}
+          </p>
         </div>
         <button
           onClick={handleFaceSheet}

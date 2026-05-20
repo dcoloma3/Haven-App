@@ -555,6 +555,12 @@ export default function Dashboard() {
               >
                 <div className="aspect-[3/4] w-full relative">
                   <CardPhoto resident={r} />
+                  {/* Age badge — bottom-left corner of photo */}
+                  {age !== null && !showFormer && (
+                    <span className="absolute bottom-2 left-2 bg-black/50 backdrop-blur-sm text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md leading-tight">
+                      {age}y
+                    </span>
+                  )}
                   {/* Med status dot — bottom-right corner of photo */}
                   {status && (
                     <span

@@ -42,6 +42,15 @@ function residentName(r) {
   return parts.length ? parts.join(' ') : (r.full_name || '—')
 }
 
+function getAge(dobStr) {
+  if (!dobStr) return null
+  const [year, month, day] = dobStr.split('-').map(Number)
+  const today = new Date()
+  let age = today.getFullYear() - year
+  if (today.getMonth() + 1 < month || (today.getMonth() + 1 === month && today.getDate() < day)) age--
+  return age
+}
+
 function adminKey(medicationId, time) {
   return `${medicationId}::${time}`
 }
@@ -69,8 +78,8 @@ function isMedDueOnDate(med, dateStr) {
   return true
 }
 
-const RESIDENT_COLS = 'id, full_name, first_name, middle_name, last_name, room_number, avatar_url, status'
-const RESIDENT_COLS_SAFE = 'id, full_name, room_number, avatar_url, status'
+const RESIDENT_COLS = 'id, full_name, first_name, middle_name, last_name, room_number, avatar_url, status, date_of_birth'
+const RESIDENT_COLS_SAFE = 'id, full_name, room_number, avatar_url, status, date_of_birth'
 
 // ─── Status helpers ───────────────────────────────────────────────────────────
 
@@ -85,22 +94,22 @@ function calcStatus(meds, time, administered) {
 
 // Timeline dot color
 function timelineDotCls(status) {
-  if (status === 'all') return 'bg-emerald-400 border-emerald-400'
-  if (status === 'partial') return 'bg-amber-400 border-amber-400'
+  if (status === 'all') return 'bg-emerald-500 border-emerald-500'
+  if (status === 'partial') return 'bg-amber-500 border-amber-500'
   return 'bg-white border-slate-300'
 }
 
 // Card border color
 function cardBorderCls(status) {
-  if (status === 'all') return 'border-emerald-200'
-  if (status === 'partial') return 'border-amber-200'
-  return 'border-slate-200'
+  if (status === 'all') return 'border-2 border-emerald-500'
+  if (status === 'partial') return 'border-2 border-amber-500'
+  return 'border border-slate-200'
 }
 
 // Divider color inside card
 function dividerCls(status) {
-  if (status === 'all') return 'border-emerald-100'
-  if (status === 'partial') return 'border-amber-100'
+  if (status === 'all') return 'border-emerald-300'
+  if (status === 'partial') return 'border-amber-300'
   return 'border-slate-100'
 }
 
@@ -336,7 +345,12 @@ function PRNResidentRow({ resident, communityId, staffMap }) {
       >
         <ResidentAvatar resident={resident} size="sm" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-slate-800">{residentName(resident)}</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-sm font-semibold text-slate-800">{residentName(resident)}</p>
+            {getAge(resident.date_of_birth) !== null && (
+              <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded flex-shrink-0">{getAge(resident.date_of_birth)}y</span>
+            )}
+          </div>
           {resident.room_number && <p className="text-xs text-slate-400">Room {resident.room_number}</p>}
         </div>
         {open && givenTodayCount > 0 && (
@@ -817,7 +831,7 @@ export default function Dispense() {
             </div>
             <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all duration-500 ${allDone ? 'bg-emerald-400' : 'bg-amber-400'}`}
+                className={`h-full rounded-full transition-all duration-500 ${allDone ? 'bg-emerald-500' : 'bg-amber-500'}`}
                 style={{ width: `${pct}%` }}
               />
             </div>
@@ -910,14 +924,14 @@ export default function Dispense() {
                   </div>
 
                   {/* ── Card ── */}
-                  <div className={`flex-1 min-w-0 border rounded-2xl overflow-hidden bg-white ${cardBorderCls(timeStatus)}`}>
+                  <div className={`flex-1 min-w-0 rounded-2xl overflow-hidden bg-white ${cardBorderCls(timeStatus)}`}>
 
                     {/* Clickable header */}
                     <button
                       onClick={() => toggleTime(time)}
                       className={`w-full text-left px-4 pt-4 pb-3 ${
-                        timeStatus === 'all' ? 'bg-emerald-50' :
-                        timeStatus === 'partial' ? 'bg-amber-50/60' :
+                        timeStatus === 'all' ? 'bg-emerald-200' :
+                        timeStatus === 'partial' ? 'bg-amber-200' :
                         'bg-slate-50/60'
                       }`}
                     >
@@ -925,8 +939,8 @@ export default function Dispense() {
                         <p className="text-2xl font-bold text-slate-800 tracking-tight">{fmt12(time)}</p>
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
-                            timeStatus === 'all' ? 'bg-emerald-100 text-emerald-700' :
-                            timeStatus === 'partial' ? 'bg-amber-100 text-amber-700' :
+                            timeStatus === 'all' ? 'bg-emerald-500 text-white' :
+                            timeStatus === 'partial' ? 'bg-amber-500 text-white' :
                             'bg-slate-100 text-slate-500'
                           }`}>
                             {doneAtTime}/{totalAtTime} given
@@ -970,6 +984,9 @@ export default function Dispense() {
                                     </span>
                                     {resident.room_number && (
                                       <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded flex-shrink-0">Rm {resident.room_number}</span>
+                                    )}
+                                    {getAge(resident.date_of_birth) !== null && (
+                                      <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded flex-shrink-0">{getAge(resident.date_of_birth)}y</span>
                                     )}
                                   </div>
                                   <p className="text-xs text-slate-400 mt-0.5">

@@ -28,6 +28,15 @@ function residentName(r) {
   return parts.length ? parts.join(' ') : (r.full_name || '—')
 }
 
+function getAge(dobStr) {
+  if (!dobStr) return null
+  const [year, month, day] = dobStr.split('-').map(Number)
+  const today = new Date()
+  let age = today.getFullYear() - year
+  if (today.getMonth() + 1 < month || (today.getMonth() + 1 === month && today.getDate() < day)) age--
+  return age
+}
+
 function ResidentPhoto({ resident }) {
   const [imgError, setImgError] = useState(false)
   if (!resident) return null
@@ -111,7 +120,7 @@ export default function MedicationHistory() {
         administered_at,
         administered_by,
         medications!medication_id(medication_name, dose),
-        residents!resident_id(full_name, first_name, middle_name, last_name, room_number, avatar_url)
+        residents!resident_id(full_name, first_name, middle_name, last_name, room_number, avatar_url, date_of_birth)
       `)
       .gte('administered_date', fromDate)
       .lte('administered_date', toDate)
@@ -265,6 +274,11 @@ export default function MedicationHistory() {
                           {resident?.room_number && (
                             <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
                               Rm {resident.room_number}
+                            </span>
+                          )}
+                          {getAge(resident?.date_of_birth) !== null && (
+                            <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
+                              {getAge(resident.date_of_birth)}y
                             </span>
                           )}
                         </div>
