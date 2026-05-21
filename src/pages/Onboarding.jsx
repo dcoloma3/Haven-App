@@ -91,16 +91,19 @@ export default function Onboarding() {
       let communityId
 
       if (isStaff) {
-        // Join ALL communities from pending invites
+        // Use accept_invite RPC (SECURITY DEFINER) to bypass RLS on community_members.
+        // A brand-new user has no existing membership, so a direct INSERT would be blocked.
         const allInvites = window.__pendingInvites ?? [pendingInvite]
         communityId = allInvites[0].community_id
-        await supabase.from('community_members').upsert(
-          allInvites.map(inv => ({ community_id: inv.community_id, user_id: userId, role: inv.role }))
-        )
-        await supabase
-          .from('community_invites')
-          .update({ accepted: true })
-          .in('id', allInvites.map(i => i.id))
+        for (const inv of allInvites) {
+          const { error: rpcErr } = await supabase.rpc('accept_invite', {
+            p_invite_id:  inv.id,
+            p_user_id:    userId,
+            p_full_name:  personal.full_name.trim(),
+            p_email:      userEmail,
+          })
+          if (rpcErr) throw new Error(rpcErr.message)
+        }
       } else {
         // Create a new community
         const { data: newCommunity, error: communityErr } = await supabase
@@ -127,21 +130,23 @@ export default function Onboarding() {
         }])
       }
 
-      // Save / update profile
-      const profilePayload = {
-        user_id: userId,
-        email: userEmail,
-        full_name: personal.full_name.trim(),
-        date_of_birth: personal.date_of_birth || null,
-        phone: personal.phone || null,
-        address: personal.address || null,
-        emergency_contact_name: personal.emergency_contact_name || null,
-        emergency_contact_phone: personal.emergency_contact_phone || null,
-        hire_date: personal.hire_date || null,
-        onboarding_complete: true,
-        profile_completed: true,
+      // Save / update profile (staff profile is already saved by accept_invite RPC above)
+      if (!isStaff) {
+        const profilePayload = {
+          user_id: userId,
+          email: userEmail,
+          full_name: personal.full_name.trim(),
+          date_of_birth: personal.date_of_birth || null,
+          phone: personal.phone || null,
+          address: personal.address || null,
+          emergency_contact_name: personal.emergency_contact_name || null,
+          emergency_contact_phone: personal.emergency_contact_phone || null,
+          hire_date: personal.hire_date || null,
+          onboarding_complete: true,
+          profile_completed: true,
+        }
+        await supabase.from('profiles').upsert(profilePayload, { onConflict: 'user_id' })
       }
-      await supabase.from('profiles').upsert(profilePayload, { onConflict: 'user_id' })
 
       await reload()
 
