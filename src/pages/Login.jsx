@@ -23,7 +23,6 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [rememberMe, setRememberMe] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
@@ -50,9 +49,6 @@ export default function Login() {
     setSuccess('')
     setLoading(true)
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (!error && !rememberMe) {
-      try { sessionStorage.setItem('haven_session_only', '1') } catch { /* intentional */ }
-    }
     if (error) setError(error.message)
     setLoading(false)
   }
@@ -127,16 +123,7 @@ export default function Login() {
 
               {error && <p className="text-sm text-red-300 bg-red-500/20 border border-red-400/30 rounded-xl px-3 py-2">{error}</p>}
 
-              <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={e => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 rounded accent-[#185FA5] cursor-pointer"
-                  />
-                  <span className="text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>Remember me</span>
-                </label>
+              <div className="flex items-center justify-end">
                 <button type="button" onClick={goToForgot} className="text-sm transition-colors" style={{ color: 'rgba(255,255,255,0.4)' }}>
                   Forgot password?
                 </button>

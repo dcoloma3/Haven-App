@@ -161,9 +161,14 @@ export default function Dashboard() {
   }, [profile?.user_id, welcomeChecked])
 
   useEffect(() => {
+    if (!openAddResident) return
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (openAddResident) setShowForm(true)
-  }, [openAddResident])
+    setShowForm(true)
+    // Clear the URL param so refreshing the page doesn't reopen the form
+    if (new URLSearchParams(location.search).get('openAddResident')) {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [openAddResident]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (newCommunity) {
@@ -239,6 +244,7 @@ export default function Dashboard() {
       ])
       if (!meds) return
       const activeIds = new Set((activeResidents ?? []).map(r => r.id))
+      const communityMedIds = new Set(meds.map(m => m.id))
       const statusMap = {}
       const medsByResident = {}
       meds.forEach(m => {
@@ -246,7 +252,7 @@ export default function Dashboard() {
         medsByResident[m.resident_id].push(m)
       })
       const adminsByResident = {}
-      ;(admins ?? []).forEach(a => {
+      ;(admins ?? []).filter(a => communityMedIds.has(a.medication_id)).forEach(a => {
         if (!adminsByResident[a.resident_id]) adminsByResident[a.resident_id] = new Set()
         adminsByResident[a.resident_id].add(adminKey(a.medication_id, a.scheduled_time))
       })

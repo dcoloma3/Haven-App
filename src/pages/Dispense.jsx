@@ -5,6 +5,7 @@ import Layout from '../components/layout/Layout'
 import { useCommunity } from '../context/CommunityContext'
 import { HelpIcon } from '../components/ui/Tooltip'
 import { localDateStr } from '../lib/dateUtils'
+import { adminKey, isMedDueOnDate } from '../lib/medStatus'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -54,32 +55,6 @@ function getAge(dobStr) {
   return age
 }
 
-function adminKey(medicationId, time) {
-  return `${medicationId}::${time}`
-}
-
-function isMedDueOnDate(med, dateStr) {
-  if (med.start_date && dateStr < med.start_date) return false
-  if (med.end_date && dateStr > med.end_date) return false
-  const type = med.frequency_type || 'daily'
-  if (type === 'one_time') return !med.start_date || dateStr === med.start_date
-  if (type === 'daily') return true
-  if (type === 'specific_days') {
-    const [y, m, d] = dateStr.split('-').map(Number)
-    const dayName = new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
-    return (med.frequency_days || []).includes(dayName)
-  }
-  if (type === 'every_x_days') {
-    if (!med.start_date || !med.frequency_interval) return true
-    const [sy, sm, sd] = med.start_date.split('-').map(Number)
-    const [dy, dm, dd] = dateStr.split('-').map(Number)
-    const startMs = new Date(sy, sm - 1, sd).getTime()
-    const dateMs = new Date(dy, dm - 1, dd).getTime()
-    const diffDays = Math.round((dateMs - startMs) / 86400000)
-    return diffDays >= 0 && diffDays % med.frequency_interval === 0
-  }
-  return true
-}
 
 // Given an ISO timestamp and a list of 'HH:MM' slot strings, return the nearest slot
 function findNearestSlot(administeredAt, slots) {

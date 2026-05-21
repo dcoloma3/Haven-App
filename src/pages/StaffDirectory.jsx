@@ -380,15 +380,12 @@ function StaffModal({ member, communityId, currentUserId, onClose, onSaved, onDe
 
 // ─── Invite Modal ─────────────────────────────────────────────────────────────
 
-function InviteModal({ communityId: _communityId, currentUserId, inviterName, communityName, onClose, onInvited }) {
-  const { memberships } = useCommunity()
+function InviteModal({ communityId, currentUserId, inviterName, communityName, onClose, onInvited }) {
   const [email, setEmail] = useState('')
   const [role, setRole] = useState('staff')
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
-
-  const adminCommunityIds = memberships.filter(m => m.role === 'admin').map(m => m.communities.id)
 
   async function handleInvite() {
     if (!email.trim()) { setError('Email is required.'); return }
@@ -399,18 +396,18 @@ function InviteModal({ communityId: _communityId, currentUserId, inviterName, co
     await supabase
       .from('community_invites')
       .delete()
-      .in('community_id', adminCommunityIds)
+      .eq('community_id', communityId)
       .eq('email', normalizedEmail)
       .eq('accepted', false)
 
     const { error: inviteErr } = await supabase
       .from('community_invites')
-      .insert(adminCommunityIds.map(cid => ({
-        community_id: cid,
+      .insert([{
+        community_id: communityId,
         email: normalizedEmail,
         role,
         invited_by: currentUserId,
-      })))
+      }])
     if (inviteErr) { setSaving(false); setError(inviteErr.message); return }
 
     // Send invite email

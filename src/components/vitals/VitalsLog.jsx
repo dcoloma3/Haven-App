@@ -48,16 +48,16 @@ function painColor(val) {
   if (val == null || val === '') return ''
   const v = Number(val)
   if (v >= 7) return 'text-red-600'
-  if (v >= 4) return 'text-amber-600'
-  return 'text-emerald-600'
+  if (v >= 1) return 'text-amber-600'
+  return 'text-emerald-600' // 0 = no pain
 }
 
 function painBg(val) {
   if (val == null || val === '') return 'bg-slate-50'
   const v = Number(val)
   if (v >= 7) return 'bg-red-50'
-  if (v >= 4) return 'bg-amber-50'
-  return 'bg-emerald-50'
+  if (v >= 1) return 'bg-amber-50'
+  return 'bg-emerald-50' // 0 = no pain
 }
 
 const RANGES = {
