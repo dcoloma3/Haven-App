@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useCommunity } from '../context/CommunityContext'
+import { useProfile } from '../context/ProfileContext'
 import HavenLogo from '../components/layout/HavenLogo'
 
 const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
@@ -23,6 +24,7 @@ function StepIndicator({ step, total }) {
 export default function Onboarding() {
   const navigate = useNavigate()
   const { reload } = useCommunity()
+  const { setProfile } = useProfile()
 
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState(null)
@@ -150,10 +152,13 @@ export default function Onboarding() {
 
       await reload()
 
+      // Update in-memory profile so ProtectedRoute sees onboarding_complete immediately
+      setProfile(prev => prev ? { ...prev, onboarding_complete: true, profile_completed: true } : prev)
+
       if (!isStaff) {
         setShowResidentPrompt(true)
       } else {
-        navigate('/dashboard')
+        navigate('/dashboard', { replace: true })
       }
     } catch (e) {
       setError(e.message)
