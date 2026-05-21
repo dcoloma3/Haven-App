@@ -11,6 +11,8 @@ import { adminKey, computeResidentStatus, ringBoxShadow, RING_COLOR } from '../l
 import { StatCardSkeleton, ResidentCardSkeleton, ResidentRowSkeleton } from '../components/ui/Skeleton'
 import WelcomeModal from '../components/onboarding/WelcomeModal'
 import { localDateStr } from '../lib/dateUtils'
+import { useBulletin } from '../hooks/useBulletin'
+import StaffBulletin from '../components/dashboard/StaffBulletin'
 
 function fmtUpdated(dateStr) {
   if (!dateStr) return null
@@ -146,6 +148,7 @@ export default function Dashboard() {
   const { communityId, community, isAdmin } = useCommunity()
   const { profile } = useProfile()
   const isMobile = useIsMobile()
+  const { bulletin, clearBulletin } = useBulletin()
 
   useEffect(() => {
     if (!profile?.user_id || welcomeChecked) return
@@ -307,6 +310,16 @@ export default function Dashboard() {
           <p className="text-xs sm:text-sm font-medium text-slate-400 uppercase tracking-widest mb-0.5 sm:mb-1">Welcome to</p>
           <h1 className="text-xl sm:text-3xl font-bold text-slate-800 leading-tight">{community.name}</h1>
         </div>
+      )}
+
+      {/* Staff Bulletin */}
+      {!showFormer && (
+        <StaffBulletin
+          bulletin={bulletin}
+          isAdmin={isAdmin}
+          onClear={() => clearBulletin(bulletin.id)}
+          onEdit={() => navigate('/settings')}
+        />
       )}
 
       {/* Summary stats bar — compact pill row */}

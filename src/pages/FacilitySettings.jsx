@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useCommunity } from '../context/CommunityContext'
 import Layout from '../components/layout/Layout'
+import { useBulletin } from '../hooks/useBulletin'
 
 const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
 
@@ -19,6 +20,15 @@ export default function FacilitySettings() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
+
+  // Bulletin state
+  const { bulletin, loading: bulletinLoading, postBulletin, clearBulletin } = useBulletin()
+  const [bulletinTitle, setBulletinTitle] = useState('')
+  const [bulletinMessage, setBulletinMessage] = useState('')
+  const [bulletinSaving, setBulletinSaving] = useState(false)
+  const [bulletinSaved, setBulletinSaved] = useState(false)
+  const [bulletinError, setBulletinError] = useState('')
+  const [bulletinClearing, setBulletinClearing] = useState(false)
 
   useEffect(() => {
     if (community) {
@@ -35,6 +45,15 @@ export default function FacilitySettings() {
       })
     }
   }, [community])
+
+  // Pre-fill bulletin form when active bulletin loads
+  useEffect(() => {
+    if (bulletin) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setBulletinTitle(bulletin.title ?? '')
+      setBulletinMessage(bulletin.message ?? '')
+    }
+  }, [bulletin])
 
   function set(field, value) { setForm(f => ({ ...f, [field]: value })) }
 
@@ -66,6 +85,33 @@ export default function FacilitySettings() {
     await reload()
     setSaved(true)
     setTimeout(() => setSaved(false), 3000)
+  }
+
+  async function handlePostBulletin(e) {
+    e.preventDefault()
+    if (!bulletinTitle.trim()) { setBulletinError('Title is required.'); return }
+    if (!bulletinMessage.trim()) { setBulletinError('Message is required.'); return }
+    setBulletinSaving(true)
+    setBulletinError('')
+    setBulletinSaved(false)
+    const { data: { user } } = await supabase.auth.getUser()
+    const { error: postErr } = await postBulletin(bulletinTitle.trim(), bulletinMessage.trim(), user?.id ?? null)
+    setBulletinSaving(false)
+    if (postErr) { setBulletinError(postErr); return }
+    setBulletinSaved(true)
+    setTimeout(() => setBulletinSaved(false), 3000)
+  }
+
+  async function handleClearBulletin() {
+    if (!bulletin) return
+    setBulletinClearing(true)
+    setBulletinError('')
+    const { error: clearErr } = await clearBulletin(bulletin.id)
+    setBulletinClearing(false)
+    if (clearErr) { setBulletinError(clearErr); return }
+    setBulletinTitle('')
+    setBulletinMessage('')
+    setBulletinSaved(false)
   }
 
   return (
@@ -138,6 +184,79 @@ export default function FacilitySettings() {
             {saving ? 'Saving…' : 'Save Changes'}
           </button>
         </form>
+      </div>
+
+      {/* Staff Bulletin section */}
+      <div className="mt-8 max-w-lg">
+        <h2 className="text-lg font-bold text-slate-800 mb-1">Staff Bulletin</h2>
+        <p className="text-sm text-slate-500 mb-4">
+          Post an announcement that all staff see on their Dashboard.
+          {bulletin ? ' There is currently an active bulletin.' : ' No active bulletin.'}
+        </p>
+
+        <div className="bg-white border border-slate-200 rounded-2xl p-6">
+          {bulletinLoading ? (
+            <p className="text-sm text-slate-400">Loading…</p>
+          ) : (
+            <form onSubmit={handlePostBulletin} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Title <span className="text-red-500">*</span>
+                </label>
+                <input
+                  className={inputCls}
+                  value={bulletinTitle}
+                  onChange={e => setBulletinTitle(e.target.value)}
+                  placeholder="e.g. All-Staff Meeting Tomorrow"
+                  maxLength={120}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Message <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  className={`${inputCls} resize-none`}
+                  rows={4}
+                  value={bulletinMessage}
+                  onChange={e => setBulletinMessage(e.target.value)}
+                  placeholder="Enter your announcement here…"
+                />
+              </div>
+
+              {bulletinError && (
+                <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{bulletinError}</p>
+              )}
+              {bulletinSaved && (
+                <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                  {bulletin ? 'Bulletin updated.' : 'Bulletin posted.'}
+                </p>
+              )}
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="submit"
+                  disabled={bulletinSaving}
+                  className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white font-medium rounded-lg py-2 text-sm transition-colors"
+                >
+                  {bulletinSaving ? 'Saving…' : bulletin ? 'Update Bulletin' : 'Post Bulletin'}
+                </button>
+
+                {bulletin && (
+                  <button
+                    type="button"
+                    onClick={handleClearBulletin}
+                    disabled={bulletinClearing}
+                    className="px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors"
+                  >
+                    {bulletinClearing ? 'Clearing…' : 'Clear Bulletin'}
+                  </button>
+                )}
+              </div>
+            </form>
+          )}
+        </div>
       </div>
     </Layout>
   )
