@@ -290,11 +290,13 @@ function PRNResidentRow({ resident, communityId, staffMap: _staffMap }) {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
 
-  const todayStr = toDateStr(new Date())
   const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
 
   async function load() {
     setLoadingMeds(true)
+    // Use local midnight → UTC so evening PRN records don't bleed into the next day
+    const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0)
+    const endOfToday = new Date(); endOfToday.setHours(23, 59, 59, 999)
     const [medsRes, dosesRes] = await Promise.all([
       supabase
         .from('medications')
@@ -307,8 +309,8 @@ function PRNResidentRow({ resident, communityId, staffMap: _staffMap }) {
         .from('prn_administrations')
         .select('*')
         .eq('resident_id', resident.id)
-        .gte('administered_at', `${todayStr}T00:00:00`)
-        .lte('administered_at', `${todayStr}T23:59:59`)
+        .gte('administered_at', startOfToday.toISOString())
+        .lte('administered_at', endOfToday.toISOString())
         .order('administered_at', { ascending: false }),
     ])
     setPrnMeds(medsRes.data ?? [])
@@ -566,8 +568,8 @@ function PRNTab({ communityId }) {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function Dispense() {
-  const today = useMemo(() => new Date(), [])
-  const [date, setDate] = useState(today)
+  const [today, setToday] = useState(() => new Date())
+  const [date, setDate] = useState(() => new Date())
   const dateInputRef = useRef(null)
   const [medications, setMedications] = useState([])
   const [administered, setAdministered] = useState(new Map())
@@ -591,6 +593,22 @@ export default function Dispense() {
 
   const dateStr = toDateStr(date)
   const isToday = toDateStr(today) === dateStr
+
+  // Keep today in sync — auto-advances at midnight so a page left open overnight resets correctly
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const realNow = new Date()
+      setToday(prev => {
+        if (toDateStr(prev) !== toDateStr(realNow)) {
+          // Day rolled over — advance date only if user was on today's view
+          setDate(d => toDateStr(d) === toDateStr(prev) ? realNow : d)
+          return realNow
+        }
+        return prev // same reference → no re-render
+      })
+    }, 60_000)
+    return () => clearInterval(interval)
+  }, [])
 
   // Load staff map scoped to this community's members only
   useEffect(() => {
@@ -657,12 +675,15 @@ export default function Dispense() {
   // Fetch PRN administrations for the selected date (to overlay in routine time slots)
   useEffect(() => {
     if (!communityId) return
+    // Use local midnight → UTC so evening PRN records don't bleed into the next day
+    const startOfDay = new Date(date); startOfDay.setHours(0, 0, 0, 0)
+    const endOfDay = new Date(date); endOfDay.setHours(23, 59, 59, 999)
     supabase
       .from('prn_administrations')
       .select(`*, residents!resident_id(id, full_name, first_name, middle_name, last_name, room_number, avatar_url, date_of_birth)`)
       .eq('community_id', communityId)
-      .gte('administered_at', `${dateStr}T00:00:00`)
-      .lte('administered_at', `${dateStr}T23:59:59`)
+      .gte('administered_at', startOfDay.toISOString())
+      .lte('administered_at', endOfDay.toISOString())
       .order('administered_at')
       .then(({ data }) => setPrnAdmins(data ?? []))
   }, [communityId, dateStr])
