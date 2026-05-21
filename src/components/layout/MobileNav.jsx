@@ -53,7 +53,7 @@ function MoreIcon({ active }) {
 }
 
 const tabCls = ({ isActive }) =>
-  `flex flex-col items-center gap-1 px-3 py-1 transition-colors min-w-[56px] ${isActive ? 'text-[#185FA5]' : 'text-slate-400'}`
+  `flex flex-col items-center gap-1 px-3 py-1 transition-colors min-w-[56px] ${isActive ? 'text-haven-600' : 'text-slate-400'}`
 
 // Pages shown in the "More" drawer
 const MORE_PAGES_ADMIN = [
@@ -257,7 +257,7 @@ export default function MobileNav() {
         <button
           onClick={() => setShowMore(o => !o)}
           className={`flex flex-col items-center gap-1 px-3 py-1 transition-colors min-w-[56px] ${
-            moreActive || showMore ? 'text-[#185FA5]' : 'text-slate-400'
+            moreActive || showMore ? 'text-haven-600' : 'text-slate-400'
           }`}
         >
           <MoreIcon active={moreActive || showMore} />

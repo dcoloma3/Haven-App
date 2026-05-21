@@ -49,6 +49,18 @@
 
 @theme {
   --animate-page-in: pageIn 220ms ease-out;
+
+  /* Haven brand color scale — used as bg-haven-*, text-haven-*, border-haven-* */
+  --color-haven-50:  #EEF5FB;
+  --color-haven-100: #D5E7F5;
+  --color-haven-200: #B4CEE7;
+  --color-haven-300: #7AA5D2;
+  --color-haven-400: #3E7CBA;
+  --color-haven-500: #185FA5;
+  --color-haven-600: #185FA5;
+  --color-haven-700: #0C447C;
+  --color-haven-800: #0B3D6E;
+  --color-haven-900: #042C53;
 }
 
 @keyframes pageIn {
