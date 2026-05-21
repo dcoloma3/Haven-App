@@ -537,7 +537,6 @@ export default function StaffDirectory() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadMembers()
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadPendingInvites()
   }, [communityId]) // eslint-disable-line react-hooks/exhaustive-deps
 

@@ -5,8 +5,6 @@ const variantClasses = {
   destructive: 'h-11 px-5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold transition-colors shadow-sm',
 };
 
-const smOverride = 'h-9 px-3.5 text-xs';
-
 export default function Button({ variant = 'primary', size = 'md', className = '', children, ...rest }) {
   const base = variantClasses[variant] ?? variantClasses.primary;
 

@@ -661,7 +661,7 @@ export default function Dispense() {
       .lte('administered_at', endOfDay.toISOString())
       .order('administered_at')
       .then(({ data }) => setPrnAdmins(data ?? []))
-  }, [communityId, dateStr])
+  }, [communityId, dateStr, date])
 
   // Group: time → residentId → { resident, meds[] }
   const timeGroups = useMemo(() => {
