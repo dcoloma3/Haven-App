@@ -55,13 +55,16 @@ const DGRAY = [120,120,120]
 function daysInMonth(year, month) { return new Date(year, month, 0).getDate() }
 function pad2(n) { return String(n).padStart(2, '0') }
 
+function hourToSlot(h) {
+  if (h < 12) return 0    // A.M.
+  if (h === 12) return 1  // Noon
+  if (h < 20) return 2    // P.M.
+  return 3                // Bed
+}
+
 function timeToSlot(timeStr) {
   if (!timeStr) return 0
-  const h = parseInt(timeStr.split(':')[0], 10)
-  if (h < 12) return 0
-  if (h === 12) return 1
-  if (h < 20) return 2
-  return 3
+  return hourToSlot(parseInt(timeStr.split(':')[0], 10))
 }
 
 // Format initials as "F.L" matching reference style (e.g. "L.O" for Liz Ochoa)
@@ -83,6 +86,14 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
   const days = daysInMonth(year, month)
   const from = `${year}-${mm}-01`
   const to   = `${year}-${mm}-${pad2(days)}`
+
+  // PRN administered_at is a UTC timestamp; query a ±1-day-wider window so a dose
+  // given near a month boundary in local time isn't dropped by UTC bounds. Each
+  // PRN is then placed by its LOCAL date/time and filtered to the report month.
+  const prnFromBound = new Date(year, month - 1, 1, 0, 0, 0)
+  prnFromBound.setDate(prnFromBound.getDate() - 1)
+  const prnToBound = new Date(year, month - 1, days, 23, 59, 59)
+  prnToBound.setDate(prnToBound.getDate() + 1)
 
   // ── Data fetches ─────────────────────────────────────────────────────────────
   const [resRes, comRes, medsRes, adminsRes, prnRes, membersRes] = await Promise.all([
@@ -106,8 +117,8 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
     supabase.from('prn_administrations')
       .select('medication_name, dose, administered_at, administered_by')
       .eq('resident_id', residentId)
-      .gte('administered_at', `${from}T00:00:00`)
-      .lte('administered_at', `${to}T23:59:59`),
+      .gte('administered_at', prnFromBound.toISOString())
+      .lte('administered_at', prnToBound.toISOString()),
     supabase.from('community_members')
       .select('user_id, profiles(first_name, last_name)')
       .eq('community_id', communityId),
@@ -155,10 +166,11 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
   for (const p of prns) {
     const medId = medByName[(p.medication_name || '').trim().toLowerCase()]
     if (!medId) continue   // PRN med not in this resident's medication list — skip
-    const datePart = p.administered_at.split('T')[0]
-    const timePart = p.administered_at.split('T')[1]?.slice(0, 5) || '00:00'
-    const day  = parseInt(datePart.split('-')[2], 10)
-    const slot = timeToSlot(timePart)
+    // Place by LOCAL date/time (matches the time shown in the on-screen log)
+    const dt = new Date(p.administered_at)
+    if (dt.getFullYear() !== year || dt.getMonth() !== month - 1) continue  // outside report month
+    const day  = dt.getDate()
+    const slot = hourToSlot(dt.getHours())
     const key  = `${medId}|${day}|${slot}`
     const staff = staffMap[p.administered_by]
     if (staff) {
@@ -322,12 +334,21 @@ function drawMedBlocks(doc, meds, adminLookup, days) {
 
     // ── Left panel text (plain black on white — matches reference) ─────────────
     if (med) {
-      // Medication name (bold)
+      // Medication name (bold) — shrink + wrap to 2 lines for long names
       doc.setFont('helvetica', 'bold')
-      doc.setFontSize(7.5)
       doc.setTextColor(...BLACK)
-      const nameLines = doc.splitTextToSize(med.medication_name || '', LEFT_W - LEFT_TEXT - 2)
-      doc.text(nameLines[0], LEFT_TEXT, blockY + ROW_H * 0.72)
+      const nameW = LEFT_W - LEFT_TEXT - 2
+      doc.setFontSize(7.5)
+      let nameLines = doc.splitTextToSize(med.medication_name || '', nameW)
+      if (nameLines.length > 1) {
+        doc.setFontSize(6.2)
+        nameLines = doc.splitTextToSize(med.medication_name || '', nameW)
+      }
+      if (nameLines.length === 1) {
+        doc.text(nameLines[0], LEFT_TEXT, blockY + ROW_H * 0.72)
+      } else {
+        doc.text(nameLines.slice(0, 2), LEFT_TEXT, blockY + ROW_H * 0.4, { lineHeightFactor: 1.15 })
+      }
     }
 
     // Strength / RX Number / Dosage — labels always shown; values only if med
