@@ -47,10 +47,8 @@ const MONTHS      = ['January','February','March','April','May','June',
 const NAVY  = [4,  44,  83]
 const BLUE  = [24, 95, 165]
 const BLACK = [0,  0,   0]
-const WHITE = [255,255,255]
 const LGRAY = [210,210,210]
 const DGRAY = [120,120,120]
-const HBG   = [240,244,248]   // header info row background
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -313,38 +311,45 @@ function drawColHeaders(doc, days) {
 }
 
 function drawMedBlocks(doc, meds, adminLookup, days) {
-  for (let i = 0; i < meds.length; i++) {
-    const med    = meds[i]
+  // Always render a full page of MEDS_PER_PAGE blocks; pad with blank rows
+  // (matches a real MAR form — blank blocks leave room for handwritten meds)
+  for (let i = 0; i < MEDS_PER_PAGE; i++) {
+    const med    = meds[i] || null
     const blockY = CONTENT_Y + i * MED_H
 
     // ── Left panel text (plain black on white — matches reference) ─────────────
-    // Row 0: Medication name (bold)
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(7.5)
-    doc.setTextColor(...BLACK)
-    const nameLines = doc.splitTextToSize(med.medication_name || '', LEFT_W - LEFT_TEXT - 2)
-    doc.text(nameLines[0], LEFT_TEXT, blockY + ROW_H * 0.72)
+    if (med) {
+      // Medication name (bold)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(7.5)
+      doc.setTextColor(...BLACK)
+      const nameLines = doc.splitTextToSize(med.medication_name || '', LEFT_W - LEFT_TEXT - 2)
+      doc.text(nameLines[0], LEFT_TEXT, blockY + ROW_H * 0.72)
+    }
 
-    // Rows 1–3: Strength / RX Number / Dosage — label + value, all black
-    doc.setFont('helvetica', 'normal')
+    // Strength / RX Number / Dosage — labels always shown; values only if med
     doc.setFontSize(6.8)
     const detail = (label, value, rowIdx, labelW) => {
       const ty = blockY + ROW_H * rowIdx + ROW_H * 0.62
+      doc.setTextColor(med ? 0 : 150, med ? 0 : 150, med ? 0 : 150)
       doc.setFont('helvetica', 'bold')
       doc.text(label, LEFT_TEXT, ty)
-      doc.setFont('helvetica', 'normal')
-      const v = doc.splitTextToSize(String(value), LEFT_W - LEFT_TEXT - labelW - 1)[0]
-      doc.text(v, LEFT_TEXT + labelW, ty)
+      if (med) {
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(...BLACK)
+        const v = doc.splitTextToSize(String(value), LEFT_W - LEFT_TEXT - labelW - 1)[0]
+        doc.text(v, LEFT_TEXT + labelW, ty)
+      }
     }
-    detail('Strength:',  med.dose || '—', 1, 16)
-    detail('RX Number:', med.prescription_number || 'N/A', 2, 20)
-    detail('Dosage:',    med.route || '—', 3, 14)
+    detail('Strength:',  med?.dose || '—', 1, 16)
+    detail('RX Number:', med?.prescription_number || 'N/A', 2, 20)
+    detail('Dosage:',    med?.route || '—', 3, 14)
 
     // ── Time labels + grid rows ───────────────────────────────────────────────
     for (let slot = 0; slot < 4; slot++) {
       const rowY = blockY + slot * ROW_H
 
-      // Time label (centered, plain black)
+      // Time label (always shown, even on blank blocks)
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(6.5)
       doc.setTextColor(...BLACK)
@@ -359,13 +364,14 @@ function drawMedBlocks(doc, meds, adminLookup, days) {
           doc.rect(cx, rowY, DAY_W, ROW_H, 'F')
         }
 
-        const key  = `${med.id}|${d}|${slot}`
-        const init = adminLookup[key]
-        if (init && d <= days) {
-          doc.setFont('helvetica', 'normal')
-          doc.setFontSize(5.5)
-          doc.setTextColor(...BLACK)
-          doc.text(init, cx + DAY_W / 2, rowY + ROW_H * 0.68, { align: 'center' })
+        if (med) {
+          const init = adminLookup[`${med.id}|${d}|${slot}`]
+          if (init && d <= days) {
+            doc.setFont('helvetica', 'normal')
+            doc.setFontSize(5.5)
+            doc.setTextColor(...BLACK)
+            doc.text(init, cx + DAY_W / 2, rowY + ROW_H * 0.68, { align: 'center' })
+          }
         }
 
         // Thin cell border
@@ -392,9 +398,9 @@ function drawMedBlocks(doc, meds, adminLookup, days) {
     doc.line(0, blockY + MED_H, PAGE_W, blockY + MED_H)
   }
 
-  // Outer table border (thin)
+  // Outer table border (thin) — spans the full page of blocks
   const tableTop = CONTENT_Y
-  const tableBot = CONTENT_Y + Math.max(meds.length, 1) * MED_H
+  const tableBot = CONTENT_Y + MEDS_PER_PAGE * MED_H
   doc.setDrawColor(...DGRAY)
   doc.setLineWidth(0.4)
   doc.rect(0, tableTop, PAGE_W, tableBot - tableTop, 'S')
