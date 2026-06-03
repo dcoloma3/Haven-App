@@ -39,6 +39,10 @@ const FOOTER_H      = 17.0
 const CONTENT_H     = PAGE_H - CONTENT_Y - FOOTER_H   // ~153.9mm
 const MEDS_PER_PAGE = Math.floor(CONTENT_H / MED_H)   // 5
 
+// Sentinel for "given but staff name couldn't be resolved" — rendered as a
+// filled dot (a literal ✓ glyph is not in jsPDF's default font and prints blank).
+const GIVEN_MARK = '__GIVEN__'
+
 const SLOT_LABELS = ['A.M.', 'Noon', 'P.M.', 'Bed']
 const MONTHS      = ['January','February','March','April','May','June',
                      'July','August','September','October','November','December']
@@ -78,14 +82,30 @@ function freqDesc(med) {
   return ''
 }
 
-// Format initials as "F.L" matching reference style (e.g. "L.O" for Liz Ochoa)
-function makeInitials(firstName, lastName) {
-  const f = (firstName || '').trim()
-  const l = (lastName  || '').trim()
-  if (!f && !l) return '?'
-  const fi = f[0] || ''
-  const li = l[0] || ''
-  return `${fi}.${li}`.toUpperCase()
+// Build "F.L" initials from a profile. Prefers first/last name, then falls back
+// to splitting full_name (the field that's reliably populated in this app).
+function makeInitials(profile) {
+  if (!profile) return null
+  const f = (profile.first_name || '').trim()
+  const l = (profile.last_name || '').trim()
+  if (f || l) {
+    return [f[0], l[0]].filter(Boolean).join('.').toUpperCase()
+  }
+  const full = (profile.full_name || '').trim()
+  if (full) {
+    const parts = full.split(/\s+/).filter(Boolean)
+    if (parts.length >= 2) return `${parts[0][0]}.${parts[parts.length - 1][0]}`.toUpperCase()
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  }
+  return null
+}
+
+function profileFullName(profile) {
+  if (!profile) return 'Staff'
+  const full = (profile.full_name || '').trim()
+  if (full) return full
+  const fl = `${profile.first_name || ''} ${profile.last_name || ''}`.trim()
+  return fl || 'Staff'
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -122,7 +142,7 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
       .eq('resident_id', residentId)
       .order('medication_name'),
     supabase.from('community_members')
-      .select('user_id, profiles(first_name, last_name)')
+      .select('user_id, profiles(user_id, full_name, first_name, last_name)')
       .eq('community_id', communityId),
   ])
 
@@ -153,15 +173,15 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
   const admins = adminsRes.data ?? []
   const prns   = prnRes.data   ?? []
 
-  // Staff lookup: userId → { initials, fullName }
+  // Staff lookup: userId → { initials, fullName }. Keyed by BOTH the membership
+  // user_id and the profile user_id so administered_by resolves either way.
   const staffMap = {}
   for (const m of members) {
     const p = m.profiles
     if (!p) continue
-    staffMap[m.user_id] = {
-      initials: makeInitials(p.first_name, p.last_name),
-      fullName: `${p.first_name || ''} ${p.last_name || ''}`.trim(),
-    }
+    const entry = { initials: makeInitials(p), fullName: profileFullName(p) }
+    if (m.user_id) staffMap[m.user_id] = entry
+    if (p.user_id) staffMap[p.user_id] = entry
   }
 
   // Admin lookup: `${medicationId}|${day}|${slotIndex}` → initials
@@ -174,11 +194,11 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
     const slot  = timeToSlot(a.scheduled_time)
     const key   = `${a.medication_id}|${day}|${slot}`
     const staff = staffMap[a.administered_by]
-    if (staff) {
-      adminLookup[key]           = staff.initials
-      staffUsed[staff.initials]  = staff.fullName
+    if (staff && staff.initials) {
+      adminLookup[key]          = staff.initials
+      staffUsed[staff.initials] = staff.fullName
     } else {
-      adminLookup[key] = '✓'
+      adminLookup[key] = GIVEN_MARK   // given, but staff name couldn't be resolved
     }
   }
 
@@ -195,11 +215,11 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
     const slot = hourToSlot(dt.getHours())
     const key  = `${medId}|${day}|${slot}`
     const staff = staffMap[p.administered_by]
-    if (staff) {
+    if (staff && staff.initials) {
       adminLookup[key]          = staff.initials
       staffUsed[staff.initials] = staff.fullName
     } else if (!adminLookup[key]) {
-      adminLookup[key] = '✓'
+      adminLookup[key] = GIVEN_MARK
     }
   }
 
@@ -416,10 +436,16 @@ function drawMedBlocks(doc, meds, adminLookup, days) {
         if (med) {
           const init = adminLookup[`${med.id}|${d}|${slot}`]
           if (init && d <= days) {
-            doc.setFont('helvetica', 'normal')
-            doc.setFontSize(5.5)
-            doc.setTextColor(...BLACK)
-            doc.text(init, cx + DAY_W / 2, rowY + ROW_H * 0.68, { align: 'center' })
+            if (init === GIVEN_MARK) {
+              // given, staff unresolved → filled dot (always renders)
+              doc.setFillColor(...BLACK)
+              doc.circle(cx + DAY_W / 2, rowY + ROW_H * 0.5, 0.7, 'F')
+            } else {
+              doc.setFont('helvetica', 'normal')
+              doc.setFontSize(5.5)
+              doc.setTextColor(...BLACK)
+              doc.text(init, cx + DAY_W / 2, rowY + ROW_H * 0.68, { align: 'center' })
+            }
           }
         }
 
