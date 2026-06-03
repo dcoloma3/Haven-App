@@ -1,8 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
 import { supabase } from '../../lib/supabase'
-import { isMedDueOnDate } from '../../lib/medStatus'
+import { generateMarGridPDF } from '../../lib/marGridPDF'
 import { useCommunity } from '../../context/CommunityContext'
 import { localDateStr } from '../../lib/dateUtils'
 
@@ -36,44 +34,8 @@ function formatTime(iso) {
   return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 }
 
-function residentFullName(r) {
-  if (!r) return ''
-  const parts = [r.first_name, r.middle_name, r.last_name].filter(Boolean)
-  return parts.length ? parts.join(' ') : (r.full_name || '')
-}
-
 function getTodayStr() {
   return localDateStr()
-}
-
-const DAY_LABELS = { monday: 'Mon', tuesday: 'Tue', wednesday: 'Wed', thursday: 'Thu', friday: 'Fri', saturday: 'Sat', sunday: 'Sun' }
-
-function describeFrequency(med) {
-  if (!med) return '—'
-  const type = med.frequency_type
-  if (!type || type === 'daily') return 'Every day'
-  if (type === 'one_time') return 'One time'
-  if (type === 'prn') return 'As needed'
-  if (type === 'specific_days') {
-    if (!med.frequency_days?.length) return 'Specific days'
-    return med.frequency_days.map(d => DAY_LABELS[d] ?? d).join(', ')
-  }
-  if (type === 'every_x_days') {
-    const n = med.frequency_interval
-    return n ? `Every ${n} day${n !== 1 ? 's' : ''}` : 'Every X days'
-  }
-  return '—'
-}
-
-function datesInRange(fromStr, toStr) {
-  const dates = []
-  const cur = new Date(fromStr + 'T00:00:00')
-  const end = new Date(toStr + 'T00:00:00')
-  while (cur <= end) {
-    dates.push(localDateStr(cur))
-    cur.setDate(cur.getDate() + 1)
-  }
-  return dates
 }
 
 function getDateRange(preset, customFrom, customTo) {
@@ -113,19 +75,17 @@ const PRESETS = [
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function ResidentMedHistory({ residentId, resident }) {
-  const { community, communityId } = useCommunity()
+export default function ResidentMedHistory({ residentId }) {
+  const { communityId } = useCommunity()
   const [rangePreset, setRangePreset] = useState('month')
   const [customFrom, setCustomFrom] = useState('')
   const [customTo, setCustomTo] = useState('')
   const [routineRecords, setRoutineRecords] = useState([])
   const [prnRecords, setPrnRecords] = useState([])
-  const [allMedications, setAllMedications] = useState([])
   const [staffMap, setStaffMap] = useState({})
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [marError, setMarError] = useState('')
-  const [marMode, setMarMode] = useState('administered') // 'administered' | 'clinical'
   const [selectedMed, setSelectedMed] = useState('')
 
   const { from, to } = getDateRange(rangePreset, customFrom, customTo)
@@ -147,11 +107,6 @@ export default function ResidentMedHistory({ residentId, resident }) {
       })
   }, [communityId])
 
-  // Load all medications for this resident — needed for Full Clinical MAR
-  useEffect(() => {
-    supabase.from('medications').select('*').eq('resident_id', residentId)
-      .then(({ data }) => setAllMedications(data ?? []))
-  }, [residentId])
 
   // Load administered records for the selected range
   const loadRecords = useCallback(async () => {
@@ -221,238 +176,21 @@ export default function ResidentMedHistory({ residentId, resident }) {
 
   // ─── PDF / MAR generation ──────────────────────────────────────────────────
 
-  function generateMAR() {
+  async function generateMAR() {
     setGenerating(true)
     setMarError('')
     try {
-      const doc = new jsPDF()
-      const name = residentFullName(resident)
-      const generatedOn = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-      const rangeLabel = from === to ? formatDateShort(from) : `${formatDateShort(from)} – ${formatDateShort(to)}`
-      const modeLabel = marMode === 'administered' ? 'Administered Medications Only' : 'Full Clinical MAR (with missed doses)'
-      // Header bar — taller when filtering a specific med
-      const headerH = selectedMed ? 36 : 30
-      doc.setFillColor(4, 44, 83)
-      doc.rect(0, 0, 220, headerH, 'F')
-      doc.setTextColor(255, 255, 255)
-      doc.setFontSize(14)
-      doc.setFont('helvetica', 'bold')
-      doc.text('Medication Administration Record (MAR)', 14, 11)
-      doc.setFontSize(8)
-      doc.setFont('helvetica', 'normal')
-      doc.text(`${community?.name ?? 'Haven'}  ·  Generated: ${generatedOn}`, 14, 18)
-      doc.text(modeLabel, 14, 24)
-      if (selectedMed) {
-        doc.setFont('helvetica', 'bold')
-        doc.text(`Medication Filter: ${selectedMed}`, 14, 31)
-        doc.setFont('helvetica', 'normal')
-      }
-
-      // Resident info
-      const residentY = headerH + 10
-      doc.setTextColor(30, 30, 30)
-      doc.setFontSize(13)
-      doc.setFont('helvetica', 'bold')
-      doc.text(name || '—', 14, residentY)
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(9)
-      doc.setTextColor(80, 80, 80)
-      const infoLine = [
-        resident?.room_number ? `Room ${resident.room_number}` : null,
-        resident?.date_of_birth ? `DOB: ${formatDateShort(resident.date_of_birth)}` : null,
-        `Period: ${rangeLabel}`,
-      ].filter(Boolean).join('   ·   ')
-      doc.text(infoLine, 14, residentY + 7)
-
-      const tableStartY = residentY + 14
-
-      // ── ADMINISTERED ONLY ──────────────────────────────────────────────────
-      if (marMode === 'administered') {
-        // Build lookup: medication_id → full med object (for frequency)
-        const medById = new Map(allMedications.map(m => [m.id, m]))
-
-        const rows = []
-        filteredRoutine.forEach(r => {
-          const fullMed = medById.get(r.medication_id)
-          rows.push({
-            sortKey: r.administered_date + '_' + (r.scheduled_time ?? ''),
-            cells: [
-              formatDateShort(r.administered_date),
-              r.administered_at ? formatTime(r.administered_at) : fmt12(r.scheduled_time),
-              r.medications?.medication_name ?? '—',
-              r.medications?.dose ?? '—',
-              describeFrequency(fullMed),
-              'Routine',
-              '—',
-              r.administered_by ? (staffMap[r.administered_by] ?? 'Staff') : '—',
-            ],
-            type: 'routine',
-          })
-        })
-        filteredPrn.forEach(r => {
-          const dateStr = r.administered_at.split('T')[0]
-          rows.push({
-            sortKey: r.administered_at,
-            cells: [
-              formatDateShort(dateStr),
-              formatTime(r.administered_at),
-              r.medication_name,
-              r.dose ?? '—',
-              'As needed',
-              'PRN',
-              r.reason,
-              r.administered_by ? (staffMap[r.administered_by] ?? 'Staff') : '—',
-            ],
-            type: 'prn',
-          })
-        })
-        rows.sort((a, b) => a.sortKey.localeCompare(b.sortKey))
-
-        autoTable(doc, {
-          startY: tableStartY,
-          head: [['Date', 'Time Given', 'Medication', 'Dose', 'Frequency', 'Type', 'Reason', 'Given By']],
-          body: rows.map(r => r.cells),
-          styles: { fontSize: 7.5, cellPadding: 2 },
-          headStyles: { fillColor: [24, 95, 165], textColor: 255, fontStyle: 'bold', fontSize: 7.5 },
-          alternateRowStyles: { fillColor: [245, 248, 252] },
-          didParseCell(data) {
-            if (data.section === 'body' && data.column.index === 5) {
-              if (data.cell.raw === 'PRN') {
-                data.cell.styles.textColor = [124, 58, 237]
-                data.cell.styles.fontStyle = 'bold'
-              }
-            }
-          },
-          columnStyles: {
-            0: { cellWidth: 22 }, 1: { cellWidth: 20 }, 2: { cellWidth: 36 },
-            3: { cellWidth: 16 }, 4: { cellWidth: 26 }, 5: { cellWidth: 14 },
-            6: { cellWidth: 26 }, 7: { cellWidth: 22 },
-          },
-          margin: { left: 14, right: 14 },
-        })
-      }
-
-      // ── FULL CLINICAL MAR ──────────────────────────────────────────────────
-      if (marMode === 'clinical') {
-        const dates = datesInRange(from, to)
-
-        // Build lookup: administered_date :: scheduled_time :: medication_id → record
-        // Use all routine records for the lookup (so we can mark missed doses correctly)
-        const adminLookup = new Map()
-        routineRecords.forEach(r => {
-          adminLookup.set(`${r.administered_date}::${r.scheduled_time}::${r.medication_id}`, r)
-        })
-
-        // PRN by date — respect the medication filter
-        const prnByDate = {}
-        filteredPrn.forEach(r => {
-          const d = r.administered_at.split('T')[0]
-          if (!prnByDate[d]) prnByDate[d] = []
-          prnByDate[d].push(r)
-        })
-
-        // Medications to show — filter by selected med if set
-        const medsToShow = selectedMed
-          ? allMedications.filter(m => m.medication_name === selectedMed)
-          : allMedications
-
-        const rows = []
-        dates.forEach(dateStr => {
-          const dueMeds = medsToShow.filter(m => isMedDueOnDate(m, dateStr))
-
-          dueMeds.forEach(med => {
-            ;(med.scheduled_times ?? []).forEach(time => {
-              const record = adminLookup.get(`${dateStr}::${time}::${med.id}`)
-              const given = !!record
-              rows.push({
-                cells: [
-                  formatDateShort(dateStr),
-                  fmt12(time),
-                  med.medication_name,
-                  med.dose ?? '—',
-                  describeFrequency(med),
-                  given ? `✓ Given ${record.administered_at ? formatTime(record.administered_at) : ''}` : '✗ Missed',
-                  given && record.administered_by ? (staffMap[record.administered_by] ?? 'Staff') : '—',
-                  'Routine',
-                  '—',
-                ],
-                given,
-                prn: false,
-              })
-            })
-          })
-
-          ;(prnByDate[dateStr] ?? []).forEach(prn => {
-            rows.push({
-              cells: [
-                formatDateShort(dateStr),
-                formatTime(prn.administered_at),
-                prn.medication_name,
-                prn.dose ?? '—',
-                'As needed',
-                '✓ Given (PRN)',
-                prn.administered_by ? (staffMap[prn.administered_by] ?? 'Staff') : '—',
-                'PRN',
-                prn.reason,
-              ],
-              given: true,
-              prn: true,
-            })
-          })
-        })
-
-        autoTable(doc, {
-          startY: tableStartY,
-          head: [['Date', 'Scheduled', 'Medication', 'Dose', 'Frequency', 'Status', 'Given By', 'Type', 'Reason']],
-          body: rows.map(r => r.cells),
-          styles: { fontSize: 7, cellPadding: 2 },
-          headStyles: { fillColor: [24, 95, 165], textColor: 255, fontStyle: 'bold', fontSize: 7 },
-          alternateRowStyles: { fillColor: [245, 248, 252] },
-          didParseCell(data) {
-            if (data.section === 'body') {
-              if (data.column.index === 5) {
-                const raw = String(data.cell.raw ?? '')
-                if (raw.startsWith('✓')) {
-                  data.cell.styles.textColor = [5, 150, 105]
-                  data.cell.styles.fontStyle = 'bold'
-                } else if (raw.startsWith('✗')) {
-                  data.cell.styles.textColor = [220, 38, 38]
-                  data.cell.styles.fontStyle = 'bold'
-                }
-              }
-              if (data.column.index === 7 && data.cell.raw === 'PRN') {
-                data.cell.styles.textColor = [124, 58, 237]
-                data.cell.styles.fontStyle = 'bold'
-              }
-            }
-          },
-          columnStyles: {
-            0: { cellWidth: 20 }, 1: { cellWidth: 16 }, 2: { cellWidth: 34 },
-            3: { cellWidth: 14 }, 4: { cellWidth: 24 }, 5: { cellWidth: 28 },
-            6: { cellWidth: 22 }, 7: { cellWidth: 12 }, 8: { cellWidth: 22 },
-          },
-          margin: { left: 14, right: 14 },
-        })
-      }
-
-      // Footer on every page
-      const pageCount = doc.internal.getNumberOfPages()
-      for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i)
-        doc.setFontSize(7.5)
-        doc.setTextColor(150, 150, 150)
-        doc.text(
-          `Page ${i} of ${pageCount}  ·  ${name}  ·  MAR  ·  ${rangeLabel}`,
-          14, doc.internal.pageSize.height - 8
-        )
-      }
-
-      const safeName = name.replace(/\s+/g, '_')
-      const safeMed = selectedMed ? `_${selectedMed.replace(/\s+/g, '_')}` : ''
-      doc.save(`${safeName}_MAR${safeMed}_${from}_to_${to}.pdf`)
+      const [y, m] = from.split('-')   // from = 'YYYY-MM-DD' of the selected range start
+      await generateMarGridPDF({
+        residentId,
+        communityId,
+        month: Number(m),
+        year: Number(y),
+        supabase,
+      })
     } catch (err) {
       console.error(err)
-      setMarError('Failed to generate MAR. Please try again.')
+      setMarError(`Failed to generate MAR: ${err?.message || 'Please try again.'}`)
     } finally {
       setGenerating(false)
     }
@@ -477,23 +215,6 @@ export default function ResidentMedHistory({ residentId, resident }) {
         </div>
         {!loading && totalDoses > 0 && (
           <div className="flex flex-col items-end gap-2 flex-shrink-0">
-            {/* MAR mode toggle */}
-            <div className="flex bg-slate-100 rounded-lg p-0.5 gap-0.5">
-              <button
-                onClick={() => setMarMode('administered')}
-                className={`px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors ${marMode === 'administered' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                title="Only shows medications that were actually given"
-              >
-                Administered
-              </button>
-              <button
-                onClick={() => setMarMode('clinical')}
-                className={`px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors ${marMode === 'clinical' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                title="Shows all scheduled doses — given and missed"
-              >
-                Full Clinical
-              </button>
-            </div>
             <button
               onClick={generateMAR}
               disabled={generating}
@@ -506,9 +227,7 @@ export default function ResidentMedHistory({ residentId, resident }) {
               </svg>
               {generating ? 'Generating…' : 'Generate MAR'}
             </button>
-            <p className="text-[10px] text-slate-400">
-              {marMode === 'administered' ? 'Given meds only' : 'Includes missed doses'}
-            </p>
+            <p className="text-[10px] text-slate-400">Monthly grid · routine + PRN</p>
             {marError && (
               <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{marError}</p>
             )}

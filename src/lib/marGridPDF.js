@@ -87,7 +87,7 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
   const to   = `${year}-${mm}-${pad2(days)}`
 
   // ── Data fetches ─────────────────────────────────────────────────────────────
-  const [resRes, comRes, medsRes, adminsRes, membersRes] = await Promise.all([
+  const [resRes, comRes, medsRes, adminsRes, prnRes, membersRes] = await Promise.all([
     supabase.from('residents')
       .select('first_name, last_name, full_name, physician')
       .eq('id', residentId).eq('community_id', communityId).single(),
@@ -102,6 +102,11 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
       .select('medication_id, scheduled_time, administered_date, administered_by')
       .eq('resident_id', residentId)
       .gte('administered_date', from).lte('administered_date', to),
+    supabase.from('prn_administrations')
+      .select('medication_name, dose, administered_at, administered_by')
+      .eq('resident_id', residentId)
+      .gte('administered_at', `${from}T00:00:00`)
+      .lte('administered_at', `${to}T23:59:59`),
     supabase.from('community_members')
       .select('user_id, profiles(first_name, last_name)')
       .eq('community_id', communityId),
@@ -111,6 +116,7 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
   const community = comRes.data   ?? {}
   const meds      = medsRes.data  ?? []
   const admins    = adminsRes.data ?? []
+  const prns      = prnRes.data   ?? []
   const members   = membersRes.data ?? []
 
   // Staff lookup: userId → { initials, fullName }
@@ -127,6 +133,8 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
   // Admin lookup: `${medicationId}|${day}|${slotIndex}` → initials
   const adminLookup = {}
   const staffUsed   = {}   // initials → fullName for footer legend
+
+  // Routine administrations
   for (const a of admins) {
     const day   = parseInt(a.administered_date.split('-')[2], 10)
     const slot  = timeToSlot(a.scheduled_time)
@@ -136,6 +144,26 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
       adminLookup[key]           = staff.initials
       staffUsed[staff.initials]  = staff.fullName
     } else {
+      adminLookup[key] = '✓'
+    }
+  }
+
+  // PRN administrations — link by medication_name (no medication_id FK on prn_administrations)
+  const medByName = {}
+  for (const m of meds) medByName[(m.medication_name || '').trim().toLowerCase()] = m.id
+  for (const p of prns) {
+    const medId = medByName[(p.medication_name || '').trim().toLowerCase()]
+    if (!medId) continue   // PRN med not in this resident's medication list — skip
+    const datePart = p.administered_at.split('T')[0]
+    const timePart = p.administered_at.split('T')[1]?.slice(0, 5) || '00:00'
+    const day  = parseInt(datePart.split('-')[2], 10)
+    const slot = timeToSlot(timePart)
+    const key  = `${medId}|${day}|${slot}`
+    const staff = staffMap[p.administered_by]
+    if (staff) {
+      adminLookup[key]          = staff.initials
+      staffUsed[staff.initials] = staff.fullName
+    } else if (!adminLookup[key]) {
       adminLookup[key] = '✓'
     }
   }

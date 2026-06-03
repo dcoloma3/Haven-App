@@ -9,7 +9,6 @@ import { supabase } from '../../lib/supabase'
 import { useCommunity } from '../../context/CommunityContext'
 import { adminKey, isMedDueOnDate } from '../../lib/medStatus'
 import { generateLIC622PDF } from '../../lib/lic622PDF'
-import { generateMarGridPDF } from '../../lib/marGridPDF'
 import { localDateStr } from '../../lib/dateUtils'
 
 const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
@@ -948,12 +947,6 @@ export default function MedicationList({ residentId, onMedStatusChange: _onMedSt
   const [showLIC622, setShowLIC622] = useState(false)
   const [lic622Generating, setLic622Generating] = useState(false)
   const [lic622Error, setLic622Error] = useState('')
-  const today = new Date()
-  const [showMAR, setShowMAR] = useState(false)
-  const [marGenerating, setMarGenerating] = useState(false)
-  const [marError, setMarError] = useState('')
-  const [marMonth, setMarMonth] = useState(today.getMonth() + 1)
-  const [marYear, setMarYear] = useState(today.getFullYear())
 
   useEffect(() => {
     supabase
@@ -977,18 +970,6 @@ export default function MedicationList({ residentId, onMedStatusChange: _onMedSt
     })
     setShowAdd(false)
     setEditing(null)
-  }
-
-  async function handleGenerateMAR() {
-    setMarGenerating(true)
-    setMarError('')
-    try {
-      await generateMarGridPDF({ residentId, communityId, month: marMonth, year: marYear, supabase })
-      setShowMAR(false)
-    } catch (e) {
-      setMarError(`Failed to generate MAR: ${e?.message || 'Please try again.'}`)
-    }
-    setMarGenerating(false)
   }
 
   async function handleGenerateLIC622() {
@@ -1063,90 +1044,6 @@ export default function MedicationList({ residentId, onMedStatusChange: _onMedSt
         </div>
       )}
 
-      {/* ── MAR Modal ── */}
-      {showMAR && (
-        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50">
-          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-sm">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-              <div>
-                <h2 className="font-semibold text-slate-800">Download MAR</h2>
-                <p className="text-xs text-slate-400 mt-0.5">Monthly Medication Administration Record</p>
-              </div>
-              <button onClick={() => setShowMAR(false)} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
-            </div>
-            <div className="px-6 py-5 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Month</label>
-                  <select
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent"
-                    value={marMonth}
-                    onChange={e => setMarMonth(Number(e.target.value))}
-                  >
-                    {['January','February','March','April','May','June','July','August','September','October','November','December'].map((m, i) => (
-                      <option key={i+1} value={i+1}>{m}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Year</label>
-                  <select
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent"
-                    value={marYear}
-                    onChange={e => setMarYear(Number(e.target.value))}
-                  >
-                    {[today.getFullYear()+1, today.getFullYear(), today.getFullYear()-1, today.getFullYear()-2].map(y => (
-                      <option key={y} value={y}>{y}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="bg-slate-50 rounded-xl px-4 py-3 text-xs text-slate-500 space-y-1">
-                <p>Generates a Haven-branded MAR grid including:</p>
-                <ul className="list-disc list-inside space-y-0.5 mt-1">
-                  <li>All medications with strength, Rx#, and dosage</li>
-                  <li>A.M. / Noon / P.M. / Bed rows per medication</li>
-                  <li>Staff initials in each day cell where administered</li>
-                  <li>31-day grid with staff legend in footer</li>
-                </ul>
-              </div>
-              {marError && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{marError}</p>}
-              <div className="flex gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowMAR(false)}
-                  className="flex-1 border border-slate-300 text-slate-700 rounded-lg py-2 text-sm hover:bg-slate-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleGenerateMAR}
-                  disabled={marGenerating}
-                  className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-lg py-2 text-sm font-medium transition-colors flex items-center justify-center gap-2"
-                >
-                  {marGenerating ? (
-                    <>
-                      <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
-                      </svg>
-                      Generating…
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-                      </svg>
-                      Download MAR
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ── Manage Medications ── */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden mb-4">
         {/* Header — always visible, Add button in header */}
@@ -1162,16 +1059,6 @@ export default function MedicationList({ residentId, onMedStatusChange: _onMedSt
             <ChevronIcon open={openManage} />
           </button>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <button
-              onClick={() => setShowMAR(true)}
-              title="Download Monthly MAR"
-              className="flex items-center gap-1 border border-slate-300 text-slate-600 hover:bg-slate-50 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
-            >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-              </svg>
-              MAR
-            </button>
             <button
               onClick={() => setShowLIC622(true)}
               title="Download LIC 622"
