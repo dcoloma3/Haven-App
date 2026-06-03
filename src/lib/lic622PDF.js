@@ -120,8 +120,8 @@ export async function generateLIC622PDF({ residentId, communityId, supabase }) {
 
   // ── Load form background images ──────────────────────────────────────────────
   const [p1Img, p2Img] = await Promise.all([
-    fetchImageAsDataUrl('/lic622-p1.png'),
-    fetchImageAsDataUrl('/lic622-p2.png'),
+    fetchImageAsDataUrl('/lic622-p1.jpg'),
+    fetchImageAsDataUrl('/lic622-p2.jpg'),
   ])
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -159,7 +159,7 @@ export async function generateLIC622PDF({ residentId, communityId, supabase }) {
   // ─────────────────────────────────────────────────────────────────────────────
   // PAGE 1 — Form background + header data + medication rows (first ~24 meds)
   // ─────────────────────────────────────────────────────────────────────────────
-  doc.addImage(p1Img, 'PNG', 0, 0, PAGE_W, PAGE_H)
+  doc.addImage(p1Img, 'JPEG', 0, 0, PAGE_W, PAGE_H)
 
   dataStyle()
 
@@ -207,7 +207,7 @@ export async function generateLIC622PDF({ residentId, communityId, supabase }) {
   // PAGE 2 — Form background + overflow meds (if any) + Part II
   // ─────────────────────────────────────────────────────────────────────────────
   doc.addPage()
-  doc.addImage(p2Img, 'PNG', 0, 0, PAGE_W, PAGE_H)
+  doc.addImage(p2Img, 'JPEG', 0, 0, PAGE_W, PAGE_H)
 
   dataStyle()
 
