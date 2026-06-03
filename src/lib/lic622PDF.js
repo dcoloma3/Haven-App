@@ -32,65 +32,56 @@ async function fetchImageAsDataUrl(url) {
 
 // ─── Layout constants (mm) ────────────────────────────────────────────────────
 // Form is landscape letter: 279.4 × 215.9 mm (792 × 612 pts at 0.3528 mm/pt)
-// Field positions derived from coordinate extraction of original LIC 622 (3/99)
-// pt → mm: multiply by 0.3528
+// Column x values = LEFT edge of each column (derived from pdfplumber extraction)
 
 const PAGE_W = 279.4
 const PAGE_H = 215.9
 
-// Header fields
-const FAC_NAME_X  = 228    // x position to write facility name value
-const FAC_NAME_Y  = 27     // y position — inside "FACILITY NAME" area
-const FAC_NUM_X   = 228    // x position to write facility number
-const FAC_NUM_Y   = 38     // y position — inside "FACILITY NUMBER" box
-
-// Resident info row (y=123.6pt → 43.6mm; value written near bottom of row)
-const RES_ROW_Y   = 47
-
-// Column x positions (pts → mm, left edge of each column)
-// Derived from pdfplumber word positions on original form
+// Medication table column LEFT edges (mm)
 const COL_X = {
-  name:        9.0,   // MEDICATION NAME       (25pt)
-  strength:   53.0,   // STRENGTH/QUANTITY     (150pt)
-  instruct:   75.9,   // INSTRUCTIONS          (215pt)
-  exp:       112.9,   // EXPIRATION DATE       (320pt)
-  filled:    135.8,   // DATE FILLED           (385pt)
-  started:   151.7,   // DATE STARTED          (430pt)
-  physician: 169.3,   // PRESCRIBING PHYSICIAN (480pt)
-  rxnum:     195.8,   // PRESCRIPTION NUMBER   (555pt)
-  refills:   223.0,   // NO. OF REFILLS        (632pt)
-  pharmacy:  241.7,   // NAME OF PHARMACY      (685pt)
+  name:        9.0,   // MEDICATION NAME
+  strength:   53.0,   // STRENGTH/QUANTITY
+  instruct:   75.9,   // INSTRUCTIONS CONTROL/CUSTODY
+  exp:       112.9,   // EXPIRATION DATE
+  filled:    135.8,   // DATE FILLED
+  started:   151.7,   // DATE STARTED
+  physician: 169.3,   // PRESCRIBING PHYSICIAN
+  rxnum:     195.8,   // PRESCRIPTION NUMBER
+  refills:   223.0,   // NO. OF REFILLS
+  pharmacy:  241.7,   // NAME OF PHARMACY
 }
+const COL_RIGHT = PAGE_W - 9.0  // right edge of last column
 
-// Resident info row x positions
+// Resident info row column LEFT edges (mm)
 const RES_X = {
-  name:       9.0,   // NAME (LAST FIRST MIDDLE)  — 25pt
-  admDate:  137.4,   // ADMISSION DATE             — 389pt
-  physician: 171.1,  // ATTENDING PHYSICIAN        — 485pt
-  admin:     226.2,  // ADMINISTRATOR              — 641pt
+  name:       9.0,   // NAME (LAST FIRST MIDDLE)
+  admDate:  137.4,   // ADMISSION DATE
+  physician: 171.1,  // ATTENDING PHYSICIAN
+  admin:     226.2,  // ADMINISTRATOR
 }
 
-// Data rows
-const P1_ROW_START_Y = 59.0   // first data row top on page 1 (~167pt)
-const P2_ROW_START_Y = 14.5   // first data row top on page 2 (~41pt, after col header repeat)
-const ROW_H          = 7.2    // row height in mm (~20.4pt per row)
-const DATA_FONT_SIZE = 7      // pt — matches form's handwritten-entry scale
-const DATA_TEXT_DY   = 5.0   // offset within row to baseline of text
+// Header field boxes (mm) — top / bottom of each box
+const FAC_NAME_BOX  = { x1: 225.4, x2: 270.0, y1: 23.3, y2: 30.0 }  // FACILITY NAME
+const FAC_NUM_BOX   = { x1: 225.4, x2: 270.0, y1: 30.0, y2: 41.3 }  // FACILITY NUMBER
+const RES_ROW_BOX   = { y1: 41.3,  y2: 47.0  }                       // resident info row
 
-// Part II — destruction record columns (page 2)
-// Positions from pdfplumber extraction of page 2
+// Medication data rows
+const P1_ROW_START_Y = 59.0   // top of first data row, page 1
+const P2_ROW_START_Y = 14.5   // top of first data row, page 2
+const ROW_H          = 7.2    // row height (mm)
+const DATA_FONT_SIZE = 7      // pt
+
+// Part II destruction record column LEFT edges (mm)
 const DEST_X = {
-  name:      9.0,    // MEDICATION NAME      (25pt → 8.8mm)
-  strength:  60.1,   // STRENGTH/QUANTITY    (170pt → 60.0mm)
-  filled:    83.0,   // DATE FILLED          (235pt → 82.9mm)
-  rxnum:    106.7,   // PRESCRIPTION NUMBER  (302pt → 106.5mm)
-  disposal: 133.2,   // DISPOSAL DATE        (377pt → 133.0mm)
-  pharmacy: 152.7,   // NAME OF PHARMACY     (433pt → 152.8mm)
-  sig_admin:194.3,   // SIGNATURE OF ADMIN/REP (550pt → 194.0mm)
-  sig_wit:  240.6,   // SIGNATURE OF WITNESS   (682pt → 240.7mm)
+  name:       9.0,
+  strength:  60.1,
+  filled:    83.0,
+  rxnum:    106.7,
+  disposal: 133.2,
+  pharmacy: 152.7,
+  sig_admin:194.3,
+  sig_wit:  240.6,
 }
-const P2_DEST_START_Y = 133.0  // destruction data rows start (~377pt)
-const DEST_ROW_H      = 7.2
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 
@@ -125,117 +116,145 @@ export async function generateLIC622PDF({ residentId, communityId, supabase }) {
   ])
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // Build PDF — landscape letter, matching the original LIC 622 form
-  // ─────────────────────────────────────────────────────────────────────────────
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'letter' })
 
-  // Helper — set up data-entry text style
-  function dataStyle(bold = false) {
+  // ── Text style helpers ────────────────────────────────────────────────────────
+  function dataStyle(bold = false, size = DATA_FONT_SIZE) {
     doc.setFont('helvetica', bold ? 'bold' : 'normal')
-    doc.setFontSize(DATA_FONT_SIZE)
+    doc.setFontSize(size)
     doc.setTextColor(0, 0, 0)
   }
 
-  // Helper — truncate text to fit column width
-  function fit(text, colKey, padMm = 2) {
-    const nextKey = Object.keys(COL_X)[Object.keys(COL_X).indexOf(colKey) + 1]
-    const maxW = nextKey
-      ? (COL_X[nextKey] - COL_X[colKey] - padMm)
-      : (PAGE_W - 9 - COL_X[colKey] - padMm)
-    const lines = doc.splitTextToSize(String(text ?? ''), maxW)
+  // Center X of a medication column
+  function colMidX(key) {
+    const keys = Object.keys(COL_X)
+    const idx  = keys.indexOf(key)
+    const right = idx < keys.length - 1 ? COL_X[keys[idx + 1]] : COL_RIGHT
+    return (COL_X[key] + right) / 2
+  }
+
+  // Vertical center baseline of a row (given row top Y)
+  // For 7pt font, the optical center sits ~3.6mm below the row top
+  function rowMidY(rowTopY) {
+    return rowTopY + ROW_H / 2 + 1.2   // 1.2mm ≈ half cap-height at 7pt
+  }
+
+  // Max width available for a column (with 1.5mm padding each side)
+  function colMaxW(key) {
+    const keys = Object.keys(COL_X)
+    const idx  = keys.indexOf(key)
+    const right = idx < keys.length - 1 ? COL_X[keys[idx + 1]] : COL_RIGHT
+    return right - COL_X[key] - 3.0
+  }
+
+  // Truncate text to fit column, then return it
+  function fit(text, key) {
+    const lines = doc.splitTextToSize(String(text ?? ''), colMaxW(key))
     return lines[0] || ''
   }
 
-  function fitDest(text, colKey, padMm = 2) {
-    const keys = Object.keys(DEST_X)
-    const nextKey = keys[keys.indexOf(colKey) + 1]
-    const maxW = nextKey
-      ? (DEST_X[nextKey] - DEST_X[colKey] - padMm)
-      : (PAGE_W - 9 - DEST_X[colKey] - padMm)
-    const lines = doc.splitTextToSize(String(text ?? ''), maxW)
-    return lines[0] || ''
+  // Centered text helper — places text centered within a box
+  function textCenter(text, x1, x2, y) {
+    const cx = (x1 + x2) / 2
+    doc.text(String(text ?? ''), cx, y, { align: 'center' })
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // PAGE 1 — Form background + header data + medication rows (first ~24 meds)
+  // PAGE 1
   // ─────────────────────────────────────────────────────────────────────────────
   doc.addImage(p1Img, 'JPEG', 0, 0, PAGE_W, PAGE_H)
 
-  dataStyle()
+  // ── Header fields ─────────────────────────────────────────────────────────────
 
-  // Facility name
-  doc.text(community.name || '', FAC_NAME_X, FAC_NAME_Y)
+  // Facility name — centered in the FACILITY NAME box
+  dataStyle(false, 8)
+  const facNameY = (FAC_NAME_BOX.y1 + FAC_NAME_BOX.y2) / 2 + 1.2
+  textCenter(community.name || '', FAC_NAME_BOX.x1, FAC_NAME_BOX.x2, facNameY)
 
-  // Facility number
-  doc.setFontSize(8)
-  doc.setFont('helvetica', 'bold')
-  doc.text(community.license_number || '', FAC_NUM_X, FAC_NUM_Y)
-  dataStyle()
+  // Facility number — centered in the FACILITY NUMBER box, slightly larger/bold
+  dataStyle(true, 8.5)
+  const facNumY = (FAC_NUM_BOX.y1 + FAC_NUM_BOX.y2) / 2 + 1.4
+  textCenter(community.license_number || '', FAC_NUM_BOX.x1, FAC_NUM_BOX.x2, facNumY)
 
-  // Resident info row
-  doc.text(nameLastFirst(resident),                             RES_X.name,      RES_ROW_Y)
-  doc.text(fmtDate(resident.move_in_date || resident.admission_date) || '', RES_X.admDate, RES_ROW_Y)
-  doc.text(resident.physician || '',                            RES_X.physician, RES_ROW_Y)
-  // ADMINISTRATOR left blank — filled in by hand
+  // ── Resident info row ─────────────────────────────────────────────────────────
+  dataStyle(false, 7.5)
+  const resY = (RES_ROW_BOX.y1 + RES_ROW_BOX.y2) / 2 + 1.2
+
+  // NAME — left-aligned with padding (can be long)
+  const resNameStr = nameLastFirst(resident)
+  const resNameLines = doc.splitTextToSize(resNameStr, RES_X.admDate - RES_X.name - 3)
+  doc.text(resNameLines[0] || '', RES_X.name + 1.5, resY)
+
+  // ADMISSION DATE — centered in its column
+  textCenter(
+    fmtDate(resident.move_in_date || resident.admission_date) || '',
+    RES_X.admDate, RES_X.physician, resY
+  )
+
+  // ATTENDING PHYSICIAN — centered in its column
+  const physLines = doc.splitTextToSize(resident.physician || '', RES_X.admin - RES_X.physician - 3)
+  textCenter(physLines[0] || '', RES_X.physician, RES_X.admin, resY)
+
+  // ADMINISTRATOR — left blank (filled by hand)
 
   // ── Medication rows ───────────────────────────────────────────────────────────
-  // Page 1 can fit approximately 24 rows before the footer
   const P1_MAX_ROWS = 24
   const p1Meds = meds.slice(0, P1_MAX_ROWS)
 
   p1Meds.forEach((med, idx) => {
-    const rowY = P1_ROW_START_Y + idx * ROW_H + DATA_TEXT_DY
-
-    dataStyle(true)
-    doc.text(fit(med.medication_name, 'name'), COL_X.name, rowY)
-
-    dataStyle()
-    doc.text(fit(med.dose || '',                'strength'),  COL_X.strength,  rowY)
-
+    const rowTop = P1_ROW_START_Y + idx * ROW_H
+    const midY   = rowMidY(rowTop)
     const instrVal = [med.route, med.instructions].filter(Boolean).join(' ')
-    doc.text(fit(instrVal || '',                'instruct'),  COL_X.instruct,  rowY)
-    doc.text(fit(fmtDate(med.expiration_date),  'exp'),       COL_X.exp,       rowY)
-    doc.text(fit(fmtDate(med.date_filled),      'filled'),    COL_X.filled,    rowY)
-    doc.text(fit(fmtDate(med.start_date),       'started'),   COL_X.started,   rowY)
-    doc.text(fit(med.prescribing_physician || resident.physician || '', 'physician'), COL_X.physician, rowY)
-    doc.text(fit(med.prescription_number || '', 'rxnum'),     COL_X.rxnum,     rowY)
-    doc.text(fit(String(med.refills || ''),     'refills'),   COL_X.refills,   rowY)
-    doc.text(fit(med.pharmacy || '',            'pharmacy'),  COL_X.pharmacy,  rowY)
+    const physName = med.prescribing_physician || resident.physician || ''
+
+    // MEDICATION NAME — left-aligned (long text)
+    dataStyle(true, DATA_FONT_SIZE)
+    doc.text(fit(med.medication_name, 'name'), COL_X.name + 1.5, midY)
+
+    // All other columns — centered
+    dataStyle(false, DATA_FONT_SIZE)
+    doc.text(fit(med.dose || '', 'strength'),              colMidX('strength'),  midY, { align: 'center' })
+    doc.text(fit(instrVal,       'instruct'),              colMidX('instruct'),  midY, { align: 'center' })
+    doc.text(fit(fmtDate(med.expiration_date), 'exp'),     colMidX('exp'),       midY, { align: 'center' })
+    doc.text(fit(fmtDate(med.date_filled),     'filled'),  colMidX('filled'),    midY, { align: 'center' })
+    doc.text(fit(fmtDate(med.start_date),      'started'), colMidX('started'),   midY, { align: 'center' })
+    doc.text(fit(physName,                     'physician'),colMidX('physician'), midY, { align: 'center' })
+    doc.text(fit(med.prescription_number || '','rxnum'),   colMidX('rxnum'),     midY, { align: 'center' })
+    doc.text(fit(String(med.refills || ''),    'refills'), colMidX('refills'),   midY, { align: 'center' })
+    doc.text(fit(med.pharmacy || '',           'pharmacy'),colMidX('pharmacy'),  midY, { align: 'center' })
   })
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // PAGE 2 — Form background + overflow meds (if any) + Part II
+  // PAGE 2
   // ─────────────────────────────────────────────────────────────────────────────
   doc.addPage()
   doc.addImage(p2Img, 'JPEG', 0, 0, PAGE_W, PAGE_H)
 
-  dataStyle()
-
-  // Overflow meds (page 2 carries rows 25+ before Part II)
   const p2Meds = meds.slice(P1_MAX_ROWS)
-  const P2_MAX_MED_ROWS = 15  // rows available before Part II header
+  const P2_MAX_MED_ROWS = 15
 
   p2Meds.slice(0, P2_MAX_MED_ROWS).forEach((med, idx) => {
-    const rowY = P2_ROW_START_Y + idx * ROW_H + DATA_TEXT_DY
-
-    dataStyle(true)
-    doc.text(fit(med.medication_name, 'name'), COL_X.name, rowY)
-
-    dataStyle()
-    doc.text(fit(med.dose || '',                'strength'),  COL_X.strength,  rowY)
+    const rowTop   = P2_ROW_START_Y + idx * ROW_H
+    const midY     = rowMidY(rowTop)
     const instrVal = [med.route, med.instructions].filter(Boolean).join(' ')
-    doc.text(fit(instrVal || '',                'instruct'),  COL_X.instruct,  rowY)
-    doc.text(fit(fmtDate(med.expiration_date),  'exp'),       COL_X.exp,       rowY)
-    doc.text(fit(fmtDate(med.date_filled),      'filled'),    COL_X.filled,    rowY)
-    doc.text(fit(fmtDate(med.start_date),       'started'),   COL_X.started,   rowY)
-    doc.text(fit(med.prescribing_physician || resident.physician || '', 'physician'), COL_X.physician, rowY)
-    doc.text(fit(med.prescription_number || '', 'rxnum'),     COL_X.rxnum,     rowY)
-    doc.text(fit(String(med.refills || ''),     'refills'),   COL_X.refills,   rowY)
-    doc.text(fit(med.pharmacy || '',            'pharmacy'),  COL_X.pharmacy,  rowY)
+    const physName = med.prescribing_physician || resident.physician || ''
+
+    dataStyle(true, DATA_FONT_SIZE)
+    doc.text(fit(med.medication_name, 'name'), COL_X.name + 1.5, midY)
+
+    dataStyle(false, DATA_FONT_SIZE)
+    doc.text(fit(med.dose || '',                'strength'), colMidX('strength'),  midY, { align: 'center' })
+    doc.text(fit(instrVal,                      'instruct'), colMidX('instruct'),  midY, { align: 'center' })
+    doc.text(fit(fmtDate(med.expiration_date),  'exp'),      colMidX('exp'),       midY, { align: 'center' })
+    doc.text(fit(fmtDate(med.date_filled),      'filled'),   colMidX('filled'),    midY, { align: 'center' })
+    doc.text(fit(fmtDate(med.start_date),       'started'),  colMidX('started'),   midY, { align: 'center' })
+    doc.text(fit(physName,                      'physician'),colMidX('physician'),  midY, { align: 'center' })
+    doc.text(fit(med.prescription_number || '', 'rxnum'),    colMidX('rxnum'),     midY, { align: 'center' })
+    doc.text(fit(String(med.refills || ''),     'refills'),  colMidX('refills'),   midY, { align: 'center' })
+    doc.text(fit(med.pharmacy || '',            'pharmacy'), colMidX('pharmacy'),  midY, { align: 'center' })
   })
 
-  // Part II destruction record rows are left blank for manual completion
-  // (destruction events are not yet tracked in the app — fill by hand)
+  // Part II destruction record rows left blank for manual completion
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Save
