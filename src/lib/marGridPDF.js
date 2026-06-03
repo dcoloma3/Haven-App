@@ -2,71 +2,78 @@ import jsPDF from 'jspdf'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Haven Medication Administration Record — Grid Format
-// Matches the layout of Mar Test.pdf (Advantis format) with Haven branding
+// Layout calibrated against Mar Test.pdf reference (pdfplumber coordinate analysis)
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ── Layout constants (mm, landscape letter 279.4 × 215.9) ────────────────────
-const PAGE_W  = 279.4
-const PAGE_H  = 215.9
-const ML      = 6         // left margin
-const MR      = 6         // right margin
+// ── Layout constants (mm, landscape letter 279.4 × 215.9) ─────────────────────
+// Reference measurements (pts → mm at 0.3528 mm/pt):
+//   Medication text at x=34pt → 12.0mm
+//   Time column start:   x=175pt → 61.7mm
+//   Grid start:          x=207.4pt → 73.1mm
+//   Day column width:    18pt → 6.35mm
+//   Row height:          20pt → 7.06mm
+//   5 meds per page, 4 time-slot rows each
 
-const NAVY    = [4,  44,  83]    // #042C53
-const BLUE    = [24, 95, 165]   // #185FA5
-const LGRAY   = [220, 220, 220]
-const MGRAY   = [150, 150, 150]
-const BLACK   = [0, 0, 0]
-const WHITE   = [255, 255, 255]
+const PAGE_W = 279.4
+const PAGE_H = 215.9
 
-// Header zones
-const TITLE_H   = 14    // Haven branding bar
-const RES_H     = 11    // resident name / observations row
-const COL_HDR_H = 8     // day-number row (01 02 … 31)
-const HEADER_H  = TITLE_H + RES_H + COL_HDR_H  // 33mm
+// Header zones (light, minimal — matches reference)
+const TITLE_H   = 16.0   // logo + title + month/year
+const RES_H     = 11.0   // Resident name + Observations row
+const COL_HDR_H =  6.0   // Day number header row
+const HEADER_H  = TITLE_H + RES_H + COL_HDR_H  // 33mm total
 
-// Med grid
-const LEFT_W   = 57     // medication details panel width (mm)
-const TIME_W   = 14     // "A.M."/"Noon" etc. column width
-const GRID_X   = ML + LEFT_W + TIME_W   // where day cells begin
-const GRID_W   = PAGE_W - MR - GRID_X   // remaining width for 31 day cols
-const DAY_W    = GRID_W / 31            // width per day column (~6.3mm)
-const ROW_H    = 7.0    // height of each time-slot row
-const MED_H    = ROW_H * 4              // 4 rows per medication (28mm)
+// Medication grid geometry (matched to reference)
+const LEFT_TEXT = 12.0   // x offset for text in left panel
+const LEFT_W    = 61.7   // left panel width (from page left edge)
+const TIME_W    = 11.4   // time-label column width
+const GRID_X    = LEFT_W + TIME_W   // = 73.1mm — where day cells begin
+const DAY_W     = 6.35   // width per day column (18pt)
+const GRID_W    = DAY_W * 31        // 196.85mm
 
-// Footer
-const FOOTER_H     = 18
-const CONTENT_Y    = HEADER_H           // where med blocks start
-const CONTENT_H    = PAGE_H - HEADER_H - FOOTER_H
-const MEDS_PER_PAGE = Math.floor(CONTENT_H / MED_H)   // ≈ 5
+// Row geometry
+const ROW_H         = 7.06   // one time-slot row (20pt)
+const MED_H         = ROW_H * 4    // 28.24mm per medication block
+const CONTENT_Y     = HEADER_H     // 45mm
+const FOOTER_H      = 17.0
+const CONTENT_H     = PAGE_H - CONTENT_Y - FOOTER_H   // ~153.9mm
+const MEDS_PER_PAGE = Math.floor(CONTENT_H / MED_H)   // 5
 
-const SLOT_LABELS  = ['A.M.', 'Noon', 'P.M.', 'Bed']
-const MONTHS       = ['January','February','March','April','May','June',
-                      'July','August','September','October','November','December']
+const SLOT_LABELS = ['A.M.', 'Noon', 'P.M.', 'Bed']
+const MONTHS      = ['January','February','March','April','May','June',
+                     'July','August','September','October','November','December']
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// Colours
+const NAVY  = [4,  44,  83]
+const BLUE  = [24, 95, 165]
+const BLACK = [0,  0,   0]
+const WHITE = [255,255,255]
+const LGRAY = [210,210,210]
+const DGRAY = [120,120,120]
+const HBG   = [240,244,248]   // header info row background
 
-function daysInMonth(year, month) {
-  return new Date(year, month, 0).getDate()
-}
+// ── Helpers ────────────────────────────────────────────────────────────────────
 
-function pad2(n) {
-  return String(n).padStart(2, '0')
-}
+function daysInMonth(year, month) { return new Date(year, month, 0).getDate() }
+function pad2(n) { return String(n).padStart(2, '0') }
 
 function timeToSlot(timeStr) {
   if (!timeStr) return 0
   const h = parseInt(timeStr.split(':')[0], 10)
-  if (h < 12) return 0   // A.M.
-  if (h === 12) return 1 // Noon
-  if (h < 20) return 2   // P.M.
-  return 3               // Bed
+  if (h < 12) return 0
+  if (h === 12) return 1
+  if (h < 20) return 2
+  return 3
 }
 
-function initials(firstName, lastName) {
+// Format initials as "F.L" matching reference style (e.g. "L.O" for Liz Ochoa)
+function makeInitials(firstName, lastName) {
   const f = (firstName || '').trim()
   const l = (lastName  || '').trim()
   if (!f && !l) return '?'
-  return `${f[0] || ''}${l[0] || ''}`.toUpperCase()
+  const fi = f[0] || ''
+  const li = l[0] || ''
+  return `${fi}.${li}`.toUpperCase()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -74,12 +81,12 @@ function initials(firstName, lastName) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function generateMarGridPDF({ residentId, communityId, month, year, supabase }) {
-  const mm    = pad2(month)
-  const days  = daysInMonth(year, month)
-  const from  = `${year}-${mm}-01`
-  const to    = `${year}-${mm}-${pad2(days)}`
+  const mm   = pad2(month)
+  const days = daysInMonth(year, month)
+  const from = `${year}-${mm}-01`
+  const to   = `${year}-${mm}-${pad2(days)}`
 
-  // ── Fetch data ──────────────────────────────────────────────────────────────
+  // ── Data fetches ─────────────────────────────────────────────────────────────
   const [resRes, comRes, medsRes, adminsRes, membersRes] = await Promise.all([
     supabase.from('residents')
       .select('first_name, last_name, full_name, physician')
@@ -100,67 +107,60 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
       .eq('community_id', communityId),
   ])
 
-  const resident = resRes.data  ?? {}
-  const community = comRes.data ?? {}
-  const meds     = medsRes.data ?? []
-  const admins   = adminsRes.data ?? []
-  const members  = membersRes.data ?? []
+  const resident  = resRes.data   ?? {}
+  const community = comRes.data   ?? {}
+  const meds      = medsRes.data  ?? []
+  const admins    = adminsRes.data ?? []
+  const members   = membersRes.data ?? []
 
-  // Build staff lookup: userId → { initials, fullName }
+  // Staff lookup: userId → { initials, fullName }
   const staffMap = {}
   for (const m of members) {
     const p = m.profiles
     if (!p) continue
     staffMap[m.user_id] = {
-      initials: initials(p.first_name, p.last_name),
+      initials: makeInitials(p.first_name, p.last_name),
       fullName: `${p.first_name || ''} ${p.last_name || ''}`.trim(),
     }
   }
 
-  // Build admin lookup: `${medicationId}|${day}|${slotIndex}` → initials string
+  // Admin lookup: `${medicationId}|${day}|${slotIndex}` → initials
   const adminLookup = {}
-  const staffUsed = {}   // initials → fullName for footer legend
+  const staffUsed   = {}   // initials → fullName for footer legend
   for (const a of admins) {
-    const day  = parseInt(a.administered_date.split('-')[2], 10)
-    const slot = timeToSlot(a.scheduled_time)
-    const key  = `${a.medication_id}|${day}|${slot}`
+    const day   = parseInt(a.administered_date.split('-')[2], 10)
+    const slot  = timeToSlot(a.scheduled_time)
+    const key   = `${a.medication_id}|${day}|${slot}`
     const staff = staffMap[a.administered_by]
     if (staff) {
-      adminLookup[key] = staff.initials
-      staffUsed[staff.initials] = staff.fullName
+      adminLookup[key]           = staff.initials
+      staffUsed[staff.initials]  = staff.fullName
     } else {
       adminLookup[key] = '✓'
     }
   }
 
-  // Resident full name
   const resName = resident.full_name
     || `${resident.first_name || ''} ${resident.last_name || ''}`.trim()
     || 'Unknown'
 
-  // ── Build PDF ───────────────────────────────────────────────────────────────
+  // ── Build PDF ────────────────────────────────────────────────────────────────
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'letter' })
-  let pageNum  = 1
-  let medIdx   = 0
+
   const totalPages = Math.ceil(meds.length / MEDS_PER_PAGE) || 1
 
-  function drawPage(medsOnPage) {
+  for (let pageIdx = 0; pageIdx < totalPages; pageIdx++) {
+    if (pageIdx > 0) doc.addPage()
+    // White page background (so transparent areas don't render dark)
+    doc.setFillColor(255, 255, 255)
+    doc.rect(0, 0, PAGE_W, PAGE_H, 'F')
+    const chunk = meds.slice(pageIdx * MEDS_PER_PAGE, (pageIdx + 1) * MEDS_PER_PAGE)
     drawHeader(doc, resName, community.name || '', month, year)
     drawColHeaders(doc, days)
-    drawMedBlocks(doc, medsOnPage, medIdx, adminLookup, days)
-    drawFooter(doc, staffUsed, month, year, pageNum, totalPages)
-    pageNum++
-    medIdx += medsOnPage.length
+    drawMedBlocks(doc, chunk, adminLookup, days)
+    drawFooter(doc, staffUsed, month, year, pageIdx + 1, totalPages)
   }
 
-  // Chunk medications into pages
-  for (let i = 0; i < Math.max(meds.length, 1); i += MEDS_PER_PAGE) {
-    if (i > 0) doc.addPage()
-    const chunk = meds.slice(i, i + MEDS_PER_PAGE)
-    drawPage(chunk)
-  }
-
-  // Save
   const safeName = resName.replace(/[^a-zA-Z0-9]/g, '_')
   doc.save(`MAR_${safeName}_${year}-${mm}.pdf`)
 }
@@ -170,290 +170,265 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
 // ─────────────────────────────────────────────────────────────────────────────
 
 function drawHeader(doc, resName, communityName, month, year) {
-  // ── Title bar ──────────────────────────────────────────────────────────────
+  // ── Title row (light, white background — matches reference) ───────────────────
+  // Small Haven logo, top-left
+  const hx = LEFT_TEXT, hy = 3
+  doc.setDrawColor(...NAVY)
+  doc.setLineWidth(0.5)
+  doc.triangle(hx, hy + 4, hx + 4, hy, hx + 8, hy + 4, 'S')   // roof
+  doc.rect(hx + 0.8, hy + 4, 6.4, 4.5, 'S')                   // walls
   doc.setFillColor(...NAVY)
-  doc.rect(0, 0, PAGE_W, TITLE_H, 'F')
+  doc.rect(hx + 2.6, hy + 5.5, 3, 3, 'F')                     // door
 
-  // Haven house icon (simplified SVG path as jsPDF lines)
-  const hx = ML + 1, hy = 2
-  doc.setDrawColor(...WHITE)
-  doc.setLineWidth(0.6)
-  // House outline
-  doc.lines([
-    [4, -3.5],   // left slope up
-    [4,  3.5],   // right slope down
-  ], hx, hy + 4.5, [1,1], null, false)
-  doc.lines([
-    [0,  0],
-    [8,  0],
-    [8, -7],
-    [0, -7],
-  ], hx, hy + 8.5, [1,1], null, true)
-  // Door
-  doc.setFillColor(...WHITE)
-  doc.rect(hx + 2.5, hy + 5, 3, 3.5, 'F')
-
-  // "haven" wordmark
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(11)
-  doc.setTextColor(...WHITE)
-  doc.text('haven', hx + 10, hy + 7)
+  doc.setTextColor(...NAVY)
+  doc.text('haven', hx + 10.5, hy + 6.5)
 
-  // Form title centered
+  // Form title — centered, dark text
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(12)
-  doc.text('Medication Administration Record', PAGE_W / 2, TITLE_H / 2 + 2, { align: 'center' })
+  doc.setTextColor(...BLACK)
+  doc.text('Medication Administration Record', PAGE_W / 2, hy + 6.5, { align: 'center' })
 
-  // Month/Year right
+  // Month/Year — right
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10)
-  doc.text(`${MONTHS[month - 1]} ${year}`, PAGE_W - MR, TITLE_H / 2 + 2, { align: 'right' })
+  doc.setTextColor(...BLACK)
+  doc.text(`${MONTHS[month - 1]}-${year}`, PAGE_W - 8, hy + 6.5, { align: 'right' })
 
-  // ── Resident info row ───────────────────────────────────────────────────────
+  // Thin accent rule under title
+  doc.setDrawColor(...BLUE)
+  doc.setLineWidth(0.5)
+  doc.line(LEFT_TEXT, TITLE_H - 2, PAGE_W - 8, TITLE_H - 2)
+
+  // ── Resident info row (white, thin borders) ───────────────────────────────────
   const ry = TITLE_H
-  doc.setFillColor(240, 244, 248)
-  doc.rect(0, ry, PAGE_W, RES_H, 'F')
   doc.setDrawColor(...LGRAY)
   doc.setLineWidth(0.3)
-  doc.rect(0, ry, PAGE_W, RES_H, 'S')
+  doc.line(0, ry + RES_H, PAGE_W, ry + RES_H)
 
+  // Resident name (bold, prominent)
+  doc.setTextColor(...DGRAY)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(7.5)
+  doc.text('Resident:', LEFT_TEXT, ry + 5)
+  doc.setTextColor(...BLACK)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(10)
+  doc.text(resName, LEFT_TEXT + 17, ry + 5.3)
+
+  // Facility (second line, smaller)
+  doc.setTextColor(...DGRAY)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(7.5)
+  doc.text('Facility:', LEFT_TEXT, ry + 9.5)
+  doc.setTextColor(...BLACK)
+  doc.text(communityName, LEFT_TEXT + 15, ry + 9.5)
+
+  // Observations label + blank lines (right side)
   doc.setTextColor(...BLACK)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(8)
-  doc.text('Resident:', ML + 1, ry + 4.5)
-  doc.setFont('helvetica', 'normal')
-  doc.text(resName, ML + 19, ry + 4.5)
-
-  doc.setFont('helvetica', 'bold')
-  doc.text('Facility:', ML + 1, ry + 9)
-  doc.setFont('helvetica', 'normal')
-  doc.text(communityName, ML + 17, ry + 9)
-
-  doc.setFont('helvetica', 'bold')
-  doc.text('Observations:', PAGE_W * 0.55, ry + 4.5)
-  // Observation line for handwriting
-  doc.setDrawColor(...MGRAY)
-  doc.setLineWidth(0.3)
-  doc.line(PAGE_W * 0.55 + 28, ry + 5, PAGE_W - MR, ry + 5)
-  doc.line(PAGE_W * 0.55, ry + 9.5, PAGE_W - MR, ry + 9.5)
+  doc.text('Observations:', PAGE_W * 0.52, ry + 5)
+  doc.setDrawColor(...LGRAY)
+  doc.setLineWidth(0.25)
+  const obsX = PAGE_W * 0.52 + 28
+  doc.line(obsX, ry + 5.3, PAGE_W - 8, ry + 5.3)
+  doc.line(PAGE_W * 0.52, ry + 9.8, PAGE_W - 8, ry + 9.8)
 }
 
 function drawColHeaders(doc, days) {
   const hy = TITLE_H + RES_H
 
-  // Background for left panel and time column headers
-  doc.setFillColor(...BLUE)
-  doc.rect(0, hy, ML + LEFT_W + TIME_W, COL_HDR_H, 'F')
-
+  // "Medication" and "Time" labels (white bg, dark text)
+  doc.setTextColor(...BLACK)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(7)
-  doc.setTextColor(...WHITE)
-  doc.text('Medication', ML + LEFT_W / 2, hy + COL_HDR_H / 2 + 1.5, { align: 'center' })
-  doc.text('Time', ML + LEFT_W + TIME_W / 2, hy + COL_HDR_H / 2 + 1.5, { align: 'center' })
+  doc.text('Medication', LEFT_W / 2, hy + COL_HDR_H / 2 + 1.4, { align: 'center' })
+  doc.setFontSize(6.5)
+  doc.text('Time', LEFT_W + TIME_W / 2, hy + COL_HDR_H / 2 + 1.4, { align: 'center' })
 
-  // Day number headers
-  doc.setFillColor(230, 238, 248)
-  doc.rect(GRID_X, hy, GRID_W, COL_HDR_H, 'F')
-
-  doc.setTextColor(...NAVY)
+  // Day numbers (white bg, thin gray cell borders)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(5.5)
   for (let d = 1; d <= 31; d++) {
-    const cx = GRID_X + (d - 1) * DAY_W + DAY_W / 2
-    if (d <= days) {
-      doc.text(pad2(d), cx, hy + COL_HDR_H / 2 + 1.5, { align: 'center' })
-    } else {
-      // Days past end of month — gray out
+    const cx  = GRID_X + (d - 1) * DAY_W
+    const mid = cx + DAY_W / 2
+
+    if (d > days) {
+      doc.setFillColor(243, 243, 243)
+      doc.rect(cx, hy, DAY_W, COL_HDR_H, 'F')
       doc.setTextColor(...LGRAY)
-      doc.text(pad2(d), cx, hy + COL_HDR_H / 2 + 1.5, { align: 'center' })
-      doc.setTextColor(...NAVY)
+    } else {
+      doc.setTextColor(...BLACK)
     }
-    // Vertical dividers
+    doc.text(pad2(d), mid, hy + COL_HDR_H / 2 + 1.4, { align: 'center' })
+
     doc.setDrawColor(...LGRAY)
-    doc.setLineWidth(0.2)
-    doc.line(GRID_X + (d - 1) * DAY_W, hy, GRID_X + (d - 1) * DAY_W, hy + COL_HDR_H)
+    doc.setLineWidth(0.15)
+    doc.line(cx, hy, cx, hy + COL_HDR_H)
   }
-  // Right border of grid
   doc.line(GRID_X + GRID_W, hy, GRID_X + GRID_W, hy + COL_HDR_H)
 
-  // Outer border
-  doc.setDrawColor(...NAVY)
-  doc.setLineWidth(0.5)
-  doc.rect(0, hy, PAGE_W, COL_HDR_H, 'S')
+  // Thin rules above and below the header row
+  doc.setDrawColor(...DGRAY)
+  doc.setLineWidth(0.3)
+  doc.line(0, hy, PAGE_W, hy)
+  doc.line(0, hy + COL_HDR_H, PAGE_W, hy + COL_HDR_H)
+
+  // Vertical separators after Medication and Time columns
+  doc.setDrawColor(...LGRAY)
+  doc.setLineWidth(0.3)
+  doc.line(LEFT_W, hy, LEFT_W, hy + COL_HDR_H)
+  doc.line(GRID_X, hy, GRID_X, hy + COL_HDR_H)
 }
 
-function drawMedBlocks(doc, meds, startIdx, adminLookup, days) {
+function drawMedBlocks(doc, meds, adminLookup, days) {
   for (let i = 0; i < meds.length; i++) {
-    const med = meds[i]
+    const med    = meds[i]
     const blockY = CONTENT_Y + i * MED_H
 
-    // Zebra background
-    if (i % 2 === 1) {
-      doc.setFillColor(248, 250, 253)
-      doc.rect(0, blockY, PAGE_W, MED_H, 'F')
-    }
-
-    // ── Left panel ────────────────────────────────────────────────────────────
-    // Medication name (row 0)
+    // ── Left panel text (plain black on white — matches reference) ─────────────
+    // Row 0: Medication name (bold)
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(7)
+    doc.setFontSize(7.5)
     doc.setTextColor(...BLACK)
-    const nameLines = doc.splitTextToSize(med.medication_name || '', LEFT_W - 4)
-    doc.text(nameLines[0], ML + 2, blockY + ROW_H * 0.65)
+    const nameLines = doc.splitTextToSize(med.medication_name || '', LEFT_W - LEFT_TEXT - 2)
+    doc.text(nameLines[0], LEFT_TEXT, blockY + ROW_H * 0.72)
 
-    // Strength (row 1)
+    // Rows 1–3: Strength / RX Number / Dosage — label + value, all black
     doc.setFont('helvetica', 'normal')
-    doc.setFontSize(6.5)
-    doc.setTextColor(80, 80, 80)
-    const strengthText = med.dose ? `Strength: ${med.dose}` : 'Strength: —'
-    doc.text(doc.splitTextToSize(strengthText, LEFT_W - 4)[0], ML + 2, blockY + ROW_H + ROW_H * 0.65)
+    doc.setFontSize(6.8)
+    const detail = (label, value, rowIdx, labelW) => {
+      const ty = blockY + ROW_H * rowIdx + ROW_H * 0.62
+      doc.setFont('helvetica', 'bold')
+      doc.text(label, LEFT_TEXT, ty)
+      doc.setFont('helvetica', 'normal')
+      const v = doc.splitTextToSize(String(value), LEFT_W - LEFT_TEXT - labelW - 1)[0]
+      doc.text(v, LEFT_TEXT + labelW, ty)
+    }
+    detail('Strength:',  med.dose || '—', 1, 16)
+    detail('RX Number:', med.prescription_number || 'N/A', 2, 20)
+    detail('Dosage:',    med.route || '—', 3, 14)
 
-    // RX Number (row 2)
-    const rxText = med.prescription_number ? `RX#: ${med.prescription_number}` : 'RX#: —'
-    doc.text(doc.splitTextToSize(rxText, LEFT_W - 4)[0], ML + 2, blockY + ROW_H * 2 + ROW_H * 0.65)
-
-    // Dosage/instructions (row 3) — route + frequency
-    const parts = [med.route, med.dose].filter(Boolean)
-    const dosageText = `Dosage: ${parts.join(' · ') || '—'}`
-    doc.text(doc.splitTextToSize(dosageText, LEFT_W - 4)[0], ML + 2, blockY + ROW_H * 3 + ROW_H * 0.65)
-
-    // ── Time labels + grid rows ────────────────────────────────────────────────
+    // ── Time labels + grid rows ───────────────────────────────────────────────
     for (let slot = 0; slot < 4; slot++) {
       const rowY = blockY + slot * ROW_H
 
-      // Time label
-      doc.setFont('helvetica', 'bold')
+      // Time label (centered, plain black)
+      doc.setFont('helvetica', 'normal')
       doc.setFontSize(6.5)
-      doc.setTextColor(...NAVY)
-      doc.text(SLOT_LABELS[slot], ML + LEFT_W + TIME_W / 2, rowY + ROW_H * 0.65, { align: 'center' })
+      doc.setTextColor(...BLACK)
+      doc.text(SLOT_LABELS[slot], LEFT_W + TIME_W / 2, rowY + ROW_H * 0.68, { align: 'center' })
 
       // Day cells
       for (let d = 1; d <= 31; d++) {
         const cx = GRID_X + (d - 1) * DAY_W
-        const cy = rowY
-        const cellW = DAY_W
-        const cellH = ROW_H
 
-        // Fill days past month end
         if (d > days) {
-          doc.setFillColor(245, 245, 245)
-          doc.rect(cx, cy, cellW, cellH, 'F')
+          doc.setFillColor(243, 243, 243)
+          doc.rect(cx, rowY, DAY_W, ROW_H, 'F')
         }
 
-        // Administration initials
-        const key = `${med.id}|${d}|${slot}`
+        const key  = `${med.id}|${d}|${slot}`
         const init = adminLookup[key]
         if (init && d <= days) {
-          doc.setFont('helvetica', 'bold')
+          doc.setFont('helvetica', 'normal')
           doc.setFontSize(5.5)
-          doc.setTextColor(...BLUE)
-          doc.text(init, cx + cellW / 2, cy + cellH * 0.68, { align: 'center' })
+          doc.setTextColor(...BLACK)
+          doc.text(init, cx + DAY_W / 2, rowY + ROW_H * 0.68, { align: 'center' })
         }
 
-        // Cell borders
+        // Thin cell border
         doc.setDrawColor(...LGRAY)
-        doc.setLineWidth(0.15)
-        doc.rect(cx, cy, cellW, cellH, 'S')
+        doc.setLineWidth(0.12)
+        doc.rect(cx, rowY, DAY_W, ROW_H, 'S')
       }
 
-      // Horizontal rule between time rows (except after the last)
-      if (slot < 3) {
-        doc.setDrawColor(...LGRAY)
-        doc.setLineWidth(0.2)
-        doc.line(ML, rowY + ROW_H, PAGE_W - MR, rowY + ROW_H)
-      }
+      // Thin horizontal rule between time rows
+      doc.setDrawColor(238, 238, 238)
+      doc.setLineWidth(0.12)
+      doc.line(0, rowY + ROW_H, GRID_X, rowY + ROW_H)
     }
 
-    // Left panel border
-    doc.setDrawColor(...MGRAY)
-    doc.setLineWidth(0.3)
-    doc.rect(ML, blockY, LEFT_W, MED_H, 'S')
-
-    // Time column border
-    doc.rect(ML + LEFT_W, blockY, TIME_W, MED_H, 'S')
-
-    // Outer medication block border
-    doc.setDrawColor(...NAVY)
-    doc.setLineWidth(0.5)
-    doc.rect(0, blockY, PAGE_W, MED_H, 'S')
-
-    // Vertical dividers between day columns
+    // Vertical separators (thin gray) for Medication and Time columns
     doc.setDrawColor(...LGRAY)
-    doc.setLineWidth(0.2)
-    for (let d = 1; d <= 31; d++) {
-      doc.line(GRID_X + (d - 1) * DAY_W, blockY, GRID_X + (d - 1) * DAY_W, blockY + MED_H)
-    }
+    doc.setLineWidth(0.3)
+    doc.line(LEFT_W, blockY, LEFT_W, blockY + MED_H)
+    doc.line(GRID_X, blockY, GRID_X, blockY + MED_H)
+
+    // Thin separator rule between medication blocks
+    doc.setDrawColor(...DGRAY)
+    doc.setLineWidth(0.3)
+    doc.line(0, blockY + MED_H, PAGE_W, blockY + MED_H)
   }
+
+  // Outer table border (thin)
+  const tableTop = CONTENT_Y
+  const tableBot = CONTENT_Y + Math.max(meds.length, 1) * MED_H
+  doc.setDrawColor(...DGRAY)
+  doc.setLineWidth(0.4)
+  doc.rect(0, tableTop, PAGE_W, tableBot - tableTop, 'S')
 }
 
 function drawFooter(doc, staffUsed, month, year, pageNum, totalPages) {
   const fy = PAGE_H - FOOTER_H
 
-  // Footer background
+  // Footer background + top border
   doc.setFillColor(245, 247, 250)
   doc.rect(0, fy, PAGE_W, FOOTER_H, 'F')
   doc.setDrawColor(...NAVY)
-  doc.setLineWidth(0.5)
+  doc.setLineWidth(0.6)
   doc.line(0, fy, PAGE_W, fy)
 
-  // Legend codes (left)
+  // Legend codes (right side, matching reference position)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(6.5)
   doc.setTextColor(...BLACK)
-  doc.text('Legend:', ML, fy + 5)
-  doc.setFont('helvetica', 'normal')
-  const codes = [
-    ['P', 'Paused'],
-    ['R', 'Refused'],
-    ['O.F', 'Out of Facility'],
-    ['N/A', 'Not Available'],
-  ]
-  let lx = ML + 15
+  const codes = [['P','Paused medication'], ['R','Refused'], ['O.F','Out of Facility']]
+  let lx = PAGE_W * 0.60
   for (const [code, label] of codes) {
     doc.setFont('helvetica', 'bold')
     doc.text(`[${code}]`, lx, fy + 5)
     doc.setFont('helvetica', 'normal')
-    doc.text(label, lx + doc.getTextWidth(`[${code}]`) + 1, fy + 5)
-    lx += doc.getTextWidth(`[${code}] ${label}`) + 6
+    const codeW = doc.getTextWidth(`[${code}] `)
+    doc.text(label, lx + codeW, fy + 5)
+    lx += doc.getTextWidth(`[${code}] ${label}  `) + 2
   }
 
-  // Staff initials key (center)
+  // Staff initials key (below legend, right side — matching reference)
   const staffEntries = Object.entries(staffUsed)
   if (staffEntries.length > 0) {
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(6.5)
-    doc.text('Staff:', ML, fy + 11)
-    doc.setFont('helvetica', 'normal')
-    let sx = ML + 13
+    let sx = PAGE_W * 0.60
     for (const [init, name] of staffEntries) {
-      const txt = `[${init}] ${name}`
-      doc.text(txt, sx, fy + 11)
-      sx += doc.getTextWidth(txt) + 6
-      if (sx > PAGE_W * 0.7) break  // don't overflow into right panel
+      const txt = `[${init}] ${name}  `
+      if (sx + doc.getTextWidth(txt) > PAGE_W - 8) break
+      doc.setFont('helvetica', 'bold')
+      doc.text(`[${init}]`, sx, fy + 10)
+      doc.setFont('helvetica', 'normal')
+      doc.text(name, sx + doc.getTextWidth(`[${init}] `), fy + 10)
+      sx += doc.getTextWidth(txt)
     }
   }
 
-  // Print info (right)
-  const today = new Date()
+  // Print info (bottom-left, matching reference position)
+  const today     = new Date()
   const printDate = `${pad2(today.getMonth()+1)}/${pad2(today.getDate())}/${today.getFullYear()}`
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(6.5)
   doc.setTextColor(100, 100, 100)
+  doc.text(`Print Date  ${printDate}`, 8, fy + 5)
+  doc.text(`Report Date  ${MONTHS[month-1]}-${year}`, 8, fy + 9.5)
 
-  const infoLines = [
-    `Print Date: ${printDate}`,
-    `Report: ${MONTHS[month-1]} ${year}`,
-    `Page ${pageNum} of ${totalPages}`,
-  ]
-  let iy = fy + 5
-  for (const line of infoLines) {
-    doc.text(line, PAGE_W - MR, iy, { align: 'right' })
-    iy += 4
-  }
+  // Page number and Haven branding (bottom-right)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(6.5)
+  doc.setTextColor(100, 100, 100)
+  doc.text(`Page ${pageNum} of ${totalPages}`, PAGE_W - 8, fy + 5, { align: 'right' })
 
-  // "Powered by Haven" branding
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(6)
+  doc.setFontSize(6.5)
   doc.setTextColor(...BLUE)
-  doc.text('Powered by Haven · havencare.app', PAGE_W - MR, fy + FOOTER_H - 2, { align: 'right' })
+  doc.text('Powered by Haven  ·  havencare.app', PAGE_W - 8, fy + 10, { align: 'right' })
 }
