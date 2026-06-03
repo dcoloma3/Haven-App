@@ -106,8 +106,11 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
     // Scope by resident only (matches MedicationList) — some med rows have a
     // null/legacy community_id and would be hidden by an .eq('community_id') filter.
     // RLS still enforces tenant isolation via the resident's community.
+    // Use select('*') (not an explicit column list) so a column that doesn't
+    // exist in a given environment (e.g. prescription_number) can't make the
+    // whole query error out and return null → blank sheet.
     supabase.from('medications')
-      .select('id, medication_name, dose, prescription_number, route, frequency_type, scheduled_times')
+      .select('*')
       .eq('resident_id', residentId)
       .order('medication_name'),
     supabase.from('medication_administrations')
