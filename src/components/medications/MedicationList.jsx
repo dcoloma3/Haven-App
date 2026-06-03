@@ -947,9 +947,6 @@ export default function MedicationList({ residentId, onMedStatusChange: _onMedSt
   const [showLIC622, setShowLIC622] = useState(false)
   const [lic622Generating, setLic622Generating] = useState(false)
   const [lic622Error, setLic622Error] = useState('')
-  const today = new Date()
-  const [lic622Year, setLic622Year] = useState(today.getFullYear())
-  const [lic622Month, setLic622Month] = useState(today.getMonth() + 1)
 
   useEffect(() => {
     supabase
@@ -979,64 +976,35 @@ export default function MedicationList({ residentId, onMedStatusChange: _onMedSt
     setLic622Generating(true)
     setLic622Error('')
     try {
-      await generateLIC622PDF({ residentId, communityId, year: lic622Year, month: lic622Month, supabase })
+      await generateLIC622PDF({ residentId, communityId, supabase })
       setShowLIC622(false)
-    } catch (_e) {
-      setLic622Error('Failed to generate PDF. Please try again.')
+    } catch (e) {
+      setLic622Error(`Failed to generate PDF: ${e?.message || 'Please try again.'}`)
     }
     setLic622Generating(false)
   }
 
-  const MONTHS = [
-    'January','February','March','April','May','June',
-    'July','August','September','October','November','December'
-  ]
-  const yearOptions = []
-  for (let y = today.getFullYear() + 1; y >= today.getFullYear() - 3; y--) yearOptions.push(y)
-
   return (
     <div>
-      {/* ── LIC 622 Month Picker Modal ── */}
+      {/* ── LIC 622 Confirm Modal ── */}
       {showLIC622 && (
         <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50">
           <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-sm">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
               <div>
                 <h2 className="font-semibold text-slate-800">Download LIC 622</h2>
-                <p className="text-xs text-slate-400 mt-0.5">Medication Administration Record</p>
+                <p className="text-xs text-slate-400 mt-0.5">Centrally Stored Medication &amp; Destruction Record</p>
               </div>
               <button onClick={() => setShowLIC622(false)} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
             </div>
             <div className="px-6 py-5 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Month</label>
-                  <select
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent"
-                    value={lic622Month}
-                    onChange={e => setLic622Month(Number(e.target.value))}
-                  >
-                    {MONTHS.map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Year</label>
-                  <select
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent"
-                    value={lic622Year}
-                    onChange={e => setLic622Year(Number(e.target.value))}
-                  >
-                    {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
-                  </select>
-                </div>
-              </div>
               <div className="bg-slate-50 rounded-xl px-4 py-3 text-xs text-slate-500 space-y-1">
-                <p>The PDF will include:</p>
+                <p>Generates the official California DSS LIC 622 form pre-filled with:</p>
                 <ul className="list-disc list-inside space-y-0.5 mt-1">
-                  <li>All scheduled medications for this resident</li>
-                  <li>Staff initials for every dose given</li>
-                  <li>R / H / NG codes for refused, held, or not-given doses</li>
-                  <li>Facility name, license number, and resident info</li>
+                  <li>Facility name and license number</li>
+                  <li>Resident name, admission date, and attending physician</li>
+                  <li>All centrally stored medications on file</li>
+                  <li>Blank Part II destruction record for manual completion</li>
                 </ul>
               </div>
               {lic622Error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{lic622Error}</p>}
