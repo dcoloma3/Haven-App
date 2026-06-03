@@ -67,6 +67,17 @@ function timeToSlot(timeStr) {
   return hourToSlot(parseInt(timeStr.split(':')[0], 10))
 }
 
+// Short human description of a medication's frequency, for the Dosage line
+function freqDesc(med) {
+  const t = med.frequency_type
+  if (!t || t === 'daily') return 'Daily'
+  if (t === 'prn') return 'As needed'
+  if (t === 'one_time') return 'One time'
+  if (t === 'specific_days') return 'Specific days'
+  if (t === 'every_x_days') return med.frequency_interval ? `Every ${med.frequency_interval} days` : 'Every X days'
+  return ''
+}
+
 // Format initials as "F.L" matching reference style (e.g. "L.O" for Liz Ochoa)
 function makeInitials(firstName, lastName) {
   const f = (firstName || '').trim()
@@ -95,33 +106,21 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
   const prnToBound = new Date(year, month - 1, days, 23, 59, 59)
   prnToBound.setDate(prnToBound.getDate() + 1)
 
-  // ── Data fetches ─────────────────────────────────────────────────────────────
-  const [resRes, comRes, medsRes, adminsRes, prnRes, membersRes] = await Promise.all([
+  // ── First batch: resident, community, medications, staff ─────────────────────
+  // Use select('*') for medications so a column that doesn't exist in a given
+  // environment (e.g. prescription_number) can't error the whole query → blank.
+  // Scope meds by resident_id only (matches MedicationList); RLS still isolates.
+  const [resRes, comRes, medsRes, membersRes] = await Promise.all([
     supabase.from('residents')
       .select('first_name, last_name, full_name, physician')
       .eq('id', residentId).eq('community_id', communityId).single(),
     supabase.from('communities')
       .select('name, license_number')
       .eq('id', communityId).single(),
-    // Scope by resident only (matches MedicationList) — some med rows have a
-    // null/legacy community_id and would be hidden by an .eq('community_id') filter.
-    // RLS still enforces tenant isolation via the resident's community.
-    // Use select('*') (not an explicit column list) so a column that doesn't
-    // exist in a given environment (e.g. prescription_number) can't make the
-    // whole query error out and return null → blank sheet.
     supabase.from('medications')
       .select('*')
       .eq('resident_id', residentId)
       .order('medication_name'),
-    supabase.from('medication_administrations')
-      .select('medication_id, scheduled_time, administered_date, administered_by')
-      .eq('resident_id', residentId)
-      .gte('administered_date', from).lte('administered_date', to),
-    supabase.from('prn_administrations')
-      .select('medication_name, dose, administered_at, administered_by')
-      .eq('resident_id', residentId)
-      .gte('administered_at', prnFromBound.toISOString())
-      .lte('administered_at', prnToBound.toISOString()),
     supabase.from('community_members')
       .select('user_id, profiles(first_name, last_name)')
       .eq('community_id', communityId),
@@ -130,9 +129,29 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
   const resident  = resRes.data   ?? {}
   const community = comRes.data   ?? {}
   const meds      = medsRes.data  ?? []
-  const admins    = adminsRes.data ?? []
-  const prns      = prnRes.data   ?? []
   const members   = membersRes.data ?? []
+  const medIds    = meds.map(m => m.id)
+
+  // ── Second batch: administrations ────────────────────────────────────────────
+  // Query routine administrations by medication_id (matches how the Dispense tab
+  // reads them) rather than by resident_id — robust to any resident_id drift on
+  // administration rows. PRN rows have a reliable NOT NULL resident_id.
+  const [adminsRes, prnRes] = await Promise.all([
+    medIds.length
+      ? supabase.from('medication_administrations')
+          .select('medication_id, scheduled_time, administered_date, administered_by')
+          .in('medication_id', medIds)
+          .gte('administered_date', from).lte('administered_date', to)
+      : Promise.resolve({ data: [] }),
+    supabase.from('prn_administrations')
+      .select('medication_name, dose, administered_at, administered_by')
+      .eq('resident_id', residentId)
+      .gte('administered_at', prnFromBound.toISOString())
+      .lte('administered_at', prnToBound.toISOString()),
+  ])
+
+  const admins = adminsRes.data ?? []
+  const prns   = prnRes.data   ?? []
 
   // Staff lookup: userId → { initials, fullName }
   const staffMap = {}
@@ -370,7 +389,10 @@ function drawMedBlocks(doc, meds, adminLookup, days) {
     }
     detail('Strength:',  med?.dose || '—', 1, 16)
     detail('RX Number:', med?.prescription_number || 'N/A', 2, 20)
-    detail('Dosage:',    med?.route || '—', 3, 14)
+    const dosageText = med
+      ? ([med.route, freqDesc(med)].filter(Boolean).join(' · ') || '—')
+      : '—'
+    detail('Dosage:', dosageText, 3, 14)
 
     // ── Time labels + grid rows ───────────────────────────────────────────────
     for (let slot = 0; slot < 4; slot++) {
