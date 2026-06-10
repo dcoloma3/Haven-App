@@ -142,7 +142,7 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
       .eq('resident_id', residentId)
       .order('medication_name'),
     supabase.from('community_members')
-      .select('user_id, profiles(user_id, full_name, first_name, last_name)')
+      .select('user_id, role')
       .eq('community_id', communityId),
   ])
 
@@ -173,15 +173,30 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
   const admins = adminsRes.data ?? []
   const prns   = prnRes.data   ?? []
 
-  // Staff lookup: userId → { initials, fullName }. Keyed by BOTH the membership
-  // user_id and the profile user_id so administered_by resolves either way.
+  // Resolve administering-staff names. community_members has NO foreign key to
+  // profiles, so an embedded join (profiles(...)) returns null and every cell
+  // falls back to the dot. Instead, fetch profiles directly by user_id — the
+  // same two-step pattern StaffDirectory uses. Include both community members
+  // and anyone who actually administered (administered_by) so every cell resolves.
+  const staffIds = [...new Set([
+    ...members.map(m => m.user_id),
+    ...admins.map(a => a.administered_by),
+    ...prns.map(p => p.administered_by),
+  ].filter(Boolean))]
+
+  let profiles = []
+  if (staffIds.length) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('user_id, full_name, first_name, last_name')
+      .in('user_id', staffIds)
+    profiles = data ?? []
+  }
+
   const staffMap = {}
-  for (const m of members) {
-    const p = m.profiles
-    if (!p) continue
-    const entry = { initials: makeInitials(p), fullName: profileFullName(p) }
-    if (m.user_id) staffMap[m.user_id] = entry
-    if (p.user_id) staffMap[p.user_id] = entry
+  for (const p of profiles) {
+    if (!p.user_id) continue
+    staffMap[p.user_id] = { initials: makeInitials(p), fullName: profileFullName(p) }
   }
 
   // Admin lookup: `${medicationId}|${day}|${slotIndex}` → initials
