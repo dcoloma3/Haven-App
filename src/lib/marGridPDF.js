@@ -422,20 +422,21 @@ function drawMedBlocks(doc, meds, adminLookup, days) {
     }
 
     // Detail lines — Strength / RX Number / Dosage / Instructions.
-    // Compact stack below the name so all four fit in the block height.
-    // Labels always shown; values only when there's a medication.
+    // Evenly spaced below the name with a single aligned value column so the
+    // values line up cleanly and read like a small table.
     doc.setFontSize(6.3)
     const dosageText = med
       ? ([med.route, freqDesc(med)].filter(Boolean).join(' · ') || '—')
       : '—'
     const detailRows = [
-      { label: 'Strength:',     value: med?.dose || '—',                      labelW: 15, lines: 1 },
-      { label: 'RX Number:',    value: med?.prescription_number || 'N/A',     labelW: 19, lines: 1 },
-      { label: 'Dosage:',       value: dosageText,                            labelW: 13, lines: 1 },
-      { label: 'Instructions:', value: med?.notes || '—',                     labelW: 20, lines: 2 },
+      { label: 'Strength:',     value: med?.dose || '—',                  lines: 1 },
+      { label: 'RX Number:',    value: med?.prescription_number || 'N/A', lines: 1 },
+      { label: 'Dosage:',       value: dosageText,                        lines: 1 },
+      { label: 'Instructions:', value: med?.notes || '—',                 lines: 2 },
     ]
-    const detailStartY = blockY + 8.2
-    const detailGap = 4.85
+    const valueX = LEFT_TEXT + 20         // shared value column — keeps values aligned
+    const detailStartY = blockY + 9.6     // clear gap below the name
+    const detailGap = 4.7                 // even vertical rhythm
     detailRows.forEach((row, idx) => {
       const ty = detailStartY + idx * detailGap
       doc.setFont('helvetica', 'bold')
@@ -444,9 +445,8 @@ function drawMedBlocks(doc, meds, adminLookup, days) {
       if (med) {
         doc.setFont('helvetica', 'normal')
         doc.setTextColor(...BLACK)
-        const wrapped = doc.splitTextToSize(String(row.value), LEFT_W - LEFT_TEXT - row.labelW - 1)
-        const shown = wrapped.slice(0, row.lines)
-        doc.text(shown, LEFT_TEXT + row.labelW, ty, { lineHeightFactor: 1.1 })
+        const wrapped = doc.splitTextToSize(String(row.value), LEFT_W - valueX - 1)
+        doc.text(wrapped.slice(0, row.lines), valueX, ty, { lineHeightFactor: 1.1 })
       }
     })
 
@@ -491,10 +491,11 @@ function drawMedBlocks(doc, meds, adminLookup, days) {
         doc.rect(cx, rowY, DAY_W, ROW_H, 'S')
       }
 
-      // Thin horizontal rule between time rows
+      // Thin horizontal rule between time rows — only across the Time column,
+      // not the medication detail panel (so it never cuts through the text).
       doc.setDrawColor(238, 238, 238)
       doc.setLineWidth(0.12)
-      doc.line(0, rowY + ROW_H, GRID_X, rowY + ROW_H)
+      doc.line(LEFT_W, rowY + ROW_H, GRID_X, rowY + ROW_H)
     }
 
     // Vertical separators (thin gray) for Medication and Time columns
