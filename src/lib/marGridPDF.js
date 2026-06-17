@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf'
+import { drawHavenMark } from './havenMarkPdf'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Haven Medication Administration Record — Grid Format
@@ -282,19 +283,14 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
 
 function drawHeader(doc, resName, communityName, month, year) {
   // ── Title row (light, white background — matches reference) ───────────────────
-  // Small Haven logo, top-left
-  const hx = LEFT_TEXT, hy = 3
-  doc.setDrawColor(...NAVY)
-  doc.setLineWidth(0.5)
-  doc.triangle(hx, hy + 4, hx + 4, hy, hx + 8, hy + 4, 'S')   // roof
-  doc.rect(hx + 0.8, hy + 4, 6.4, 4.5, 'S')                   // walls
-  doc.setFillColor(...NAVY)
-  doc.rect(hx + 2.6, hy + 5.5, 3, 3, 'F')                     // door
+  // Small Haven logo, top-left — canonical mark (matches HavenLogo.jsx)
+  const hx = LEFT_TEXT, hy = 2
+  drawHavenMark(doc, hx, hy, 11, BLUE, [55, 138, 221])
 
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(11)
-  doc.setTextColor(...NAVY)
-  doc.text('haven', hx + 10.5, hy + 6.5)
+  doc.setTextColor(...BLUE)
+  doc.text('haven', hx + 11, hy + 8)
 
   // Form title — centered, dark text
   doc.setFont('helvetica', 'bold')

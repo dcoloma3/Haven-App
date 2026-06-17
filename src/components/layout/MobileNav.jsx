@@ -4,13 +4,11 @@ import { useCommunity } from '../../context/CommunityContext'
 import { useIsMobile } from '../../hooks/useIsMobile'
 
 function HomeIcon({ active }) {
-  return active ? (
-    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
-    </svg>
-  ) : (
-    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+  // Same house shape for both states — active just thickens + lightly fills,
+  // matching how the other menu icons (e.g. Calendar) show their active state.
+  return (
+    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill={active ? 'currentColor' : 'none'} fillOpacity={active ? 0.15 : 0} />
       <polyline points="9 22 9 12 15 12 15 22" />
     </svg>
   )

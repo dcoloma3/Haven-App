@@ -6,7 +6,7 @@ const C = {
   bg: '#042C53',
   primary: '#185FA5',
   accent: '#378ADD',
-  light: '#85B7EB',
+  light: '#378ADD',
   veryLight: '#E6F1FB',
   statsBg: '#031F3D',
 }
@@ -21,7 +21,7 @@ function MarketingLogo({ onClick }) {
         <rect x="4" y="20" width="5" height="8" fill="white" rx="0.5" />
         <rect x="13" y="18" width="5" height="5" stroke="white" strokeWidth="1.5" fill="none" rx="0.5" />
         <line x1="12" y1="3" x2="12" y2="6" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
-        <circle cx="12" cy="1.5" r="1.5" fill="#85B7EB" />
+        <circle cx="12" cy="1.5" r="1.5" fill="#378ADD" />
       </svg>
       <span style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-0.5px', color: 'white', lineHeight: 1, fontFamily: 'inherit' }}>
         haven
@@ -233,10 +233,10 @@ function HeroSection({ scrollTo }) {
         {/* Large centered logo mark */}
         <div className="flex flex-col items-center mb-6 md:mb-10">
           <svg className="w-20 h-[100px] sm:w-[72px] sm:h-[90px] mb-3 md:mb-4" viewBox="0 0 24 30" fill="none" aria-hidden="true">
-            <path d="M2,28 L2,15 L12,6 L22,15 L22,28 Z" stroke="white" strokeWidth="1.2" strokeLinejoin="round" fill="none" />
+            <path d="M2,28 L2,15 L12,6 L22,15 L22,28 Z" stroke="white" strokeWidth="1.5" strokeLinejoin="round" fill="none" />
             <rect x="4" y="20" width="5" height="8" fill="white" rx="0.5" />
-            <rect x="13" y="18" width="5" height="5" stroke="white" strokeWidth="1.2" fill="none" rx="0.5" />
-            <line x1="12" y1="3" x2="12" y2="6" stroke="white" strokeWidth="1.2" strokeLinecap="round" />
+            <rect x="13" y="18" width="5" height="5" stroke="white" strokeWidth="1.5" fill="none" rx="0.5" />
+            <line x1="12" y1="3" x2="12" y2="6" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
             <circle cx="12" cy="1.5" r="1.5" fill={C.accent} />
           </svg>
           <span style={{ fontSize: 'clamp(2.8rem, 7vw, 4rem)', fontWeight: 600, letterSpacing: '-2px', color: 'white', lineHeight: 1, fontFamily: 'inherit' }}>

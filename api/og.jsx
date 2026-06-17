@@ -6,15 +6,15 @@ export const config = { runtime: 'edge' }
 const BUBBLES = [
   { x: 820, y: 60,  r: 55, color: '#378ADD', opacity: 0.07 },
   { x: 950, y: 180, r: 38, color: '#185FA5', opacity: 0.06 },
-  { x: 1080,y: 80,  r: 62, color: '#85B7EB', opacity: 0.05 },
+  { x: 1080,y: 80,  r: 62, color: '#378ADD', opacity: 0.05 },
   { x: 1140,y: 260, r: 44, color: '#378ADD', opacity: 0.07 },
-  { x: 700, y: 40,  r: 28, color: '#85B7EB', opacity: 0.06 },
+  { x: 700, y: 40,  r: 28, color: '#378ADD', opacity: 0.06 },
   { x: 1020,y: 380, r: 50, color: '#185FA5', opacity: 0.05 },
   { x: 880, y: 480, r: 35, color: '#378ADD', opacity: 0.06 },
-  { x: 600, y: 300, r: 22, color: '#85B7EB', opacity: 0.05 },
+  { x: 600, y: 300, r: 22, color: '#378ADD', opacity: 0.05 },
   { x: 1160,y: 500, r: 40, color: '#185FA5', opacity: 0.07 },
   { x: 750, y: 550, r: 58, color: '#378ADD', opacity: 0.04 },
-  { x: 100, y: 80,  r: 30, color: '#85B7EB', opacity: 0.04 },
+  { x: 100, y: 80,  r: 30, color: '#378ADD', opacity: 0.04 },
   { x: 50,  y: 400, r: 20, color: '#378ADD', opacity: 0.05 },
 ]
 
@@ -67,7 +67,7 @@ export default function handler() {
             <rect x="4" y="20" width="5" height="8" fill="white" rx="0.5" />
             <rect x="13" y="18" width="5" height="5" stroke="white" strokeWidth="1.5" fill="none" rx="0.5" />
             <line x1="12" y1="3" x2="12" y2="6" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
-            <circle cx="12" cy="1.5" r="1.5" fill="#85B7EB" />
+            <circle cx="12" cy="1.5" r="1.5" fill="#378ADD" />
           </svg>
           <span style={{
             fontSize: '48px',
@@ -104,7 +104,7 @@ export default function handler() {
           width: 'fit-content',
           fontSize: '18px',
           fontWeight: 500,
-          color: '#85B7EB',
+          color: '#378ADD',
         }}>
           havencare.app
         </div>

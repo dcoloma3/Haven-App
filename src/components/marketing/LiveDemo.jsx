@@ -242,7 +242,7 @@ function DemoSidebar({ active, onNav }) {
           <path d="M2,28 L2,15 L12,6 L22,15 L22,28 Z" stroke="white" strokeWidth="1.5" strokeLinejoin="round" fill="none"/>
           <rect x="4" y="20" width="5" height="8" fill="white" rx="0.5"/>
           <rect x="13" y="18" width="5" height="5" stroke="white" strokeWidth="1.5" fill="none" rx="0.5"/>
-          <circle cx="12" cy="1.5" r="1.5" fill="#85B7EB"/>
+          <circle cx="12" cy="1.5" r="1.5" fill="#378ADD"/>
         </svg>
         <span className="font-semibold text-white" style={{ fontSize: 14, letterSpacing: '-0.3px' }}>haven</span>
       </div>
@@ -1048,7 +1048,7 @@ export default function LiveDemo() {
             <path d="M2,28 L2,15 L12,6 L22,15 L22,28 Z" stroke="white" strokeWidth="1.5" strokeLinejoin="round" fill="none"/>
             <rect x="4" y="20" width="5" height="8" fill="white" rx="0.5"/>
             <rect x="13" y="18" width="5" height="5" stroke="white" strokeWidth="1.5" fill="none" rx="0.5"/>
-            <circle cx="12" cy="1.5" r="1.5" fill="#85B7EB"/>
+            <circle cx="12" cy="1.5" r="1.5" fill="#378ADD"/>
           </svg>
           <span className="text-white font-semibold" style={{ fontSize: 12, letterSpacing: '-0.3px' }}>haven</span>
         </div>

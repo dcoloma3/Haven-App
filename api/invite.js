@@ -28,7 +28,7 @@ export default async function handler(req, res) {
                     <path d="M2,28 L2,15 L12,6 L22,15 L22,28 Z" stroke="white" stroke-width="1.5" stroke-linejoin="round" fill="none"/>
                     <rect x="4" y="20" width="5" height="8" fill="white" rx="0.5"/>
                     <rect x="13" y="18" width="5" height="5" stroke="white" stroke-width="1.5" fill="none" rx="0.5"/>
-                    <circle cx="12" cy="1.5" r="1.5" fill="#85B7EB"/>
+                    <circle cx="12" cy="1.5" r="1.5" fill="#378ADD"/>
                   </svg>
                 </td>
                 <td>
