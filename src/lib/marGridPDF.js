@@ -421,26 +421,34 @@ function drawMedBlocks(doc, meds, adminLookup, days) {
       }
     }
 
-    // Strength / RX Number / Dosage — labels always shown; values only if med
-    doc.setFontSize(6.8)
-    const detail = (label, value, rowIdx, labelW) => {
-      const ty = blockY + ROW_H * rowIdx + ROW_H * 0.62
-      doc.setTextColor(med ? 0 : 150, med ? 0 : 150, med ? 0 : 150)
-      doc.setFont('helvetica', 'bold')
-      doc.text(label, LEFT_TEXT, ty)
-      if (med) {
-        doc.setFont('helvetica', 'normal')
-        doc.setTextColor(...BLACK)
-        const v = doc.splitTextToSize(String(value), LEFT_W - LEFT_TEXT - labelW - 1)[0]
-        doc.text(v, LEFT_TEXT + labelW, ty)
-      }
-    }
-    detail('Strength:',  med?.dose || '—', 1, 16)
-    detail('RX Number:', med?.prescription_number || 'N/A', 2, 20)
+    // Detail lines — Strength / RX Number / Dosage / Instructions.
+    // Compact stack below the name so all four fit in the block height.
+    // Labels always shown; values only when there's a medication.
+    doc.setFontSize(6.3)
     const dosageText = med
       ? ([med.route, freqDesc(med)].filter(Boolean).join(' · ') || '—')
       : '—'
-    detail('Dosage:', dosageText, 3, 14)
+    const detailRows = [
+      { label: 'Strength:',     value: med?.dose || '—',                      labelW: 15, lines: 1 },
+      { label: 'RX Number:',    value: med?.prescription_number || 'N/A',     labelW: 19, lines: 1 },
+      { label: 'Dosage:',       value: dosageText,                            labelW: 13, lines: 1 },
+      { label: 'Instructions:', value: med?.notes || '—',                     labelW: 20, lines: 2 },
+    ]
+    const detailStartY = blockY + 8.2
+    const detailGap = 4.85
+    detailRows.forEach((row, idx) => {
+      const ty = detailStartY + idx * detailGap
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(med ? 0 : 150, med ? 0 : 150, med ? 0 : 150)
+      doc.text(row.label, LEFT_TEXT, ty)
+      if (med) {
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(...BLACK)
+        const wrapped = doc.splitTextToSize(String(row.value), LEFT_W - LEFT_TEXT - row.labelW - 1)
+        const shown = wrapped.slice(0, row.lines)
+        doc.text(shown, LEFT_TEXT + row.labelW, ty, { lineHeightFactor: 1.1 })
+      }
+    })
 
     // ── Time labels + grid rows ───────────────────────────────────────────────
     for (let slot = 0; slot < 4; slot++) {
