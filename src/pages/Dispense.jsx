@@ -6,6 +6,8 @@ import { useCommunity } from '../context/CommunityContext'
 import { HelpIcon } from '../components/ui/Tooltip'
 import { localDateStr } from '../lib/dateUtils'
 import { adminKey, isMedDueOnDate } from '../lib/medStatus'
+import AdministeringBar from '../components/dispense/AdministeringBar'
+import { attributionFields, insertWithAttribution } from '../lib/administering'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -255,7 +257,7 @@ function GivenByLine({ record, staffMap }) {
 
 // ─── PRN Tab ──────────────────────────────────────────────────────────────────
 
-function PRNResidentRow({ resident, communityId, staffMap: _staffMap }) {
+function PRNResidentRow({ resident, communityId, staffMap: _staffMap, activeCaregiver }) {
   const [open, setOpen] = useState(false)
   const [prnMeds, setPrnMeds] = useState([])
   const [loadingMeds, setLoadingMeds] = useState(false)
@@ -304,20 +306,16 @@ function PRNResidentRow({ resident, communityId, staffMap: _staffMap }) {
     setSaveError('')
     const { data: { session } } = await supabase.auth.getSession()
     const now = new Date()
-    const { data, error } = await supabase
-      .from('prn_administrations')
-      .insert([{
-        medication_name: med.medication_name,
-        dose: med.dose ?? null,
-        resident_id: resident.id,
-        community_id: communityId,
-        administered_at: now.toISOString(),
-        administered_by: session?.user?.id ?? null,
-        reason: reason.trim(),
-        notes: null,
-      }])
-      .select()
-      .single()
+    const { data, error } = await insertWithAttribution('prn_administrations', {
+      medication_name: med.medication_name,
+      dose: med.dose ?? null,
+      resident_id: resident.id,
+      community_id: communityId,
+      administered_at: now.toISOString(),
+      reason: reason.trim(),
+      notes: null,
+      ...attributionFields(activeCaregiver, session?.user?.id ?? null),
+    })
     setSaving(false)
     if (error) { setSaveError(error.message); return }
     setTodayDoses(prev => [data, ...prev])
@@ -466,7 +464,7 @@ function PRNResidentRow({ resident, communityId, staffMap: _staffMap }) {
   )
 }
 
-function PRNTab({ communityId }) {
+function PRNTab({ communityId, activeCaregiver }) {
   const [residents, setResidents] = useState([])
   const [loading, setLoading] = useState(true)
   const [staffMap, setStaffMap] = useState({})
@@ -534,7 +532,7 @@ function PRNTab({ communityId }) {
     <div>
       <p className="text-xs text-slate-400 mb-3">{residents.length} resident{residents.length !== 1 ? 's' : ''} with PRN medications — tap to expand</p>
       {residents.map(r => (
-        <PRNResidentRow key={r.id} resident={r} communityId={communityId} staffMap={staffMap} />
+        <PRNResidentRow key={r.id} resident={r} communityId={communityId} staffMap={staffMap} activeCaregiver={activeCaregiver} />
       ))}
     </div>
   )
@@ -565,6 +563,9 @@ export default function Dispense() {
   const [communityMedIds, setCommunityMedIds] = useState([])
   // PRN administrations for the selected date (shown read-only in routine slots)
   const [prnAdmins, setPrnAdmins] = useState([])
+  // Who is currently administering on this device (shared-iPad attribution)
+  const [sessionUserId, setSessionUserId] = useState(null)
+  const [activeCaregiver, setActiveCaregiver] = useState(null) // { caregiverId, name }
 
   const dateStr = toDateStr(date)
   const isToday = toDateStr(today) === dateStr
@@ -600,6 +601,23 @@ export default function Dispense() {
           })
       })
   }, [communityId])
+
+  // Logged-in account id (audit trail + default administering caregiver)
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSessionUserId(session?.user?.id ?? null)
+    })
+  }, [])
+
+  // Selectable staff accounts (name list) for the "Administering as" bar
+  const accounts = useMemo(
+    () => Object.entries(staffMap).map(([user_id, name]) => ({ user_id, name })),
+    [staffMap]
+  )
+  const currentUser = useMemo(
+    () => (sessionUserId ? { id: sessionUserId, name: staffMap[sessionUserId] || '' } : null),
+    [sessionUserId, staffMap]
+  )
 
   useEffect(() => {
     if (!communityId) return
@@ -740,7 +758,7 @@ export default function Dispense() {
   async function quickNotGiven(med, time, reason) {
     const key = adminKey(med.id, time)
     const { data: { session } } = await supabase.auth.getSession()
-    const { data } = await supabase.from('medication_not_given').insert([{
+    const { data } = await insertWithAttribution('medication_not_given', {
       medication_id: med.id,
       resident_id: med.resident_id,
       community_id: communityId,
@@ -748,7 +766,9 @@ export default function Dispense() {
       administered_date: dateStr,
       reason,
       recorded_by: session?.user?.id ?? null,
-    }]).select().single()
+      administered_by_name: activeCaregiver?.name?.trim() || null,
+      administered_by_caregiver_id: activeCaregiver?.caregiverId ?? null,
+    })
     if (data) setNotGiven(prev => { const n = new Map(prev); n.set(key, data); return n })
   }
 
@@ -757,7 +777,7 @@ export default function Dispense() {
     const { key, med, time, notes } = refusedForm
     setSavingRefused(true)
     const { data: { session } } = await supabase.auth.getSession()
-    const { data } = await supabase.from('medication_not_given').insert([{
+    const { data } = await insertWithAttribution('medication_not_given', {
       medication_id: med.id,
       resident_id: med.resident_id,
       community_id: communityId,
@@ -766,7 +786,9 @@ export default function Dispense() {
       reason: 'refused',
       notes: notes.trim(),
       recorded_by: session?.user?.id ?? null,
-    }]).select().single()
+      administered_by_name: activeCaregiver?.name?.trim() || null,
+      administered_by_caregiver_id: activeCaregiver?.caregiverId ?? null,
+    })
     if (data) setNotGiven(prev => { const n = new Map(prev); n.set(key, data); return n })
     setSavingRefused(false)
     setRefusedForm(null)
@@ -800,10 +822,10 @@ export default function Dispense() {
         resident_id: med.resident_id,
         scheduled_time: time,
         administered_date: dateStr,
-        administered_by: session?.user?.id ?? null,
+        ...attributionFields(activeCaregiver, session?.user?.id ?? sessionUserId),
       }
       setAdministered(prev => { const n = new Map(prev); n.set(key, { ...payload, id: 'temp' }); return n })
-      const { data } = await supabase.from('medication_administrations').insert([payload]).select().single()
+      const { data } = await insertWithAttribution('medication_administrations', payload)
       if (data) setAdministered(prev => { const n = new Map(prev); n.set(key, data); return n })
       setToggling(prev => { const n = new Set(prev); n.delete(key); return n })
     }
@@ -815,7 +837,7 @@ export default function Dispense() {
     const key = adminKey(med.id, time)
     setSavingNotGiven(true)
     const { data: { session } } = await supabase.auth.getSession()
-    const { data } = await supabase.from('medication_not_given').insert([{
+    const { data } = await insertWithAttribution('medication_not_given', {
       medication_id: med.id,
       resident_id: med.resident_id,
       community_id: communityId,
@@ -824,7 +846,9 @@ export default function Dispense() {
       reason,
       notes: notes || null,
       recorded_by: session?.user?.id ?? null,
-    }]).select().single()
+      administered_by_name: activeCaregiver?.name?.trim() || null,
+      administered_by_caregiver_id: activeCaregiver?.caregiverId ?? null,
+    })
     if (data) setNotGiven(prev => { const n = new Map(prev); n.set(key, data); return n })
     setSavingNotGiven(false)
     setNotGivenModal(null)
@@ -845,8 +869,14 @@ export default function Dispense() {
     <Layout>
 
       {/* ── Header ── */}
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <h1 className="text-2xl font-bold text-slate-800">Dispense</h1>
+        <AdministeringBar
+          communityId={communityId}
+          accounts={accounts}
+          currentUser={currentUser}
+          onChange={setActiveCaregiver}
+        />
       </div>
 
       {/* ── Routine / PRN tabs ── */}
@@ -866,7 +896,7 @@ export default function Dispense() {
         </button>
       </div>
 
-      {dispenseTab === 'prn' && <PRNTab communityId={communityId} />}
+      {dispenseTab === 'prn' && <PRNTab communityId={communityId} activeCaregiver={activeCaregiver} />}
 
       {dispenseTab === 'routine' && (<>
 

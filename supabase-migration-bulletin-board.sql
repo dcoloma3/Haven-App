@@ -25,7 +25,7 @@ drop policy if exists "bulletins_select" on community_bulletins;
 create policy "bulletins_select" on community_bulletins
   for select to authenticated
   using (
-    (community_id = any(public.user_community_ids()) and cleared_at is null)
+    (community_id in (select public.user_community_ids()) and cleared_at is null)
     or public.is_super_admin()
   );
 
@@ -36,7 +36,7 @@ create policy "bulletins_insert" on community_bulletins
   for insert to authenticated
   with check (
     (
-      community_id = any(public.user_community_ids())
+      community_id in (select public.user_community_ids())
       and exists (
         select 1 from community_members
         where user_id = auth.uid()
@@ -54,7 +54,7 @@ create policy "bulletins_update" on community_bulletins
   for update to authenticated
   using (
     (
-      community_id = any(public.user_community_ids())
+      community_id in (select public.user_community_ids())
       and exists (
         select 1 from community_members
         where user_id = auth.uid()
@@ -66,7 +66,7 @@ create policy "bulletins_update" on community_bulletins
   )
   with check (
     (
-      community_id = any(public.user_community_ids())
+      community_id in (select public.user_community_ids())
       and exists (
         select 1 from community_members
         where user_id = auth.uid()

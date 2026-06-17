@@ -156,15 +156,17 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
   // Query routine administrations by medication_id (matches how the Dispense tab
   // reads them) rather than by resident_id — robust to any resident_id drift on
   // administration rows. PRN rows have a reliable NOT NULL resident_id.
+  // select('*') so the administered_by_name / _caregiver_id columns are included
+  // when present, but a pre-migration DB (without them) doesn't error the query.
   const [adminsRes, prnRes] = await Promise.all([
     medIds.length
       ? supabase.from('medication_administrations')
-          .select('medication_id, scheduled_time, administered_date, administered_by')
+          .select('*')
           .in('medication_id', medIds)
           .gte('administered_date', from).lte('administered_date', to)
       : Promise.resolve({ data: [] }),
     supabase.from('prn_administrations')
-      .select('medication_name, dose, administered_at, administered_by')
+      .select('*')
       .eq('resident_id', residentId)
       .gte('administered_at', prnFromBound.toISOString())
       .lte('administered_at', prnToBound.toISOString()),
@@ -203,17 +205,28 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
   const adminLookup = {}
   const staffUsed   = {}   // initials → fullName for footer legend
 
+  // Resolve who administered: prefer the caregiver NAME recorded on the row
+  // (the person selected on the device), then fall back to the logged-in account.
+  function resolveAdministrator(row) {
+    if (row.administered_by_name) {
+      return { initials: makeInitials({ full_name: row.administered_by_name }), fullName: row.administered_by_name.trim() }
+    }
+    const staff = staffMap[row.administered_by]
+    if (staff && staff.initials) return staff
+    return null
+  }
+
   // Routine administrations
   for (const a of admins) {
-    const day   = parseInt(a.administered_date.split('-')[2], 10)
-    const slot  = timeToSlot(a.scheduled_time)
-    const key   = `${a.medication_id}|${day}|${slot}`
-    const staff = staffMap[a.administered_by]
-    if (staff && staff.initials) {
-      adminLookup[key]          = staff.initials
-      staffUsed[staff.initials] = staff.fullName
+    const day  = parseInt(a.administered_date.split('-')[2], 10)
+    const slot = timeToSlot(a.scheduled_time)
+    const key  = `${a.medication_id}|${day}|${slot}`
+    const who  = resolveAdministrator(a)
+    if (who && who.initials) {
+      adminLookup[key]        = who.initials
+      staffUsed[who.initials] = who.fullName
     } else {
-      adminLookup[key] = GIVEN_MARK   // given, but staff name couldn't be resolved
+      adminLookup[key] = GIVEN_MARK   // given, but administrator couldn't be resolved
     }
   }
 
@@ -229,10 +242,10 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
     const day  = dt.getDate()
     const slot = hourToSlot(dt.getHours())
     const key  = `${medId}|${day}|${slot}`
-    const staff = staffMap[p.administered_by]
-    if (staff && staff.initials) {
-      adminLookup[key]          = staff.initials
-      staffUsed[staff.initials] = staff.fullName
+    const who  = resolveAdministrator(p)
+    if (who && who.initials) {
+      adminLookup[key]        = who.initials
+      staffUsed[who.initials] = who.fullName
     } else if (!adminLookup[key]) {
       adminLookup[key] = GIVEN_MARK
     }

@@ -4,6 +4,7 @@ import { useProfile } from '../context/ProfileContext'
 import { useCommunity } from '../context/CommunityContext'
 import Layout from '../components/layout/Layout'
 import CertInput from '../components/ui/CertInput'
+import CaregiverRoster from '../components/staff/CaregiverRoster'
 
 const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
 
@@ -693,6 +694,9 @@ export default function StaffDirectory() {
               ))}
             </div>
           )}
+
+          {/* Caregiver roster — admin only */}
+          {isAdmin && <CaregiverRoster communityId={communityId} />}
         </>
       )}
 
