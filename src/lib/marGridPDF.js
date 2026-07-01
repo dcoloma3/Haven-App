@@ -73,12 +73,26 @@ function timeToSlot(timeStr) {
 }
 
 // Map a not-given reason → a short cell code + a human label for the legend/list.
+// Mirrors the Dispense "reason" dropdown values exactly (refused, held, absent,
+// out_of_stock, side_effects, other) so nothing is mislabeled.
+const DENIAL_MAP = {
+  refused:      { code: 'R',  label: 'Refused' },
+  held:         { code: 'H',  label: 'Held (physician order)' },
+  absent:       { code: 'A',  label: 'Absent / Unavailable' },
+  out_of_stock: { code: 'OS', label: 'Out of Stock' },
+  side_effects: { code: 'SE', label: 'Side Effects' },
+  other:        { code: 'NG', label: 'Not Given (other)' },
+}
 function denialCode(reason) {
-  const r = (reason || '').toLowerCase()
-  if (r.includes('refus')) return { code: 'R', label: 'Refused' }
-  if (r.includes('absent') || r.includes('out')) return { code: 'A', label: 'Absent / Out of Facility' }
-  if (r.includes('hold') || r.includes('held') || r.includes('paus')) return { code: 'H', label: 'Held' }
-  return { code: 'H', label: reason ? reason.charAt(0).toUpperCase() + reason.slice(1) : 'Not given' }
+  const key = (reason || '').toLowerCase().trim()
+  if (DENIAL_MAP[key]) return DENIAL_MAP[key]
+  // Legacy / free-text fallbacks
+  if (key.includes('refus')) return DENIAL_MAP.refused
+  if (key.includes('stock')) return DENIAL_MAP.out_of_stock
+  if (key.includes('side') || key.includes('reaction')) return DENIAL_MAP.side_effects
+  if (key.includes('absent') || key.includes('unavail')) return DENIAL_MAP.absent
+  if (key.includes('held') || key.includes('hold') || key.includes('paus')) return DENIAL_MAP.held
+  return { code: 'NG', label: reason ? reason.charAt(0).toUpperCase() + reason.slice(1) : 'Not given' }
 }
 
 // Short human description of a medication's frequency, for the Dosage line
@@ -588,7 +602,7 @@ function drawFooter(doc, staffUsed, month, year, pageNum, totalPages) {
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(6.5)
   doc.setTextColor(...BLACK)
-  const codes = [['R','Refused'], ['H','Held'], ['A','Absent / Out of Facility']]
+  const codes = [['R','Refused'], ['H','Held'], ['A','Absent'], ['OS','Out of Stock'], ['SE','Side Effects'], ['NG','Not Given']]
   let lx = PAGE_W * 0.60
   for (const [code, label] of codes) {
     doc.setFont('helvetica', 'bold')
