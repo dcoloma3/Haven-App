@@ -598,55 +598,58 @@ function drawFooter(doc, staffUsed, month, year, pageNum, totalPages) {
   doc.setLineWidth(0.6)
   doc.line(0, fy, PAGE_W, fy)
 
-  // Legend codes (right side, matching reference position)
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(6.5)
+  const RM = PAGE_W - 8   // right margin
+  const LM = 8            // left margin
+
+  // Row 1 — denial-code legend, left-aligned on its own line (nothing to its right)
+  doc.setFontSize(6.2)
   doc.setTextColor(...BLACK)
   const codes = [['R','Refused'], ['H','Held'], ['A','Absent'], ['OS','Out of Stock'], ['SE','Side Effects'], ['NG','Not Given']]
-  let lx = PAGE_W * 0.60
+  let lx = LM
   for (const [code, label] of codes) {
     doc.setFont('helvetica', 'bold')
     doc.text(`[${code}]`, lx, fy + 5)
-    doc.setFont('helvetica', 'normal')
     const codeW = doc.getTextWidth(`[${code}] `)
+    doc.setFont('helvetica', 'normal')
     doc.text(label, lx + codeW, fy + 5)
-    lx += doc.getTextWidth(`[${code}] ${label}  `) + 2
+    lx += doc.getTextWidth(`[${code}] ${label}`) + 4
   }
 
-  // Staff initials key (below legend, right side — matching reference)
+  // Row 2 — staff initials key (left, capped) · Page X of Y (right)
   const staffEntries = Object.entries(staffUsed)
   if (staffEntries.length > 0) {
-    let sx = PAGE_W * 0.60
+    doc.setFontSize(6.2)
+    doc.setTextColor(...BLACK)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Staff:', LM, fy + 10)
+    let sx = LM + doc.getTextWidth('Staff: ')
+    const staffLimit = PAGE_W * 0.72   // stop well before the page number
     for (const [init, name] of staffEntries) {
-      const txt = `[${init}] ${name}  `
-      if (sx + doc.getTextWidth(txt) > PAGE_W - 8) break
+      const txt = `[${init}] ${name}`
+      if (sx + doc.getTextWidth(txt + '   ') > staffLimit) break
       doc.setFont('helvetica', 'bold')
       doc.text(`[${init}]`, sx, fy + 10)
       doc.setFont('helvetica', 'normal')
       doc.text(name, sx + doc.getTextWidth(`[${init}] `), fy + 10)
-      sx += doc.getTextWidth(txt)
+      sx += doc.getTextWidth(txt + '   ')
     }
   }
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(6.5)
+  doc.setTextColor(100, 100, 100)
+  doc.text(`Page ${pageNum} of ${totalPages}`, RM, fy + 10, { align: 'right' })
 
-  // Print info (bottom-left, matching reference position)
+  // Row 3 — print/report dates (left) · Haven branding (right)
   const today     = new Date()
   const printDate = `${pad2(today.getMonth()+1)}/${pad2(today.getDate())}/${today.getFullYear()}`
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(6.5)
   doc.setTextColor(100, 100, 100)
-  doc.text(`Print Date  ${printDate}`, 8, fy + 5)
-  doc.text(`Report Date  ${MONTHS[month-1]}-${year}`, 8, fy + 9.5)
-
-  // Page number and Haven branding (bottom-right)
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(6.5)
-  doc.setTextColor(100, 100, 100)
-  doc.text(`Page ${pageNum} of ${totalPages}`, PAGE_W - 8, fy + 5, { align: 'right' })
+  doc.text(`Print Date  ${printDate}    ·    Report Date  ${MONTHS[month-1]}-${year}`, LM, fy + 14.5)
 
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(6.5)
   doc.setTextColor(...BLUE)
-  doc.text('Powered by Haven  ·  havencare.app', PAGE_W - 8, fy + 10, { align: 'right' })
+  doc.text('Powered by Haven  ·  havencare.app', RM, fy + 14.5, { align: 'right' })
 }
 
 // Exceptions page — every refused / held / not-given dose with its reason.
