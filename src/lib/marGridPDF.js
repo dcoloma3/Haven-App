@@ -72,6 +72,15 @@ function timeToSlot(timeStr) {
   return hourToSlot(parseInt(timeStr.split(':')[0], 10))
 }
 
+// Map a not-given reason → a short cell code + a human label for the legend/list.
+function denialCode(reason) {
+  const r = (reason || '').toLowerCase()
+  if (r.includes('refus')) return { code: 'R', label: 'Refused' }
+  if (r.includes('absent') || r.includes('out')) return { code: 'A', label: 'Absent / Out of Facility' }
+  if (r.includes('hold') || r.includes('held') || r.includes('paus')) return { code: 'H', label: 'Held' }
+  return { code: 'H', label: reason ? reason.charAt(0).toUpperCase() + reason.slice(1) : 'Not given' }
+}
+
 // Short human description of a medication's frequency, for the Dosage line
 function freqDesc(med) {
   const t = med.frequency_type
@@ -159,7 +168,7 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
   // administration rows. PRN rows have a reliable NOT NULL resident_id.
   // select('*') so the administered_by_name / _caregiver_id columns are included
   // when present, but a pre-migration DB (without them) doesn't error the query.
-  const [adminsRes, prnRes] = await Promise.all([
+  const [adminsRes, prnRes, deniedRes] = await Promise.all([
     medIds.length
       ? supabase.from('medication_administrations')
           .select('*')
@@ -171,10 +180,18 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
       .eq('resident_id', residentId)
       .gte('administered_at', prnFromBound.toISOString())
       .lte('administered_at', prnToBound.toISOString()),
+    // Refused / held / not-given doses (with reasons)
+    medIds.length
+      ? supabase.from('medication_not_given')
+          .select('*')
+          .in('medication_id', medIds)
+          .gte('administered_date', from).lte('administered_date', to)
+      : Promise.resolve({ data: [] }),
   ])
 
   const admins = adminsRes.data ?? []
   const prns   = prnRes.data   ?? []
+  const denied = deniedRes.data ?? []
 
   // Resolve administering-staff names. community_members has NO foreign key to
   // profiles, so an embedded join (profiles(...)) returns null and every cell
@@ -252,6 +269,29 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
     }
   }
 
+  // Denied / refused / held doses → a code in the cell + a reason in the
+  // exceptions list. Given doses take precedence in the cell.
+  const medById = {}
+  for (const m of meds) medById[m.id] = m
+  const deniedLookup = {}   // key → 'R' | 'H' | 'A'
+  const exceptions = []     // { day, medName, time, label, reason }
+  for (const dg of denied) {
+    const day  = parseInt(dg.administered_date.split('-')[2], 10)
+    const slot = timeToSlot(dg.scheduled_time)
+    const key  = `${dg.medication_id}|${day}|${slot}`
+    const { code, label } = denialCode(dg.reason)
+    if (!adminLookup[key]) deniedLookup[key] = code   // never overwrite a given dose
+    const med = medById[dg.medication_id]
+    exceptions.push({
+      day,
+      medName: med?.medication_name || dg.medication_name || 'Medication',
+      time: dg.scheduled_time || '',
+      label,
+      reason: (dg.notes || '').trim(),
+    })
+  }
+  exceptions.sort((a, b) => a.day - b.day || String(a.time).localeCompare(String(b.time)))
+
   const resName = resident.full_name
     || `${resident.first_name || ''} ${resident.last_name || ''}`.trim()
     || 'Unknown'
@@ -259,9 +299,11 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
   // ── Build PDF ────────────────────────────────────────────────────────────────
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'letter' })
 
-  const totalPages = Math.ceil(meds.length / MEDS_PER_PAGE) || 1
+  const medPages   = Math.ceil(meds.length / MEDS_PER_PAGE) || 1
+  const totalPages = medPages + (exceptions.length ? 1 : 0)
 
-  for (let pageIdx = 0; pageIdx < totalPages; pageIdx++) {
+  // Medication grid pages
+  for (let pageIdx = 0; pageIdx < medPages; pageIdx++) {
     if (pageIdx > 0) doc.addPage()
     // White page background (so transparent areas don't render dark)
     doc.setFillColor(255, 255, 255)
@@ -269,8 +311,18 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
     const chunk = meds.slice(pageIdx * MEDS_PER_PAGE, (pageIdx + 1) * MEDS_PER_PAGE)
     drawHeader(doc, resName, community.name || '', month, year)
     drawColHeaders(doc, days)
-    drawMedBlocks(doc, chunk, adminLookup, days)
+    drawMedBlocks(doc, chunk, adminLookup, deniedLookup, days)
     drawFooter(doc, staffUsed, month, year, pageIdx + 1, totalPages)
+  }
+
+  // Exceptions page (refused / held / not-given doses with reasons)
+  if (exceptions.length) {
+    doc.addPage()
+    doc.setFillColor(255, 255, 255)
+    doc.rect(0, 0, PAGE_W, PAGE_H, 'F')
+    drawHeader(doc, resName, community.name || '', month, year)
+    drawExceptionsPage(doc, exceptions, month, year)
+    drawFooter(doc, staffUsed, month, year, totalPages, totalPages)
   }
 
   const safeName = resName.replace(/[^a-zA-Z0-9]/g, '_')
@@ -391,7 +443,7 @@ function drawColHeaders(doc, days) {
   doc.line(GRID_X, hy, GRID_X, hy + COL_HDR_H)
 }
 
-function drawMedBlocks(doc, meds, adminLookup, days) {
+function drawMedBlocks(doc, meds, adminLookup, deniedLookup, days) {
   // Always render a full page of MEDS_PER_PAGE blocks; pad with blank rows
   // (matches a real MAR form — blank blocks leave room for handwritten meds)
   for (let i = 0; i < MEDS_PER_PAGE; i++) {
@@ -465,9 +517,11 @@ function drawMedBlocks(doc, meds, adminLookup, days) {
           doc.rect(cx, rowY, DAY_W, ROW_H, 'F')
         }
 
-        if (med) {
-          const init = adminLookup[`${med.id}|${d}|${slot}`]
-          if (init && d <= days) {
+        if (med && d <= days) {
+          const cellKey = `${med.id}|${d}|${slot}`
+          const init = adminLookup[cellKey]
+          const denyCode = deniedLookup[cellKey]
+          if (init) {
             if (init === GIVEN_MARK) {
               // given, staff unresolved → filled dot (always renders)
               doc.setFillColor(...BLACK)
@@ -478,6 +532,12 @@ function drawMedBlocks(doc, meds, adminLookup, days) {
               doc.setTextColor(...BLACK)
               doc.text(init, cx + DAY_W / 2, rowY + ROW_H * 0.68, { align: 'center' })
             }
+          } else if (denyCode) {
+            // refused / held / absent — show the code in red so it stands out
+            doc.setFont('helvetica', 'bold')
+            doc.setFontSize(5.8)
+            doc.setTextColor(190, 30, 30)
+            doc.text(denyCode, cx + DAY_W / 2, rowY + ROW_H * 0.68, { align: 'center' })
           }
         }
 
@@ -528,7 +588,7 @@ function drawFooter(doc, staffUsed, month, year, pageNum, totalPages) {
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(6.5)
   doc.setTextColor(...BLACK)
-  const codes = [['P','Paused medication'], ['R','Refused'], ['O.F','Out of Facility']]
+  const codes = [['R','Refused'], ['H','Held'], ['A','Absent / Out of Facility']]
   let lx = PAGE_W * 0.60
   for (const [code, label] of codes) {
     doc.setFont('helvetica', 'bold')
@@ -573,4 +633,76 @@ function drawFooter(doc, staffUsed, month, year, pageNum, totalPages) {
   doc.setFontSize(6.5)
   doc.setTextColor(...BLUE)
   doc.text('Powered by Haven  ·  havencare.app', PAGE_W - 8, fy + 10, { align: 'right' })
+}
+
+// Exceptions page — every refused / held / not-given dose with its reason.
+function drawExceptionsPage(doc, exceptions, month, year) {
+  const x = LEFT_TEXT
+  let y = HEADER_H + 4
+  const mon3 = MONTHS[month - 1].slice(0, 3)
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(12)
+  doc.setTextColor(...BLACK)
+  doc.text('Medication Exceptions', x, y)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(8)
+  doc.setTextColor(...DGRAY)
+  doc.text('Doses that were refused, held, or not given — with the reason recorded.', x, y + 5)
+  y += 11
+
+  // Column headers
+  const cols = [
+    { label: 'Date',        x: x,        w: 26 },
+    { label: 'Time',        x: x + 26,   w: 22 },
+    { label: 'Medication',  x: x + 48,   w: 70 },
+    { label: 'Status',      x: x + 118,  w: 34 },
+    { label: 'Reason',      x: x + 152,  w: PAGE_W - 8 - (x + 152) },
+  ]
+  doc.setFillColor(...BLUE)
+  doc.rect(x, y, PAGE_W - 8 - x, 6, 'F')
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(7.5)
+  doc.setTextColor(255, 255, 255)
+  cols.forEach(c => doc.text(c.label, c.x + 1.5, y + 4))
+  y += 6
+
+  doc.setTextColor(...BLACK)
+  exceptions.forEach((e, i) => {
+    const reasonLines = doc.splitTextToSize(e.reason || e.label, cols[4].w - 2)
+    const rowH = Math.max(6, reasonLines.length * 3.4 + 2.4)
+    if (i % 2 === 1) { doc.setFillColor(247, 249, 252); doc.rect(x, y, PAGE_W - 8 - x, rowH, 'F') }
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(7.5)
+    doc.setTextColor(...BLACK)
+    doc.text(`${mon3} ${e.day}, ${year}`, cols[0].x + 1.5, y + 4)
+    doc.text(e.time ? fmt12Safe(e.time) : '—', cols[1].x + 1.5, y + 4)
+    doc.text(doc.splitTextToSize(e.medName, cols[2].w - 2)[0] || '', cols[2].x + 1.5, y + 4)
+    doc.setFont('helvetica', 'bold')
+    doc.text(e.label, cols[3].x + 1.5, y + 4)
+    doc.setFont('helvetica', 'normal')
+    doc.text(reasonLines, cols[4].x + 1.5, y + 4, { lineHeightFactor: 1.15 })
+
+    doc.setDrawColor(...LGRAY)
+    doc.setLineWidth(0.15)
+    doc.line(x, y + rowH, PAGE_W - 8, y + rowH)
+    y += rowH
+  })
+
+  // Outer border
+  doc.setDrawColor(...DGRAY)
+  doc.setLineWidth(0.3)
+  doc.rect(x, HEADER_H + 15, PAGE_W - 8 - x, y - (HEADER_H + 15), 'S')
+}
+
+// 'HH:MM' → 'H:MM AM/PM' (safe for empty/odd values)
+function fmt12Safe(t) {
+  const parts = String(t).split(':')
+  const h = parseInt(parts[0], 10)
+  if (Number.isNaN(h)) return String(t)
+  const m = (parts[1] || '00').slice(0, 2)
+  const ampm = h < 12 ? 'AM' : 'PM'
+  const hour = h % 12 === 0 ? 12 : h % 12
+  return `${hour}:${m} ${ampm}`
 }
