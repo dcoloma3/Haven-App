@@ -89,28 +89,40 @@ export function CommunityProvider({ children }) {
   }, [])
 
   useEffect(() => {
+    // Initial load. Guard against a double-load race with onAuthStateChange's
+    // INITIAL_SESSION — whichever fires first loads this user; the other skips.
     supabase.auth.getSession().then(({ data }) => {
-      load(data.session?.user?.id ?? null, data.session?.user?.email ?? '')
+      const uid = data.session?.user?.id ?? null
+      if (uid && uid === lastUserIdRef.current) return
+      lastUserIdRef.current = uid
+      load(uid, data.session?.user?.email ?? '')
     })
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!session) {
+        // Signed out / no session — clear everything.
         setMemberships([])
         setActiveCommunityId(null)
         try { localStorage.removeItem('haven_community_id') } catch { /* intentional */ }
         setIsSuperAdmin(false)
         setAllCommunities([])
-      } else {
-        // On a fresh sign-in, clear the stored community ID immediately so the
-        // validation in load() always picks the correct community for this user,
-        // rather than accidentally keeping a value left by a previous user.
-        if (event === 'SIGNED_IN' && session.user.id !== lastUserIdRef.current) {
-          // Genuinely new user — clear to prevent cross-user data leakage
-          try { localStorage.removeItem('haven_community_id') } catch { /* intentional */ }
-          setActiveCommunityId(null)
-        }
-        lastUserIdRef.current = session.user.id
-        load(session.user.id, session.user.email)
+        lastUserIdRef.current = null
+        return
       }
+
+      // Same user we've already loaded on this tab? This covers TOKEN_REFRESHED,
+      // USER_UPDATED, and the SIGNED_IN that fires when a mobile tab regains focus.
+      // Do NOT re-fetch — that would flash the loading screen and reset the view.
+      if (session.user.id === lastUserIdRef.current) return
+
+      // A different user than last loaded → clear any community left by the
+      // previous user before loading this one (prevents cross-user data leakage).
+      if (lastUserIdRef.current !== null) {
+        try { localStorage.removeItem('haven_community_id') } catch { /* intentional */ }
+        setActiveCommunityId(null)
+      }
+      lastUserIdRef.current = session.user.id
+      load(session.user.id, session.user.email)
     })
     return () => subscription.unsubscribe()
   }, [load])
