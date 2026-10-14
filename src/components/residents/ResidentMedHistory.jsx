@@ -84,7 +84,7 @@ const PRESETS = [
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function ResidentMedHistory({ residentId }) {
-  const { communityId, isAdmin } = useCommunity()
+  const { communityId } = useCommunity()
   const [rangePreset, setRangePreset] = useState('month')
   const [customFrom, setCustomFrom] = useState('')
   const [customTo, setCustomTo] = useState('')
@@ -423,15 +423,13 @@ export default function ResidentMedHistory({ residentId }) {
                           ) : (
                             <div className="flex items-center justify-end gap-2">
                               <p className="text-xs font-semibold text-emerald-600">✓ {formatTime(record.administered_at)}</p>
-                              {isAdmin && (
-                                <button
-                                  onClick={() => startEditPrn(record)}
-                                  className="text-[11px] text-[#185FA5] hover:text-[#0C447C] transition-colors"
-                                  title="Edit administered time"
-                                >
-                                  Edit
-                                </button>
-                              )}
+                              <button
+                                onClick={() => startEditPrn(record)}
+                                className="text-[11px] text-[#185FA5] hover:text-[#0C447C] transition-colors"
+                                title="Edit administered time"
+                              >
+                                Edit
+                              </button>
                             </div>
                           )}
                         </div>
