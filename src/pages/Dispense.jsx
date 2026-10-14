@@ -11,6 +11,13 @@ import { attributionFields, insertWithAttribution } from '../lib/administering'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+// ISO timestamp (or now) → 'YYYY-MM-DDTHH:MM' in local time, for datetime-local inputs
+function toDatetimeLocal(d = new Date()) {
+  const dt = typeof d === 'string' ? new Date(d) : d
+  const pad = n => String(n).padStart(2, '0')
+  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`
+}
+
 function fmt12(t) {
   const [h, m] = t.split(':').map(Number)
   const ampm = h < 12 ? 'AM' : 'PM'
@@ -264,6 +271,7 @@ function PRNResidentRow({ resident, communityId, staffMap: _staffMap, activeCare
   const [todayDoses, setTodayDoses] = useState([]) // today's prn_administrations for this resident
   const [givingId, setGivingId] = useState(null) // med.id that has "Administer" form open
   const [reason, setReason] = useState('')
+  const [timeGiven, setTimeGiven] = useState('') // datetime-local string, defaults to now
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
 
@@ -302,16 +310,16 @@ function PRNResidentRow({ resident, communityId, staffMap: _staffMap, activeCare
 
   async function handleAdminister(med) {
     if (!reason.trim()) { setSaveError('Please enter a reason.'); return }
+    if (!timeGiven) { setSaveError('Please enter the time given.'); return }
     setSaving(true)
     setSaveError('')
     const { data: { session } } = await supabase.auth.getSession()
-    const now = new Date()
     const { data, error } = await insertWithAttribution('prn_administrations', {
       medication_name: med.medication_name,
       dose: med.dose ?? null,
       resident_id: resident.id,
       community_id: communityId,
-      administered_at: now.toISOString(),
+      administered_at: new Date(timeGiven).toISOString(),
       reason: reason.trim(),
       notes: null,
       ...attributionFields(activeCaregiver, session?.user?.id ?? null),
@@ -321,6 +329,7 @@ function PRNResidentRow({ resident, communityId, staffMap: _staffMap, activeCare
     setTodayDoses(prev => [data, ...prev])
     setGivingId(null)
     setReason('')
+    setTimeGiven('')
   }
 
   // Count how many of this resident's PRN meds have been given today (from already-loaded doses)
@@ -416,7 +425,7 @@ function PRNResidentRow({ resident, communityId, staffMap: _staffMap, activeCare
 
                   {!isGiving && (
                     <button
-                      onClick={() => { setGivingId(med.id); setReason(''); setSaveError('') }}
+                      onClick={() => { setGivingId(med.id); setReason(''); setTimeGiven(toDatetimeLocal()); setSaveError('') }}
                       className="flex-shrink-0 bg-[#042C53] hover:bg-[#0B3D6E] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
                     >
                       Administer
@@ -437,17 +446,24 @@ function PRNResidentRow({ resident, communityId, staffMap: _staffMap, activeCare
                       placeholder={med.indication ? `e.g. ${med.indication} — describe severity` : 'e.g. Reported pain 6/10'}
                       className={inputCls + ' mb-2'}
                     />
+                    <p className="text-xs font-semibold text-slate-600 mb-2">Time given <span className="text-red-500">*</span></p>
+                    <input
+                      type="datetime-local"
+                      value={timeGiven}
+                      onChange={e => setTimeGiven(e.target.value)}
+                      className={inputCls + ' mb-2'}
+                    />
                     {saveError && <p className="text-xs text-red-600 mb-2">{saveError}</p>}
                     <div className="flex gap-2">
                       <button
-                        onClick={() => { setGivingId(null); setReason(''); setSaveError('') }}
+                        onClick={() => { setGivingId(null); setReason(''); setTimeGiven(''); setSaveError('') }}
                         className="flex-1 border border-slate-300 text-slate-600 text-xs font-medium py-1.5 rounded-lg hover:bg-white transition-colors"
                       >
                         Cancel
                       </button>
                       <button
                         onClick={() => handleAdminister(med)}
-                        disabled={saving || !reason.trim()}
+                        disabled={saving || !reason.trim() || !timeGiven}
                         className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-semibold py-1.5 rounded-lg transition-colors"
                       >
                         {saving ? 'Recording…' : 'Record Administration'}

@@ -95,10 +95,10 @@ export default function ResidentMedHistory({ residentId }) {
   const [generating, setGenerating] = useState(false)
   const [marError, setMarError] = useState('')
   const [selectedMed, setSelectedMed] = useState('')
-  const [editingPrnId, setEditingPrnId] = useState(null)
-  const [prnTimeDraft, setPrnTimeDraft] = useState('')
-  const [savingPrnId, setSavingPrnId] = useState(null)
-  const [prnEditError, setPrnEditError] = useState('')
+  const [editingId, setEditingId] = useState(null)
+  const [timeDraft, setTimeDraft] = useState('')
+  const [savingId, setSavingId] = useState(null)
+  const [editError, setEditError] = useState('')
 
   const { from, to } = getDateRange(rangePreset, customFrom, customTo)
 
@@ -150,24 +150,59 @@ export default function ResidentMedHistory({ residentId }) {
     loadRecords()
   }, [loadRecords])
 
-  function startEditPrn(record) {
-    setPrnEditError('')
-    setEditingPrnId(record.id)
-    setPrnTimeDraft(toDatetimeLocal(record.administered_at))
+  function startEditTime(record) {
+    setEditError('')
+    setEditingId(record.id)
+    setTimeDraft(toDatetimeLocal(record.administered_at))
   }
 
-  async function saveEditPrn(record) {
-    if (!prnTimeDraft) { setPrnEditError('Pick a date and time.'); return }
-    setSavingPrnId(record.id)
-    setPrnEditError('')
+  async function saveEditTime(record, table) {
+    if (!timeDraft) { setEditError('Pick a date and time.'); return }
+    setSavingId(record.id)
+    setEditError('')
     const { error } = await supabase
-      .from('prn_administrations')
-      .update({ administered_at: new Date(prnTimeDraft).toISOString() })
+      .from(table)
+      .update({ administered_at: new Date(timeDraft).toISOString() })
       .eq('id', record.id)
-    setSavingPrnId(null)
-    if (error) { setPrnEditError(error.message); return }
-    setEditingPrnId(null)
+    setSavingId(null)
+    if (error) { setEditError(error.message); return }
+    setEditingId(null)
     loadRecords()
+  }
+
+  // Given-time cell with inline edit, shared by routine + PRN rows.
+  function renderGivenTime(record, table) {
+    if (editingId === record.id) {
+      return (
+        <div className="flex flex-col items-end gap-1.5">
+          <input
+            type="datetime-local"
+            className="border border-slate-300 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent"
+            value={timeDraft}
+            onChange={e => setTimeDraft(e.target.value)}
+          />
+          <div className="flex gap-1.5">
+            <button onClick={() => setEditingId(null)} className="text-xs text-slate-500 hover:text-slate-700 px-2 py-1">Cancel</button>
+            <button onClick={() => saveEditTime(record, table)} disabled={savingId === record.id} className="text-xs bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-lg px-3 py-1 font-medium">
+              {savingId === record.id ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+          {editError && <p className="text-[10px] text-red-600 max-w-[170px]">{editError}</p>}
+        </div>
+      )
+    }
+    return (
+      <div className="flex items-center justify-end gap-2">
+        <p className="text-xs font-semibold text-emerald-600">✓ {formatTime(record.administered_at)}</p>
+        <button
+          onClick={() => startEditTime(record)}
+          className="text-[11px] text-[#185FA5] hover:text-[#0C447C] transition-colors"
+          title="Edit administered time"
+        >
+          Edit
+        </button>
+      </div>
+    )
   }
 
   // Unique medication names across both routine and PRN records in range
@@ -378,10 +413,8 @@ export default function ResidentMedHistory({ residentId }) {
                           </p>
                         </div>
                         <div className="text-right flex-shrink-0 ml-3">
-                          <p className="text-xs font-medium text-slate-500">{fmt12(record.scheduled_time)}</p>
-                          {record.administered_at && (
-                            <p className="text-xs text-emerald-600 mt-0.5">✓ {formatTime(record.administered_at)}</p>
-                          )}
+                          <p className="text-xs font-medium text-slate-500 mb-0.5">{fmt12(record.scheduled_time)}</p>
+                          {record.administered_at && renderGivenTime(record, 'medication_administrations')}
                         </div>
                       </div>
                     )
@@ -404,34 +437,7 @@ export default function ResidentMedHistory({ residentId }) {
                           {givenBy && <p className="text-xs text-slate-400 mt-0.5">{givenBy}</p>}
                         </div>
                         <div className="text-right flex-shrink-0 ml-3">
-                          {editingPrnId === record.id ? (
-                            <div className="flex flex-col items-end gap-1.5">
-                              <input
-                                type="datetime-local"
-                                className="border border-slate-300 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent"
-                                value={prnTimeDraft}
-                                onChange={e => setPrnTimeDraft(e.target.value)}
-                              />
-                              <div className="flex gap-1.5">
-                                <button onClick={() => setEditingPrnId(null)} className="text-xs text-slate-500 hover:text-slate-700 px-2 py-1">Cancel</button>
-                                <button onClick={() => saveEditPrn(record)} disabled={savingPrnId === record.id} className="text-xs bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-lg px-3 py-1 font-medium">
-                                  {savingPrnId === record.id ? 'Saving…' : 'Save'}
-                                </button>
-                              </div>
-                              {prnEditError && <p className="text-[10px] text-red-600 max-w-[170px]">{prnEditError}</p>}
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-end gap-2">
-                              <p className="text-xs font-semibold text-emerald-600">✓ {formatTime(record.administered_at)}</p>
-                              <button
-                                onClick={() => startEditPrn(record)}
-                                className="text-[11px] text-[#185FA5] hover:text-[#0C447C] transition-colors"
-                                title="Edit administered time"
-                              >
-                                Edit
-                              </button>
-                            </div>
-                          )}
+                          {renderGivenTime(record, 'prn_administrations')}
                         </div>
                       </div>
                     )
