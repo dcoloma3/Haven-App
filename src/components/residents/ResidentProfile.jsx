@@ -4,6 +4,9 @@ alter table residents add column if not exists gender text;
 alter table residents add column if not exists insurance_carrier text;
 alter table residents add column if not exists insurance_id text;
 alter table residents add column if not exists admission_type text;
+alter table residents add column if not exists religion text;
+alter table residents add column if not exists preferred_activities text;
+alter table residents add column if not exists avoided_activities text;
 alter table emergency_contacts add column if not exists email text;
 alter table emergency_contacts add column if not exists is_primary boolean not null default false;
 alter table emergency_contacts add column if not exists is_poa boolean not null default false;
@@ -87,6 +90,9 @@ export default function ResidentProfile({ resident, onUpdate, onFaceSheet, gener
         insurance_id: form.insurance_id || null,
         care_level: form.care_level || null,
         admission_type: form.admission_type || null,
+        religion: form.religion || null,
+        preferred_activities: form.preferred_activities || null,
+        avoided_activities: form.avoided_activities || null,
         notes: form.notes || null,
         color: form.color || 'blue',
       })
@@ -166,6 +172,16 @@ export default function ResidentProfile({ resident, onUpdate, onFaceSheet, gener
             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <Field label="Insurance Carrier" value={resident.insurance_carrier} />
               <Field label="Insurance ID / Member #" value={resident.insurance_id} />
+            </dl>
+          </div>
+
+          {/* Lifestyle Preferences */}
+          <div className="border-t border-slate-100 pt-5 mb-5">
+            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-4">Lifestyle Preferences</h3>
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <Field label="Religion" value={resident.religion} />
+              <Field label="Preferred Activities" value={resident.preferred_activities} wide />
+              <Field label="Avoided Activities" value={resident.avoided_activities} wide />
             </dl>
           </div>
 
@@ -285,6 +301,25 @@ export default function ResidentProfile({ resident, onUpdate, onFaceSheet, gener
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Insurance ID / Member #</label>
               <input className={inputCls} value={form.insurance_id ?? ''} onChange={e => set('insurance_id', e.target.value)} placeholder="e.g. 1EG4-TE5-MK72" />
+            </div>
+          </div>
+        </div>
+
+        {/* Lifestyle Preferences */}
+        <div className="border-t border-slate-100 pt-4">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Lifestyle Preferences</p>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Religion</label>
+              <input className={inputCls} value={form.religion ?? ''} onChange={e => set('religion', e.target.value)} placeholder="e.g. Catholic, Jewish, None" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Preferred Activities</label>
+              <textarea className={`${inputCls} resize-none`} rows={2} value={form.preferred_activities ?? ''} onChange={e => set('preferred_activities', e.target.value)} placeholder="e.g. Bingo, gardening, music, church services" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Avoided Activities</label>
+              <textarea className={`${inputCls} resize-none`} rows={2} value={form.avoided_activities ?? ''} onChange={e => set('avoided_activities', e.target.value)} placeholder="e.g. Loud group events, outings in cold weather" />
             </div>
           </div>
         </div>
