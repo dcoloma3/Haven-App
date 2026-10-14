@@ -18,6 +18,7 @@ import VitalsLog from '../components/vitals/VitalsLog'
 import CarePlanList from '../components/careplans/CarePlanList'
 import ADLTracker from '../components/adl/ADLTracker'
 import ResidentBowelLog from '../components/bowel/ResidentBowelLog'
+import ResidentSearch from '../components/residents/ResidentSearch'
 import DietaryProfile from '../components/dietary/DietaryProfile'
 import FamilyAccess from '../components/family/FamilyAccess'
 import BillingHistory from '../components/billing/BillingHistory'
@@ -286,6 +287,9 @@ export default function ResidentDetail() {
           </p>
         </div>
       </div>
+
+      {/* Universal per-resident search */}
+      <ResidentSearch residentId={id} resident={resident} onJump={handleTabClick} />
 
       {/* Tabs — 5 for staff, 6 for admin */}
       <div className="border-b border-slate-200 mb-5 -mx-4 px-4">
