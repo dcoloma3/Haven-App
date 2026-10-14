@@ -17,6 +17,7 @@ import DocumentVault from '../components/documents/DocumentVault'
 import VitalsLog from '../components/vitals/VitalsLog'
 import CarePlanList from '../components/careplans/CarePlanList'
 import ADLTracker from '../components/adl/ADLTracker'
+import ResidentBowelLog from '../components/bowel/ResidentBowelLog'
 import DietaryProfile from '../components/dietary/DietaryProfile'
 import FamilyAccess from '../components/family/FamilyAccess'
 import BillingHistory from '../components/billing/BillingHistory'
@@ -340,6 +341,9 @@ export default function ResidentDetail() {
           </div>
           <div className="border-t border-slate-100 pt-6">
             <ADLTracker residentId={id} resident={resident} />
+          </div>
+          <div className="border-t border-slate-100 pt-6">
+            <ResidentBowelLog residentId={id} />
           </div>
         </div>
       )}
