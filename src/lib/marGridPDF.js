@@ -262,19 +262,37 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
     }
   }
 
-  // PRN administrations — link by medication_name (no medication_id FK on prn_administrations)
+  // PRN administrations — placed in the grid by medication_name match, and
+  // always listed in the PRN log with their exact administered date/time.
   const medByName = {}
   for (const m of meds) medByName[(m.medication_name || '').trim().toLowerCase()] = m.id
+  const prnLog = []   // { day, hour, minute, medName, dose, reason, givenBy }
   for (const p of prns) {
-    const medId = medByName[(p.medication_name || '').trim().toLowerCase()]
-    if (!medId) continue   // PRN med not in this resident's medication list — skip
     // Place by LOCAL date/time (matches the time shown in the on-screen log)
     const dt = new Date(p.administered_at)
     if (dt.getFullYear() !== year || dt.getMonth() !== month - 1) continue  // outside report month
     const day  = dt.getDate()
+    const who  = resolveAdministrator(p)
+
+    const reason = [p.reason, p.notes]
+      .map(s => (s || '').trim())
+      .filter(Boolean)
+      .join(' — ')
+    prnLog.push({
+      day,
+      hour:    dt.getHours(),
+      minute:  dt.getMinutes(),
+      medName: (p.medication_name || 'Medication').trim(),
+      dose:    (p.dose || '').trim(),
+      reason,
+      givenBy: who?.fullName || who?.initials || '',
+    })
+
+    // Grid placement only when the PRN med is in this resident's current list
+    const medId = medByName[(p.medication_name || '').trim().toLowerCase()]
+    if (!medId) continue
     const slot = hourToSlot(dt.getHours())
     const key  = `${medId}|${day}|${slot}`
-    const who  = resolveAdministrator(p)
     if (who && who.initials) {
       adminLookup[key]        = who.initials
       staffUsed[who.initials] = who.fullName
@@ -282,6 +300,7 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
       adminLookup[key] = GIVEN_MARK
     }
   }
+  prnLog.sort((a, b) => a.day - b.day || (a.hour * 60 + a.minute) - (b.hour * 60 + b.minute))
 
   // Denied / refused / held doses → a code in the cell + a reason in the
   // exceptions list. Given doses take precedence in the cell.
@@ -313,8 +332,10 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
   // ── Build PDF ────────────────────────────────────────────────────────────────
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'letter' })
 
-  const medPages   = Math.ceil(meds.length / MEDS_PER_PAGE) || 1
-  const totalPages = medPages + (exceptions.length ? 1 : 0)
+  const medPages    = Math.ceil(meds.length / MEDS_PER_PAGE) || 1
+  const prnPageNum  = prnLog.length ? medPages + 1 : 0
+  const excPageNum  = exceptions.length ? medPages + (prnLog.length ? 1 : 0) + 1 : 0
+  const totalPages  = medPages + (prnLog.length ? 1 : 0) + (exceptions.length ? 1 : 0)
 
   // Medication grid pages
   for (let pageIdx = 0; pageIdx < medPages; pageIdx++) {
@@ -329,6 +350,16 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
     drawFooter(doc, staffUsed, month, year, pageIdx + 1, totalPages)
   }
 
+  // PRN administration log (every as-needed dose with its exact date & time)
+  if (prnLog.length) {
+    doc.addPage()
+    doc.setFillColor(255, 255, 255)
+    doc.rect(0, 0, PAGE_W, PAGE_H, 'F')
+    drawHeader(doc, resName, community.name || '', month, year)
+    drawPrnLogPage(doc, prnLog, month, year)
+    drawFooter(doc, staffUsed, month, year, prnPageNum, totalPages)
+  }
+
   // Exceptions page (refused / held / not-given doses with reasons)
   if (exceptions.length) {
     doc.addPage()
@@ -336,7 +367,7 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
     doc.rect(0, 0, PAGE_W, PAGE_H, 'F')
     drawHeader(doc, resName, community.name || '', month, year)
     drawExceptionsPage(doc, exceptions, month, year)
-    drawFooter(doc, staffUsed, month, year, totalPages, totalPages)
+    drawFooter(doc, staffUsed, month, year, excPageNum, totalPages)
   }
 
   const safeName = resName.replace(/[^a-zA-Z0-9]/g, '_')
@@ -700,6 +731,66 @@ function drawExceptionsPage(doc, exceptions, month, year) {
     doc.text(e.label, cols[3].x + 1.5, y + 4)
     doc.setFont('helvetica', 'normal')
     doc.text(reasonLines, cols[4].x + 1.5, y + 4, { lineHeightFactor: 1.15 })
+
+    doc.setDrawColor(...LGRAY)
+    doc.setLineWidth(0.15)
+    doc.line(x, y + rowH, PAGE_W - 8, y + rowH)
+    y += rowH
+  })
+
+  // Outer border
+  doc.setDrawColor(...DGRAY)
+  doc.setLineWidth(0.3)
+  doc.rect(x, HEADER_H + 15, PAGE_W - 8 - x, y - (HEADER_H + 15), 'S')
+}
+
+function drawPrnLogPage(doc, prnLog, month, year) {
+  const x = LEFT_TEXT
+  let y = HEADER_H + 4
+  const mon3 = MONTHS[month - 1].slice(0, 3)
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(12)
+  doc.setTextColor(...BLACK)
+  doc.text('PRN Administration Log', x, y)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(8)
+  doc.setTextColor(...DGRAY)
+  doc.text('As-needed (PRN) doses given this month, with the date and time administered.', x, y + 5)
+  y += 11
+
+  // Column headers
+  const cols = [
+    { label: 'Date',       x: x,        w: 26 },
+    { label: 'Time',       x: x + 26,   w: 22 },
+    { label: 'Medication', x: x + 48,   w: 62 },
+    { label: 'Dose',       x: x + 110,  w: 26 },
+    { label: 'Given by',   x: x + 136,  w: 36 },
+    { label: 'Reason',     x: x + 172,  w: PAGE_W - 8 - (x + 172) },
+  ]
+  doc.setFillColor(...BLUE)
+  doc.rect(x, y, PAGE_W - 8 - x, 6, 'F')
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(7.5)
+  doc.setTextColor(255, 255, 255)
+  cols.forEach(c => doc.text(c.label, c.x + 1.5, y + 4))
+  y += 6
+
+  doc.setTextColor(...BLACK)
+  prnLog.forEach((e, i) => {
+    const reasonLines = doc.splitTextToSize(e.reason || '—', cols[5].w - 2)
+    const rowH = Math.max(6, reasonLines.length * 3.4 + 2.4)
+    if (i % 2 === 1) { doc.setFillColor(247, 249, 252); doc.rect(x, y, PAGE_W - 8 - x, rowH, 'F') }
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(7.5)
+    doc.setTextColor(...BLACK)
+    doc.text(`${mon3} ${e.day}, ${year}`, cols[0].x + 1.5, y + 4)
+    doc.text(fmt12Safe(`${e.hour}:${String(e.minute).padStart(2, '0')}`), cols[1].x + 1.5, y + 4)
+    doc.text(doc.splitTextToSize(e.medName, cols[2].w - 2)[0] || '', cols[2].x + 1.5, y + 4)
+    doc.text(doc.splitTextToSize(e.dose || '—', cols[3].w - 2)[0] || '—', cols[3].x + 1.5, y + 4)
+    doc.text(doc.splitTextToSize(e.givenBy || '—', cols[4].w - 2)[0] || '—', cols[4].x + 1.5, y + 4)
+    doc.text(reasonLines, cols[5].x + 1.5, y + 4, { lineHeightFactor: 1.15 })
 
     doc.setDrawColor(...LGRAY)
     doc.setLineWidth(0.15)
