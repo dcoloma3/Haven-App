@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from './lib/supabase'
 import { completeTrial } from './lib/trial'
 import { identifyUser, clearUser } from './lib/monitoring'
@@ -146,8 +146,26 @@ function ProtectedRoute({ children, trialLocked, featureName, requireCommunity =
   return children
 }
 
+// Safety net: a Supabase password-recovery link signs the user in and fires a
+// PASSWORD_RECOVERY event. If the link's redirect lands them anywhere other than
+// the reset form (e.g. the home page, when the redirect URL isn't allow-listed),
+// this sends them to /reset-password so they can actually set a new password.
+function RecoveryGate({ active, onHandled }) {
+  const navigate = useNavigate()
+  const location = useLocation()
+  useEffect(() => {
+    if (!active) return
+    if (location.pathname !== '/reset-password') {
+      navigate('/reset-password', { replace: true })
+    }
+    onHandled()
+  }, [active, location.pathname, navigate, onHandled])
+  return null
+}
+
 export default function App() {
   const [session, setSession] = useState(undefined)
+  const [recovery, setRecovery] = useState(false)
   const lastIdentifiedId = useRef(null)
 
   useEffect(() => {
@@ -155,6 +173,9 @@ export default function App() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session)
+
+      // Password recovery — route to the reset form wherever the link landed.
+      if (event === 'PASSWORD_RECOVERY') setRecovery(true)
 
       // Tag Sentry with the signed-in user — guard against token-refresh re-fires
       if (session?.user) {
@@ -202,6 +223,7 @@ export default function App() {
   return (
     <>
     <BrowserRouter>
+      <RecoveryGate active={recovery} onHandled={() => setRecovery(false)} />
       <CommunityProvider>
         <ProfileProvider>
           <FacilityProvider>
