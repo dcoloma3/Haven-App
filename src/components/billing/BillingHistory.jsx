@@ -171,6 +171,18 @@ export default function BillingHistory({ residentId, resident }) {
     await fetchRecords()
   }
 
+  async function handleDelete(record) {
+    if (!window.confirm(`Delete the ${record.billing_month} billing statement? This cannot be undone.`)) return
+    setSaveError('')
+    const { error } = await supabase.from('billing_records').delete().eq('id', record.id)
+    if (error) {
+      console.error(error)
+      setSaveError('Something went wrong. Please try again.')
+      return
+    }
+    await fetchRecords()
+  }
+
   async function changeStatus(record, newStatus) {
     setSaveError('')
     const { error } = await supabase.from('billing_records').update({ status: newStatus }).eq('id', record.id)
@@ -232,6 +244,8 @@ export default function BillingHistory({ residentId, resident }) {
                     <button onClick={() => openEdit(r)} className="text-xs text-slate-500 font-medium hover:text-slate-700 transition-colors">Edit</button>
                     {r.status === 'draft' && <><span className="text-slate-200">|</span><button onClick={() => changeStatus(r, 'sent')} className="text-xs text-blue-500 font-medium hover:text-blue-700 transition-colors">Mark Sent</button></>}
                     {r.status === 'sent' && <><span className="text-slate-200">|</span><button onClick={() => changeStatus(r, 'paid')} className="text-xs text-emerald-500 font-medium hover:text-emerald-700 transition-colors">Mark Paid</button></>}
+                    <span className="text-slate-200">|</span>
+                    <button onClick={() => handleDelete(r)} className="text-xs text-red-400 font-medium hover:text-red-600 transition-colors">Delete</button>
                   </>
                 )}
               </div>
