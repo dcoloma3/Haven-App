@@ -26,7 +26,7 @@ import { supabase } from '../../lib/supabase'
 import { useCommunity } from '../../context/CommunityContext'
 import { useProfile } from '../../context/ProfileContext'
 
-const CATEGORIES = ['DNR', 'POA', 'Insurance', 'Physician Orders', 'Lab Results', 'Advance Directive', 'ID', 'Other']
+const CATEGORIES = ['POLST', 'POA', 'Insurance', 'Physician Orders', 'Lab Results', 'Advance Directive', 'ID', 'Other']
 
 function formatFileSize(bytes) {
   if (!bytes) return ''
