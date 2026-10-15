@@ -6,6 +6,7 @@ import { useCommunity } from '../../context/CommunityContext'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import HavenLogo from './HavenLogo'
 import GlobalSearch from './GlobalSearch'
+import HolidayBadge from './HolidayBadge'
 import CreateCommunityModal from '../community/CreateCommunityModal'
 
 function ChevronDown() {
@@ -234,6 +235,9 @@ export default function Navbar() {
         <Link to="/dashboard" className="flex-shrink-0 hover:opacity-80 transition-opacity">
           <HavenLogo variant="white" markHeight={28} textSize={isMobile ? 0 : 20} />
         </Link>
+
+        {/* Seasonal / holiday flourish */}
+        <HolidayBadge />
 
         {/* Desktop: search bar — absolutely centered */}
         {!isMobile && (
