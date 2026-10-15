@@ -1,6 +1,7 @@
 /*
--- Run in Supabase SQL editor:
--- Also create a storage bucket named "resident-documents" with public = false
+-- Storage setup lives in supabase-migration-document-vault-storage.sql
+-- (private bucket "resident-documents" + storage.objects policies + storage_path column).
+-- Table definition for reference:
 create table resident_documents (
   id uuid primary key default gen_random_uuid(),
   community_id uuid references communities(id) on delete cascade,
@@ -99,15 +100,15 @@ export default function DocumentVault({ residentId, resident: _resident }) {
         .upload(path, selectedFile)
       if (uploadError) throw uploadError
 
-      const { data: { publicUrl } } = supabase.storage.from('resident-documents').getPublicUrl(path)
-
       const authorName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Staff'
       await supabase.from('resident_documents').insert({
         community_id: communityId,
         resident_id: residentId,
         created_by_name: authorName,
         file_name: selectedFile.name,
-        file_url: publicUrl,
+        // Private bucket — store the path; views use short-lived signed URLs.
+        file_url: path,
+        storage_path: path,
         file_size: selectedFile.size,
         file_type: selectedFile.type,
         category,
@@ -126,15 +127,36 @@ export default function DocumentVault({ residentId, resident: _resident }) {
     }
   }
 
+  // Resolve a document's storage path (new rows store it directly; legacy rows
+  // stored a public URL we can parse the path out of).
+  function docPath(doc) {
+    if (doc.storage_path) return doc.storage_path
+    try {
+      const url = new URL(doc.file_url)
+      return url.pathname.split('/resident-documents/')[1] || null
+    } catch {
+      return doc.file_url || null
+    }
+  }
+
+  async function openDocument(doc) {
+    setUploadError('')
+    const path = docPath(doc)
+    if (!path) { setUploadError('Could not locate this file.'); return }
+    const { data, error } = await supabase.storage
+      .from('resident-documents')
+      .createSignedUrl(path, 120)
+    if (error || !data?.signedUrl) { setUploadError('Could not open file: ' + (error?.message || 'unknown error')); return }
+    window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
+  }
+
   async function handleDelete(doc) {
     setDeleting(true)
     setDeleteError('')
     try {
-      // Extract path from URL
-      const url = new URL(doc.file_url)
-      const pathParts = url.pathname.split('/resident-documents/')
-      if (pathParts[1]) {
-        await supabase.storage.from('resident-documents').remove([pathParts[1]])
+      const path = docPath(doc)
+      if (path) {
+        await supabase.storage.from('resident-documents').remove([path])
       }
       await supabase.from('resident_documents').delete().eq('id', doc.id)
       setDeleteConfirm(null)
@@ -252,14 +274,12 @@ export default function DocumentVault({ residentId, resident: _resident }) {
                     {doc.notes && <p className="text-xs text-slate-500 mt-0.5 truncate">{doc.notes}</p>}
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <a
-                      href={doc.file_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      onClick={() => openDocument(doc)}
                       className="text-[#185FA5] hover:text-[#0C447C] text-xs font-medium transition-colors"
                     >
                       Open
-                    </a>
+                    </button>
                     {isAdmin && (
                       <button
                         onClick={() => setDeleteConfirm(doc)}

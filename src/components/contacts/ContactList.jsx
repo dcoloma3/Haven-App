@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase'
 
 const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
 
-const EMPTY_FORM = { contact_name: '', relationship: '', phone_number: '', email: '', is_primary: false, is_poa: false }
+const EMPTY_FORM = { contact_name: '', relationship: '', phone_number: '', email: '', address: '', is_primary: false, is_poa: false }
 
 function PencilIcon() {
   return (
@@ -50,6 +50,7 @@ function ContactModal({ residentId, contact, onClose, onSaved }) {
       relationship: form.relationship || null,
       phone_number: form.phone_number || null,
       email: form.email || null,
+      address: form.address || null,
       is_primary: Boolean(form.is_primary),
       is_poa: Boolean(form.is_poa),
     }
@@ -107,6 +108,12 @@ function ContactModal({ residentId, contact, onClose, onSaved }) {
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
             <input type="email" className={inputCls} value={form.email ?? ''} onChange={e => set('email', e.target.value)} placeholder="contact@example.com" />
+          </div>
+
+          {/* Address */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Address</label>
+            <textarea className={`${inputCls} resize-none`} rows={2} value={form.address ?? ''} onChange={e => set('address', e.target.value)} placeholder="Street, city, state, ZIP" />
           </div>
 
           {/* Toggles */}
@@ -250,6 +257,9 @@ export default function ContactList({ residentId }) {
                     <a href={`mailto:${contact.email}`} className="text-xs text-[#185FA5] hover:underline block mt-0.5">
                       {contact.email}
                     </a>
+                  )}
+                  {contact.address && (
+                    <p className="text-xs text-slate-400 mt-0.5 whitespace-pre-wrap">{contact.address}</p>
                   )}
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0">
