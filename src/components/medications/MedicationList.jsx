@@ -67,6 +67,7 @@ const EMPTY_FORM = {
   medication_name: '',
   dose: '',
   route: '',
+  prescribing_physician: '',
   frequency: '',
   notes: '',
   scheduled_times: [],
@@ -158,6 +159,7 @@ function MedicationModal({ residentId, communityId, medication, onClose, onSaved
       medication_name: form.medication_name,
       dose: form.dose || null,
       route: form.route || null,
+      prescribing_physician: form.prescribing_physician?.trim() || null,
       frequency: form.frequency || null,
       notes: form.notes || null,
       scheduled_times: freqType === 'prn' ? [] : finalTimes,
@@ -209,6 +211,11 @@ function MedicationModal({ residentId, communityId, medication, onClose, onSaved
                 {ROUTES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
               </select>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Prescribing Physician</label>
+            <input className={inputCls} value={form.prescribing_physician ?? ''} onChange={e => set('prescribing_physician', e.target.value)} placeholder="e.g. Dr. Smith (may differ from primary physician)" />
           </div>
 
           <div>

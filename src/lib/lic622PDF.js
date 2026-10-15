@@ -200,7 +200,7 @@ export async function generateLIC622PDF({ residentId, communityId, supabase }) {
   meds.slice(0, P1_MAX_ROWS).forEach((med, idx) => {
     const y        = P1_ROW_START + idx * ROW_H + ROW_TEXT_DY
     const instrVal = [med.route, med.instructions].filter(Boolean).join(' ')
-    const phys     = med.prescribing_physician || resident.physician || ''
+    const phys     = med.prescribing_physician || ''
 
     // Medication name: bold, left-aligned
     style(true, DATA_FONT)
@@ -227,7 +227,7 @@ export async function generateLIC622PDF({ residentId, communityId, supabase }) {
   meds.slice(P1_MAX_ROWS, P1_MAX_ROWS + P2_MAX_ROWS).forEach((med, idx) => {
     const y        = P2_ROW_START + idx * ROW_H + ROW_TEXT_DY
     const instrVal = [med.route, med.instructions].filter(Boolean).join(' ')
-    const phys     = med.prescribing_physician || resident.physician || ''
+    const phys     = med.prescribing_physician || ''
 
     style(true, DATA_FONT)
     doc.text(fit(med.medication_name, 'name'), COL_X.name + 2, y)
