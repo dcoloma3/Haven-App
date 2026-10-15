@@ -1,22 +1,8 @@
-// Small seasonal/holiday flourish shown in the top nav. Date-driven; returns
-// null when nothing is active (the badge then renders nothing).
-//
-// Ranges are inclusive and compared by month/day only (year-agnostic), so a
-// range may wrap across New Year (handled below).
+// Small seasonal flourish shown in the top nav. By default it reflects the
+// SEASON (changes monthly). On the exact date of a holiday it switches to that
+// holiday and triggers a one-per-day greeting. Date-driven; no backend.
 
-const HOLIDAYS = [
-  { id: 'newyear',   emoji: '🎉', label: 'Happy New Year',          from: [12, 31], to: [1, 2] },
-  { id: 'valentine', emoji: '💝', label: "Happy Valentine's Day",    from: [2, 10],  to: [2, 14] },
-  { id: 'stpatrick', emoji: '☘️', label: "Happy St. Patrick's Day",  from: [3, 15],  to: [3, 17] },
-  { id: 'spring',    emoji: '🌷', label: 'Happy Spring',             from: [4, 1],   to: [4, 10] },
-  { id: 'july4',     emoji: '🎆', label: 'Happy 4th of July',        from: [7, 1],   to: [7, 4] },
-  { id: 'halloween', emoji: '🎃', label: 'Happy Halloween',          from: [10, 1],  to: [10, 31] },
-  { id: 'thanks',    emoji: '🦃', label: 'Happy Thanksgiving',       from: [11, 20], to: [11, 30] },
-  { id: 'holidays',  emoji: '🎄', label: 'Happy Holidays',           from: [12, 1],  to: [12, 30] },
-]
-
-// Per-month seasonal fallback, so there is always a theme even outside a
-// specific holiday window. Indexed 1–12.
+// Per-month seasonal theme — always present.
 const SEASONAL = {
   1:  { id: 'winter', emoji: '❄️', label: 'Winter' },
   2:  { id: 'winter', emoji: '❄️', label: 'Winter' },
@@ -32,24 +18,40 @@ const SEASONAL = {
   12: { id: 'winter', emoji: '❄️', label: 'Winter' },
 }
 
-function inRange(month, day, [fm, fd], [tm, td]) {
-  const v = month * 100 + day
-  const start = fm * 100 + fd
-  const end = tm * 100 + td
-  // Normal (non-wrapping) range
-  if (start <= end) return v >= start && v <= end
-  // Wrapping range (e.g. Dec 31 → Jan 2)
-  return v >= start || v <= end
+// Fixed-date holidays, keyed "month-day". Only active on the exact day.
+const FIXED_HOLIDAYS = {
+  '1-1':   { id: 'newyear',   emoji: '🎉', label: 'Happy New Year' },
+  '2-14':  { id: 'valentine', emoji: '💝', label: "Happy Valentine's Day" },
+  '3-17':  { id: 'stpatrick', emoji: '☘️', label: "Happy St. Patrick's Day" },
+  '7-4':   { id: 'july4',     emoji: '🎆', label: 'Happy 4th of July' },
+  '10-31': { id: 'halloween', emoji: '🎃', label: 'Happy Halloween' },
+  '12-25': { id: 'christmas', emoji: '🎄', label: 'Merry Christmas' },
+  '12-31': { id: 'nye',       emoji: '🎉', label: "Happy New Year's Eve" },
 }
 
-// Returns the active theme: a specific holiday if today falls in one, otherwise
-// the month's seasonal theme. Always returns a theme
-// ({ id, emoji, label, isHoliday, greeting }).
-export function getHolidayTheme(date = new Date()) {
+// Day-of-month of US Thanksgiving (4th Thursday of November) for a given year.
+function thanksgivingDay(year) {
+  const firstDow = new Date(year, 10, 1).getDay() // 0=Sun … 4=Thu
+  const firstThursday = 1 + ((4 - firstDow + 7) % 7)
+  return firstThursday + 21
+}
+
+function getHoliday(date) {
   const month = date.getMonth() + 1
   const day = date.getDate()
-  const holiday = HOLIDAYS.find(h => inRange(month, day, h.from, h.to))
-  const theme = holiday || SEASONAL[month]
+  const fixed = FIXED_HOLIDAYS[`${month}-${day}`]
+  if (fixed) return fixed
+  if (month === 11 && day === thanksgivingDay(date.getFullYear())) {
+    return { id: 'thanks', emoji: '🦃', label: 'Happy Thanksgiving' }
+  }
+  return null
+}
+
+// Returns the active theme: the holiday on its exact day, otherwise the
+// season. Always returns { id, emoji, label, isHoliday, greeting }.
+export function getHolidayTheme(date = new Date()) {
+  const holiday = getHoliday(date)
+  const theme = holiday || SEASONAL[date.getMonth() + 1]
   const isHoliday = !!holiday
   return { ...theme, isHoliday, greeting: isHoliday ? `${theme.label}!` : theme.label }
 }

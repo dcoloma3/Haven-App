@@ -7,6 +7,7 @@ import { useIsMobile } from '../../hooks/useIsMobile'
 import HavenLogo from './HavenLogo'
 import GlobalSearch from './GlobalSearch'
 import HolidayBadge from './HolidayBadge'
+import DateTimeClock from './DateTimeClock'
 import CreateCommunityModal from '../community/CreateCommunityModal'
 
 function ChevronDown() {
@@ -249,6 +250,8 @@ export default function Navbar() {
         {/* Desktop: community dropdown + staff view toggle + user menu */}
         {!isMobile && (
           <div className="flex items-center gap-3 flex-shrink-0 ml-auto">
+            <DateTimeClock />
+            <div className="w-px h-5 bg-white/20" />
             <CommunityDropdown community={community} memberships={memberships} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} onSwitch={setCommunityId} onNew={() => setShowNewCommunity(true)} />
             <div className="w-px h-5 bg-white/20" />
             <StaffViewToggle />
