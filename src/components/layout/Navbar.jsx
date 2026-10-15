@@ -8,6 +8,7 @@ import HavenLogo from './HavenLogo'
 import GlobalSearch from './GlobalSearch'
 import HolidayBadge from './HolidayBadge'
 import DateTimeClock from './DateTimeClock'
+import { useThemeOff, setThemeOff } from '../../lib/themePref'
 import CreateCommunityModal from '../community/CreateCommunityModal'
 
 function ChevronDown() {
@@ -103,6 +104,7 @@ function UserMenu({ profile, isAdmin, isSuperAdmin }) {
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
   const { communityId, allCommunities, setCommunityId } = useCommunity()
+  const themeOff = useThemeOff()
 
   const displayName = profile?.full_name || profile?.email?.split('@')[0] || 'Account'
   const avatarInitials = profile?.full_name
@@ -165,6 +167,13 @@ function UserMenu({ profile, isAdmin, isSuperAdmin }) {
             <Link to="/profile" onClick={() => setOpen(false)} className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
               My profile
             </Link>
+            <button
+              onClick={() => setThemeOff(!themeOff)}
+              className="w-full flex items-center justify-between px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors border-t border-slate-100"
+            >
+              <span>Seasonal theme</span>
+              <span className={`text-xs font-medium ${themeOff ? 'text-slate-400' : 'text-[#185FA5]'}`}>{themeOff ? 'Off' : 'On'}</span>
+            </button>
             <a href="mailto:support@havencare.app?subject=Haven App Support" onClick={() => setOpen(false)}
               className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors border-t border-slate-100">
               Contact support

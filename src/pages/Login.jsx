@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import HavenLogo from '../components/layout/HavenLogo'
+import SeasonalBackground from '../components/seasonal/SeasonalBackground'
 
 function EyeIcon({ open }) {
   return open ? (
@@ -67,6 +68,9 @@ export default function Login() {
 
       {/* Subtle dot grid overlay */}
       <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)', backgroundSize: '32px 32px', pointerEvents: 'none' }} />
+
+      {/* Seasonal decoration */}
+      <SeasonalBackground />
 
       {/* Content */}
       <div className="w-full max-w-sm relative z-10">

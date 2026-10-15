@@ -117,6 +117,43 @@
   50% { transform: translate(25px, 20px) scale(1.12); }
 }
 
+/* ── Seasonal background decoration ──────────────────────────────── */
+.seasonal-particle {
+  position: absolute;
+  top: 0;
+  line-height: 1;
+  user-select: none;
+}
+.seasonal-glow { filter: drop-shadow(0 0 6px rgba(255, 160, 40, 0.5)); }
+
+@keyframes seasonal-fall {
+  0%   { transform: translate3d(0, -12vh, 0) rotate(0deg); opacity: 0; }
+  8%   { opacity: var(--op, 0.5); }
+  50%  { transform: translate3d(24px, 45vh, 0) rotate(160deg); }
+  92%  { opacity: var(--op, 0.5); }
+  100% { transform: translate3d(-18px, 108vh, 0) rotate(320deg); opacity: 0; }
+}
+@keyframes seasonal-floatup {
+  0%   { transform: translate3d(0, 100vh, 0) rotate(0deg); opacity: 0; }
+  10%  { opacity: var(--op, 0.5); }
+  90%  { opacity: var(--op, 0.5); }
+  100% { transform: translate3d(14px, -12vh, 0) rotate(-10deg); opacity: 0; }
+}
+@keyframes seasonal-bob {
+  0%, 100% { transform: translateY(0) rotate(-5deg); }
+  50%      { transform: translateY(-12px) rotate(5deg); }
+}
+@keyframes seasonal-burst {
+  0%   { transform: scale(0.2); opacity: 0; }
+  15%  { opacity: var(--op, 0.6); }
+  45%  { transform: scale(1.1); opacity: var(--op, 0.6); }
+  75%  { opacity: 0; }
+  100% { transform: scale(1.25); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .seasonal-particle { animation: none !important; }
+}
+
 *,
 *::before,
 *::after {

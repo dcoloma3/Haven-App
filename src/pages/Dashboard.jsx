@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import Layout from '../components/layout/Layout'
+import SeasonalBackground from '../components/seasonal/SeasonalBackground'
 import ResidentForm from '../components/residents/ResidentForm'
 import { useFacility } from '../context/FacilityContext'
 import { useCommunity } from '../context/CommunityContext'
@@ -279,6 +280,8 @@ export default function Dashboard() {
 
   return (
     <Layout>
+      <SeasonalBackground />
+      <div className="relative z-[1]">
       {unauthorized && (
         <div className="flex items-center justify-between bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-4 py-3 mb-4 text-sm">
           <span>You don't have permission to access that page.</span>
@@ -653,6 +656,7 @@ export default function Dashboard() {
         </div>
       )}
 
+      </div>
       {showForm && (
         <ResidentForm onClose={() => setShowForm(false)} onSaved={handleSaved} />
       )}
