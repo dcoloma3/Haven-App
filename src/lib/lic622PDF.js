@@ -215,7 +215,7 @@ export async function generateLIC622PDF({ residentId, communityId, supabase }) {
   // ── Medication rows ───────────────────────────────────────────────────────────
   meds.slice(0, P1_MAX_ROWS).forEach((med, idx) => {
     const y        = P1_ROW_START + idx * ROW_H + ROW_TEXT_DY
-    const instrVal = med.instructions || med.notes || med.route || ''
+    const instrVal = [med.route, med.instructions || med.notes].filter(Boolean).join(' — ')
     const phys     = med.prescribing_physician || ''
 
     // Medication name: bold, left-aligned
@@ -242,7 +242,7 @@ export async function generateLIC622PDF({ residentId, communityId, supabase }) {
   // Overflow meds (rows 18+)
   meds.slice(P1_MAX_ROWS, P1_MAX_ROWS + P2_MAX_ROWS).forEach((med, idx) => {
     const y        = P2_ROW_START + idx * ROW_H + ROW_TEXT_DY
-    const instrVal = med.instructions || med.notes || med.route || ''
+    const instrVal = [med.route, med.instructions || med.notes].filter(Boolean).join(' — ')
     const phys     = med.prescribing_physician || ''
 
     style(true, DATA_FONT)
