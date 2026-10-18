@@ -95,6 +95,17 @@ const DATA_FONT    =  7      // pt
 const P1_MAX_ROWS  = 17
 const P2_MAX_ROWS  = 11
 
+// Instructions column text: route + special instructions, plus an "as needed"
+// (PRN) note when the med is PRN and that isn't already written in the text.
+function buildInstructions(med) {
+  let s = [med.route, med.instructions || med.notes].filter(Boolean).join(' — ')
+  if (med.frequency_type === 'prn') {
+    const prn = `as needed${med.indication ? ` for ${med.indication}` : ''}`
+    if (!s.toLowerCase().includes('as needed')) s = s ? `${s} — ${prn}` : prn
+  }
+  return s
+}
+
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 export async function generateLIC622PDF({ residentId, communityId, supabase }) {
@@ -215,7 +226,7 @@ export async function generateLIC622PDF({ residentId, communityId, supabase }) {
   // ── Medication rows ───────────────────────────────────────────────────────────
   meds.slice(0, P1_MAX_ROWS).forEach((med, idx) => {
     const y        = P1_ROW_START + idx * ROW_H + ROW_TEXT_DY
-    const instrVal = [med.route, med.instructions || med.notes].filter(Boolean).join(' — ')
+    const instrVal = buildInstructions(med)
     const phys     = med.prescribing_physician || ''
 
     // Medication name: bold, left-aligned
@@ -242,7 +253,7 @@ export async function generateLIC622PDF({ residentId, communityId, supabase }) {
   // Overflow meds (rows 18+)
   meds.slice(P1_MAX_ROWS, P1_MAX_ROWS + P2_MAX_ROWS).forEach((med, idx) => {
     const y        = P2_ROW_START + idx * ROW_H + ROW_TEXT_DY
-    const instrVal = [med.route, med.instructions || med.notes].filter(Boolean).join(' — ')
+    const instrVal = buildInstructions(med)
     const phys     = med.prescribing_physician || ''
 
     style(true, DATA_FONT)
