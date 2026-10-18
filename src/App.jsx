@@ -27,6 +27,7 @@ const Incidents         = lazy(() => import('./pages/Incidents'))
 const SuperAdmin        = lazy(() => import('./pages/SuperAdmin'))
 const ProfileCompletion = lazy(() => import('./pages/ProfileCompletion'))
 const VitalSigns        = lazy(() => import('./pages/VitalSigns'))
+const BowelLog          = lazy(() => import('./pages/BowelLog'))
 const ShiftLog          = lazy(() => import('./pages/ShiftLog'))
 const Billing           = lazy(() => import('./pages/Billing'))
 const Occupancy         = lazy(() => import('./pages/Occupancy'))
@@ -249,6 +250,7 @@ export default function App() {
               <Route path="/incidents" element={session ? <ProtectedRoute><Incidents /></ProtectedRoute> : <Navigate to="/login" replace />} />
               <Route path="/profile" element={session ? <ProtectedRoute><MyProfile /></ProtectedRoute> : <Navigate to="/login" replace />} />
               <Route path="/vitals" element={session ? <ProtectedRoute><VitalSigns /></ProtectedRoute> : <Navigate to="/login" replace />} />
+              <Route path="/bowel-log" element={session ? <ProtectedRoute><BowelLog /></ProtectedRoute> : <Navigate to="/login" replace />} />
               <Route path="/shift-log" element={session ? <ProtectedRoute><ShiftLog /></ProtectedRoute> : <Navigate to="/login" replace />} />
               <Route path="/maintenance" element={session ? <ProtectedRoute><Maintenance /></ProtectedRoute> : <Navigate to="/login" replace />} />
               <Route path="/transportation" element={session ? <ProtectedRoute><Transportation /></ProtectedRoute> : <Navigate to="/login" replace />} />
