@@ -165,35 +165,54 @@ export async function generateLIC622PDF({ residentId, communityId, supabase }) {
     return r - COL_X[key] - 3
   }
 
-  // Truncate text to one line fitting the column
-  function fit(text, key) {
-    return doc.splitTextToSize(String(text ?? ''), colW(key))[0] || ''
-  }
-
   // Center text within [x1, x2] at y
   function cx(text, x1, x2, y) {
     doc.text(String(text ?? ''), (x1 + x2) / 2, y, { align: 'center' })
   }
 
-  // Truncate and center within a column
+  // Draw one line, shrinking the font only as needed so it fits maxW.
+  // Restores the font size afterwards. Min 4.5pt.
+  function drawFit(text, x, y, maxW, opts = {}) {
+    const str = String(text ?? '')
+    const base = doc.getFontSize()
+    if (str) {
+      const w = doc.getTextWidth(str)
+      if (w > maxW && w > 0) doc.setFontSize(Math.max(4.5, base * (maxW / w)))
+    }
+    doc.text(str, x, y, opts)
+    doc.setFontSize(base)
+  }
+
+  // Shrink-to-fit, centered within a column.
   function col(text, key, y) {
-    doc.text(fit(text, key), colCx(key), y, { align: 'center' })
+    drawFit(text, colCx(key), y, colW(key), { align: 'center' })
   }
 
   // Strength column: dose on the left, quantity dispensed on the right.
   function strengthCell(med, y) {
-    doc.text(fit(med.dose || '', 'strength'), COL_X.strength + 1.5, y)
-    if (med.quantity != null && String(med.quantity).trim() !== '') {
-      doc.text(String(med.quantity), COL_X.instruct - 2, y, { align: 'right' })
-    }
+    const hasQty = med.quantity != null && String(med.quantity).trim() !== ''
+    const reserve = hasQty ? 8 : 1.5
+    drawFit(med.dose || '', COL_X.strength + 1.5, y, colW('strength') - reserve)
+    if (hasQty) doc.text(String(med.quantity), COL_X.instruct - 2, y, { align: 'right' })
   }
 
-  // Left-aligned, wrapped text within a column (vertically centered around y).
-  function colWrap(text, key, y, maxLines = 3) {
-    const lines = doc.splitTextToSize(String(text ?? ''), colW(key)).slice(0, maxLines)
-    const lh = 2.5
+  // Left-aligned, wrapped text within a column. Shrinks the font so all lines
+  // fit the row height (grid boxes are fixed by the template, so we can't grow
+  // the box — we fit the text to it instead).
+  function colWrap(text, key, y, maxH = ROW_H - 0.8) {
+    const str = String(text ?? '')
+    let size = DATA_FONT
+    let lines = doc.splitTextToSize(str, colW(key))
+    let lh = size * 0.36
+    while (lines.length * lh > maxH && size > 4.5) {
+      size -= 0.5
+      doc.setFontSize(size)
+      lines = doc.splitTextToSize(str, colW(key))
+      lh = size * 0.36
+    }
     const startY = y - ((lines.length - 1) * lh) / 2
     lines.forEach((ln, i) => doc.text(ln, COL_X[key] + 1.5, startY + i * lh))
+    doc.setFontSize(DATA_FONT)
   }
 
   // ── PAGE 1 ───────────────────────────────────────────────────────────────────
@@ -219,10 +238,9 @@ export async function generateLIC622PDF({ residentId, communityId, supabase }) {
   cx(fmtDate(resident.move_in_date || resident.admission_date) || '',
      RES_X.admDate, RES_X.physician, RES_Y)
 
-  // Attending physician: centered in its column
-  const physStr   = resident.physician || ''
-  const physLines = doc.splitTextToSize(physStr, RES_X.admin - RES_X.physician - 4)
-  cx(physLines[0] || '', RES_X.physician, RES_X.admin, RES_Y)
+  // Attending physician: centered in its column, shrink-to-fit
+  drawFit(resident.physician || '', (RES_X.physician + RES_X.admin) / 2, RES_Y,
+    RES_X.admin - RES_X.physician - 4, { align: 'center' })
 
   // Administrator: left blank (filled by hand)
 
@@ -234,7 +252,7 @@ export async function generateLIC622PDF({ residentId, communityId, supabase }) {
 
     // Medication name: bold, left-aligned
     style(true, DATA_FONT)
-    doc.text(fit(med.medication_name, 'name'), COL_X.name + 2, y)
+    drawFit(med.medication_name, COL_X.name + 2, y, colW('name'))
 
     // Remaining columns: normal weight, horizontally centered
     style(false, DATA_FONT)
@@ -260,7 +278,7 @@ export async function generateLIC622PDF({ residentId, communityId, supabase }) {
     const phys     = med.prescribing_physician || ''
 
     style(true, DATA_FONT)
-    doc.text(fit(med.medication_name, 'name'), COL_X.name + 2, y)
+    drawFit(med.medication_name, COL_X.name + 2, y, colW('name'))
 
     style(false, DATA_FONT)
     strengthCell(med, y)
