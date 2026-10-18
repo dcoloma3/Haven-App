@@ -166,6 +166,22 @@ export async function generateLIC622PDF({ residentId, communityId, supabase }) {
     doc.text(fit(text, key), colCx(key), y, { align: 'center' })
   }
 
+  // Strength column: dose on the left, quantity dispensed on the right.
+  function strengthCell(med, y) {
+    doc.text(fit(med.dose || '', 'strength'), COL_X.strength + 1.5, y)
+    if (med.quantity != null && String(med.quantity).trim() !== '') {
+      doc.text(String(med.quantity), COL_X.instruct - 2, y, { align: 'right' })
+    }
+  }
+
+  // Left-aligned, wrapped text within a column (vertically centered around y).
+  function colWrap(text, key, y, maxLines = 3) {
+    const lines = doc.splitTextToSize(String(text ?? ''), colW(key)).slice(0, maxLines)
+    const lh = 2.5
+    const startY = y - ((lines.length - 1) * lh) / 2
+    lines.forEach((ln, i) => doc.text(ln, COL_X[key] + 1.5, startY + i * lh))
+  }
+
   // ── PAGE 1 ───────────────────────────────────────────────────────────────────
   doc.addImage(p1Img, 'JPEG', 0, 0, PAGE_W, PAGE_H)
 
@@ -199,7 +215,7 @@ export async function generateLIC622PDF({ residentId, communityId, supabase }) {
   // ── Medication rows ───────────────────────────────────────────────────────────
   meds.slice(0, P1_MAX_ROWS).forEach((med, idx) => {
     const y        = P1_ROW_START + idx * ROW_H + ROW_TEXT_DY
-    const instrVal = [med.route, med.instructions].filter(Boolean).join(' ')
+    const instrVal = med.instructions || med.notes || med.route || ''
     const phys     = med.prescribing_physician || ''
 
     // Medication name: bold, left-aligned
@@ -208,8 +224,8 @@ export async function generateLIC622PDF({ residentId, communityId, supabase }) {
 
     // Remaining columns: normal weight, horizontally centered
     style(false, DATA_FONT)
-    col(med.dose || '',              'strength',  y)
-    col(instrVal,                    'instruct',  y)
+    strengthCell(med, y)
+    colWrap(instrVal, 'instruct', y)
     col(fmtDate(med.expiration_date),'exp',       y)
     col(fmtDate(med.date_filled),    'filled',    y)
     col(fmtDate(med.start_date),     'started',   y)
@@ -226,15 +242,15 @@ export async function generateLIC622PDF({ residentId, communityId, supabase }) {
   // Overflow meds (rows 18+)
   meds.slice(P1_MAX_ROWS, P1_MAX_ROWS + P2_MAX_ROWS).forEach((med, idx) => {
     const y        = P2_ROW_START + idx * ROW_H + ROW_TEXT_DY
-    const instrVal = [med.route, med.instructions].filter(Boolean).join(' ')
+    const instrVal = med.instructions || med.notes || med.route || ''
     const phys     = med.prescribing_physician || ''
 
     style(true, DATA_FONT)
     doc.text(fit(med.medication_name, 'name'), COL_X.name + 2, y)
 
     style(false, DATA_FONT)
-    col(med.dose || '',              'strength',  y)
-    col(instrVal,                    'instruct',  y)
+    strengthCell(med, y)
+    colWrap(instrVal, 'instruct', y)
     col(fmtDate(med.expiration_date),'exp',       y)
     col(fmtDate(med.date_filled),    'filled',    y)
     col(fmtDate(med.start_date),     'started',   y)

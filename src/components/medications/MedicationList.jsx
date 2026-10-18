@@ -78,6 +78,12 @@ const EMPTY_FORM = {
   end_date: '',
   indication: '',
   min_interval_hours: '',
+  prescription_number: '',
+  pharmacy: '',
+  refills: '',
+  quantity: '',
+  date_filled: '',
+  expiration_date: '',
 }
 
 const ROUTES = [
@@ -168,6 +174,12 @@ function MedicationModal({ residentId, communityId, medication, onClose, onSaved
       frequency_interval: form.frequency_type === 'every_x_days' ? (parseInt(form.frequency_interval) || null) : null,
       start_date: form.start_date || null,
       end_date: form.end_date || null,
+      prescription_number: form.prescription_number?.trim() || null,
+      pharmacy: form.pharmacy?.trim() || null,
+      refills: form.refills?.toString().trim() || null,
+      quantity: form.quantity?.toString().trim() || null,
+      date_filled: form.date_filled || null,
+      expiration_date: form.expiration_date || null,
       indication: form.frequency_type === 'prn' ? (form.indication?.trim() || null) : null,
       min_interval_hours: form.frequency_type === 'prn' && form.min_interval_hours ? parseInt(form.min_interval_hours) : null,
     }
@@ -216,6 +228,37 @@ function MedicationModal({ residentId, communityId, medication, onClose, onSaved
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Prescribing Physician</label>
             <input className={inputCls} value={form.prescribing_physician ?? ''} onChange={e => set('prescribing_physician', e.target.value)} placeholder="e.g. Dr. Smith (may differ from primary physician)" />
+          </div>
+
+          {/* Pharmacy & prescription details — populate the LIC 622 */}
+          <div className="border-t border-slate-100 pt-4">
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Pharmacy &amp; Prescription (LIC 622)</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Prescription # (Rx)</label>
+                <input className={inputCls} value={form.prescription_number ?? ''} onChange={e => set('prescription_number', e.target.value)} placeholder="e.g. 1234567" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Refills</label>
+                <input type="number" min="0" className={inputCls} value={form.refills ?? ''} onChange={e => set('refills', e.target.value)} placeholder="e.g. 3" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Pharmacy</label>
+                <input className={inputCls} value={form.pharmacy ?? ''} onChange={e => set('pharmacy', e.target.value)} placeholder="e.g. CVS #4821" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Quantity</label>
+                <input className={inputCls} value={form.quantity ?? ''} onChange={e => set('quantity', e.target.value)} placeholder="e.g. 30" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Date Filled</label>
+                <input type="date" className={inputCls} value={form.date_filled ?? ''} onChange={e => set('date_filled', e.target.value)} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Expiration Date</label>
+                <input type="date" className={inputCls} value={form.expiration_date ?? ''} onChange={e => set('expiration_date', e.target.value)} />
+              </div>
+            </div>
           </div>
 
           <div>
