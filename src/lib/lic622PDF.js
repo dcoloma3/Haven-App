@@ -100,8 +100,11 @@ const P2_MAX_ROWS  = 11
 function buildInstructions(med) {
   let s = [med.route, med.instructions || med.notes].filter(Boolean).join(' — ')
   if (med.frequency_type === 'prn') {
-    const prn = `as needed${med.indication ? ` for ${med.indication}` : ''}`
-    if (!s.toLowerCase().includes('as needed')) s = s ? `${s} — ${prn}` : prn
+    const lower = () => s.toLowerCase()
+    if (!lower().includes('as needed')) s = s ? `${s} — as needed` : 'as needed'
+    if (med.indication && !lower().includes(med.indication.toLowerCase())) {
+      s = `${s} for ${med.indication}`
+    }
   }
   return s
 }
