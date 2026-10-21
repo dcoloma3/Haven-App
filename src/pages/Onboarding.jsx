@@ -107,10 +107,15 @@ export default function Onboarding() {
           if (rpcErr) throw new Error(rpcErr.message)
         }
       } else {
-        // Create a new community
-        const { data: newCommunity, error: communityErr } = await supabase
+        // Create a new community. Use a client-generated id and DON'T chain
+        // .select() — reading the row back (RETURNING) runs the SELECT RLS
+        // policy, which the creator fails until their admin membership row
+        // exists below. Insert without return, then add the membership.
+        const newId = crypto.randomUUID()
+        const { error: communityErr } = await supabase
           .from('communities')
           .insert([{
+            id: newId,
             name: community.name.trim(),
             address: community.address || null,
             phone: community.phone || null,
@@ -118,11 +123,9 @@ export default function Onboarding() {
             email: community.email || null,
             website: community.website || null,
           }])
-          .select()
-          .single()
 
         if (communityErr) { setError(communityErr.message); setSaving(false); return }
-        communityId = newCommunity.id
+        communityId = newId
 
         // Make this user the admin
         await supabase.from('community_members').insert([{
