@@ -1,3 +1,6 @@
 {
-  "rewrites": [{ "source": "/((?!api/).*)", "destination": "/index.html" }]
+  "rewrites": [
+    { "source": "/for-operators", "destination": "/for-operators.html" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ]
 }

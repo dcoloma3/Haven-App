@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="description" content="Haven — the all-in-one platform for assisted living & RCFE operators. Residents, medications, LIC 622 & MAR compliance, daily logs, and billing in one system.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://havencare.app/for-operators">
+<meta property="og:title" content="Haven for Operators">
+<meta property="og:description" content="Run your care home with confidence — residents, medications, compliance, and billing in one simple system. Built by an RCFE operator.">
+<meta property="og:image" content="https://havencare.app/api/og">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Haven for Operators">
+<meta name="twitter:description" content="The all-in-one platform for assisted living & RCFE operators.">
+<meta name="twitter:image" content="https://havencare.app/api/og">
+<title>Haven for Operators</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Layout: single scrolling e-brochure — alternating navy brand bands and light content, full-width bands with a gutter-padded inner wrapper. Committed brand look (single theme by design). */
+  :root{
+    --navy:#042C53; --navy2:#0a3d6b; --blue:#185FA5; --sky:#378ADD;
+    --ink:#0f172a; --slate:#475569; --muted:#64748b;
+    --mist:#f4f7fb; --line:#e4e9f0; --paper:#ffffff;
+    --disp:'Plus Jakarta Sans', system-ui, sans-serif;
+    --body:'Inter', system-ui, sans-serif;
+    color-scheme: light;
+  }
+  *{box-sizing:border-box}
+  body{background:var(--paper); color:var(--ink); font-family:var(--body); line-height:1.6; -webkit-font-smoothing:antialiased}
+  h1,h2,h3{font-family:var(--disp); letter-spacing:-.02em; text-wrap:balance; margin:0}
+  p{margin:0}
+  a{color:inherit}
+  .wrap{max-width:1080px; margin:0 auto; padding-left:max(20px, env(safe-area-inset-left,0px)); padding-right:max(20px, env(safe-area-inset-right,0px))}
+  .eyebrow{font-family:var(--disp); font-weight:700; font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--blue)}
+
+  /* Buttons */
+  .btn{display:inline-flex; align-items:center; gap:8px; font-family:var(--disp); font-weight:700; font-size:15px;
+    text-decoration:none; border-radius:11px; padding:13px 22px; transition:transform .15s, box-shadow .15s, background .15s}
+  .btn-primary{background:var(--sky); color:#042033; box-shadow:0 8px 22px rgba(55,138,221,.35)}
+  .btn-primary:hover{transform:translateY(-1px); box-shadow:0 12px 28px rgba(55,138,221,.45)}
+  .btn-ghost{background:rgba(255,255,255,.08); color:#fff; border:1px solid rgba(255,255,255,.28)}
+  .btn-ghost:hover{background:rgba(255,255,255,.16)}
+  .btn-navy{background:var(--navy); color:#fff; box-shadow:0 8px 22px rgba(4,44,83,.25)}
+  .btn-navy:hover{transform:translateY(-1px)}
+
+  /* Sticky header */
+  header.site{position:sticky; top:env(safe-area-inset-top,0px); z-index:20; background:rgba(4,44,83,.92);
+    backdrop-filter:blur(8px); border-bottom:1px solid rgba(255,255,255,.1)}
+  header .wrap{display:flex; align-items:center; justify-content:space-between; padding-block:12px}
+  .brand{display:flex; align-items:center; gap:9px; color:#fff; text-decoration:none}
+  .brand .wm{font-family:var(--disp); font-weight:700; font-size:21px; letter-spacing:-.02em}
+  header .btn{padding:9px 16px; font-size:13.5px}
+
+  /* Hero */
+  .hero{position:relative; background:linear-gradient(160deg,#021a33 0%, var(--navy) 48%, var(--navy2) 100%); color:#fff; overflow:hidden}
+  .hero .glow{position:absolute; width:620px; height:620px; border-radius:50%; top:-240px; right:-160px;
+    background:radial-gradient(circle, rgba(55,138,221,.4), transparent 68%); pointer-events:none}
+  .hero .glow2{position:absolute; width:420px; height:420px; border-radius:50%; bottom:-200px; left:-140px;
+    background:radial-gradient(circle, rgba(37,99,235,.28), transparent 70%); pointer-events:none}
+  .hero .wrap{position:relative; padding-block:68px 76px}
+  .hero h1{font-size:clamp(34px,6vw,56px); font-weight:800; line-height:1.04; max-width:16ch; margin-top:18px}
+  .hero .sub{font-size:clamp(16px,2.3vw,20px); color:#bcd6f0; max-width:52ch; margin-top:20px; line-height:1.55}
+  .hero .actions{display:flex; flex-wrap:wrap; gap:12px; margin-top:30px}
+  .hero .trust{display:flex; flex-wrap:wrap; gap:8px 18px; margin-top:28px; color:#9fc1e6; font-size:13.5px}
+  .hero .trust span{display:inline-flex; align-items:center; gap:7px}
+  .hero .trust b{color:#fff; font-weight:600}
+  .dot{width:6px; height:6px; border-radius:50%; background:var(--sky); display:inline-block}
+
+  /* Section rhythm */
+  section{padding-block:clamp(52px,8vw,84px)}
+  .sec-head{max-width:44ch}
+  .sec-head h2{font-size:clamp(26px,4vw,38px); font-weight:800; color:var(--navy); margin-top:12px}
+  .sec-head p{font-size:17px; color:var(--slate); margin-top:14px}
+
+  /* Feature grid */
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(248px,1fr)); gap:16px; margin-top:38px}
+  .card{background:var(--paper); border:1px solid var(--line); border-radius:16px; padding:22px; transition:transform .15s, box-shadow .15s, border-color .15s}
+  .card:hover{transform:translateY(-3px); box-shadow:0 14px 34px rgba(4,44,83,.1); border-color:#cfe0f2}
+  .icon{width:42px; height:42px; border-radius:11px; background:linear-gradient(145deg,#eaf3fd,#d7e8fa); color:var(--blue);
+    display:flex; align-items:center; justify-content:center; margin-bottom:15px}
+  .icon svg{width:22px; height:22px; stroke:currentColor; stroke-width:1.9; fill:none; stroke-linecap:round; stroke-linejoin:round}
+  .card h3{font-size:16.5px; font-weight:700; color:var(--ink)}
+  .card p{font-size:13.5px; color:var(--muted); margin-top:7px; line-height:1.55}
+
+  /* Compliance band (navy) */
+  .band{background:linear-gradient(160deg,var(--navy),#06345f); color:#fff}
+  .band .inner{display:grid; grid-template-columns:1.1fr 1fr; gap:40px; align-items:center}
+  .band .eyebrow{color:var(--sky)}
+  .band h2{font-size:clamp(26px,4vw,36px); font-weight:800; color:#fff; margin-top:12px}
+  .band p{color:#bcd6f0; font-size:16.5px; margin-top:14px; max-width:46ch}
+  .band ul{list-style:none; padding:0; margin:22px 0 0; display:flex; flex-direction:column; gap:12px}
+  .band li{display:flex; gap:11px; align-items:flex-start; font-size:15px; color:#dcebf9}
+  .band li svg{width:20px; height:20px; stroke:var(--sky); stroke-width:2.2; fill:none; flex-shrink:0; margin-top:1px}
+  /* little document mock */
+  .docmock{background:#fff; border-radius:16px; padding:18px; box-shadow:0 24px 60px rgba(0,0,0,.35); color:var(--ink)}
+  .docmock .dh{display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--line); padding-bottom:10px; margin-bottom:12px}
+  .docmock .dh b{font-family:var(--disp); font-weight:800; color:var(--navy); font-size:13px}
+  .docmock .tag{font-size:10px; font-weight:700; color:var(--blue); background:#e8f1fb; padding:3px 8px; border-radius:999px}
+  .docrow{display:grid; grid-template-columns:1.4fr .8fr 1fr; gap:8px; padding:7px 0; border-bottom:1px solid #f1f5f9; font-size:11px}
+  .docrow span:first-child{font-weight:600; color:var(--ink)}
+  .docrow span{color:var(--muted)}
+  .docmock .dnote{font-size:10.5px; color:var(--muted); margin-top:10px}
+
+  /* Why / benefits */
+  .why-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:18px; margin-top:36px}
+  .why{display:flex; gap:14px}
+  .why .num{font-family:var(--disp); font-weight:800; font-size:22px; color:var(--sky); line-height:1; flex-shrink:0}
+  .why h3{font-size:16px; font-weight:700; color:var(--ink)}
+  .why p{font-size:13.5px; color:var(--muted); margin-top:6px; line-height:1.55}
+
+  /* Pricing */
+  .pricing{background:var(--mist)}
+  .pricing .sub-note{font-size:14px; color:var(--muted); margin-top:12px; font-weight:600}
+  .plans{display:grid; grid-template-columns:repeat(auto-fit,minmax(258px,1fr)); gap:18px; margin-top:40px; align-items:stretch}
+  .plan{background:#fff; border:1px solid var(--line); border-radius:18px; padding:26px 24px; display:flex; flex-direction:column}
+  .plan.pop{background:linear-gradient(165deg,var(--navy),#06345f); color:#fff; border-color:var(--navy); box-shadow:0 26px 54px rgba(4,44,83,.28); position:relative}
+  .pbadge{position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:var(--sky); color:#042033;
+    font-family:var(--disp); font-weight:800; font-size:11px; padding:5px 13px; border-radius:999px; letter-spacing:.03em; white-space:nowrap}
+  .pname{font-family:var(--disp); font-weight:700; font-size:12.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--blue)}
+  .plan.pop .pname{color:var(--sky)}
+  .price{font-family:var(--disp); font-weight:800; font-size:36px; color:var(--navy); margin-top:12px; line-height:1}
+  .plan.pop .price{color:#fff}
+  .price .per{font-family:var(--body); font-size:15px; font-weight:600; color:var(--muted)}
+  .plan.pop .price .per{color:#aecbe8}
+  .annual{font-size:12.5px; color:var(--muted); margin-top:8px}
+  .plan.pop .annual{color:#aecbe8}
+  .pdesc{font-size:13.5px; color:var(--slate); margin-top:12px; line-height:1.5}
+  .plan.pop .pdesc{color:#cfe2f5}
+  .plan ul{list-style:none; padding:0; margin:18px 0 22px; display:flex; flex-direction:column; gap:9px; flex:1}
+  .plan li{display:flex; gap:9px; font-size:13.5px; color:var(--ink); align-items:flex-start}
+  .plan.pop li{color:#dcebf9}
+  .plan li svg{width:17px; height:17px; stroke:var(--blue); stroke-width:2.6; fill:none; flex-shrink:0; margin-top:2px}
+  .plan.pop li svg{stroke:var(--sky)}
+  .plan .btn{width:100%; justify-content:center}
+  .plan.pop .btn-navy{background:var(--sky); color:#042033}
+
+  /* Quote */
+  .quote{background:var(--mist)}
+  .quote .inner{max-width:760px; margin:0 auto; text-align:center}
+  .quote blockquote{font-family:var(--disp); font-weight:600; font-size:clamp(20px,3.2vw,28px); color:var(--navy); line-height:1.3; margin:0}
+  .quote cite{display:block; font-style:normal; font-size:14px; color:var(--muted); margin-top:18px}
+
+  /* CTA */
+  .cta{background:linear-gradient(160deg,var(--navy),#083a68); color:#fff; text-align:center}
+  .cta h2{font-size:clamp(28px,4.5vw,42px); font-weight:800; color:#fff; max-width:18ch; margin:0 auto}
+  .cta p{color:#bcd6f0; font-size:17px; margin-top:16px}
+  .cta .actions{display:flex; justify-content:center; flex-wrap:wrap; gap:12px; margin-top:28px}
+  .emailrow{display:inline-flex; align-items:center; gap:10px; margin-top:26px; background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.2); border-radius:999px; padding:8px 8px 8px 16px; font-size:14px; color:#dcebf9}
+  .emailrow code{font-family:var(--body); color:#fff; font-weight:600}
+  .copybtn{font-family:var(--disp); font-weight:700; font-size:12.5px; background:#fff; color:var(--navy); border:0;
+    border-radius:999px; padding:7px 13px; cursor:pointer}
+  .copybtn:hover{background:#eaf3fd}
+
+  /* Footer */
+  footer{background:#021a33; color:#8fb3d6}
+  footer .wrap{display:flex; flex-wrap:wrap; gap:16px; justify-content:space-between; align-items:center; padding-block:26px}
+  footer .brand .wm{font-size:18px}
+  footer small{font-size:12.5px; color:#6f93b8}
+
+  @media (max-width:720px){
+    .band .inner{grid-template-columns:1fr; gap:28px}
+    .hero .wrap{padding-block:48px 56px}
+  }
+  @media (prefers-reduced-motion: reduce){ *{transition:none !important} }
+</style>
+</head>
+<body>
+
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="https://havencare.app" target="_blank" rel="noopener">
+      <svg width="26" height="32" viewBox="0 0 24 30" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M2,28 L2,15 L12,6 L22,15 L22,28 Z" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/>
+        <rect x="4" y="20" width="5" height="8" fill="#fff" rx="0.5"/>
+        <rect x="13" y="18" width="5" height="5" stroke="#fff" stroke-width="1.6" fill="none" rx="0.5"/>
+        <circle cx="12" cy="1.6" r="1.6" fill="#378ADD"/>
+      </svg>
+      <span class="wm">haven</span>
+    </a>
+    <a class="btn btn-primary" href="https://havencare.app/signup" target="_blank" rel="noopener">Start free trial</a>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="glow"></div><div class="glow2"></div>
+  <div class="wrap">
+    <span class="eyebrow" style="color:#8ec5ff">For assisted living &amp; RCFE operators</span>
+    <h1>Run your care home with confidence</h1>
+    <p class="sub">The all-in-one platform that brings residents, medications, compliance, and billing into one simple system your staff actually want to use.</p>
+    <div class="actions">
+      <a class="btn btn-primary" href="https://havencare.app/signup" target="_blank" rel="noopener">Start your 14-day free trial →</a>
+      <a class="btn btn-ghost" href="https://havencare.app" target="_blank" rel="noopener">See it live</a>
+    </div>
+    <div class="trust">
+      <span><span class="dot"></span><b>Built by an RCFE operator</b></span>
+      <span><span class="dot"></span>No credit card to start</span>
+      <span><span class="dot"></span>Works on the iPad at the med cart</span>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">One system</span>
+      <h2>Everything your home needs, in one login</h2>
+      <p>Stop juggling binders, spreadsheets, and the whiteboard. Haven keeps your whole operation together — in the office and on the floor.</p>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg></div>
+        <h3>Residents &amp; records</h3>
+        <p>Profiles, health &amp; care plans, documents, emergency contacts, and lifestyle preferences — all current and searchable.</p>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24"><rect x="3" y="9" width="18" height="6" rx="3"/><path d="M12 9v6"/></svg></div>
+        <h3>Medications &amp; MAR</h3>
+        <p>A digital med pass with PRNs, refusals, and reasons, plus caregiver initials on every dose. No more paper MAR.</p>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></div>
+        <h3>Compliance &amp; LIC 622</h3>
+        <p>The LIC 622 and monthly MAR generate straight from the medications your staff already enter.</p>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+        <h3>Daily logs</h3>
+        <p>Vitals, bowel movements, shower schedules, and ADLs — logged in seconds during rounds, home-wide or per resident.</p>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+        <h3>Incidents &amp; documents</h3>
+        <p>Report and track incidents, store signed forms securely, and keep a time-stamped record for every resident.</p>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
+        <h3>Billing &amp; statements</h3>
+        <p>Generate monthly statements per resident and see at a glance what's billed, sent, and paid.</p>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></div>
+        <h3>Family portal</h3>
+        <p>Keep families informed and reassured with updates they can see — without the phone tag.</p>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+        <h3>Scheduling &amp; calendar</h3>
+        <p>Build the staff schedule, hand off cleanly between shifts, and track resident appointments.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band">
+  <div class="wrap inner">
+    <div>
+      <span class="eyebrow">Compliance</span>
+      <h2>Stay inspection-ready</h2>
+      <p>The forms the state asks for, built from the records your team already keeps — never entered twice.</p>
+      <ul>
+        <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> LIC 622 auto-filled: strength, directions, prescriber, Rx #, refills, pharmacy</li>
+        <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Monthly MAR grid with PRN and exception logs</li>
+        <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Incident reports and a secure document vault</li>
+      </ul>
+    </div>
+    <div class="docmock" aria-hidden="true">
+      <div class="dh"><b>LIC 622 · Centrally Stored Medication</b><span class="tag">Auto-filled</span></div>
+      <div class="docrow"><span>Medication</span><span>Strength</span><span>Directions</span></div>
+      <div class="docrow"><span>Lisinopril</span><span>10 mg</span><span>By mouth daily</span></div>
+      <div class="docrow"><span>Tylenol</span><span>500 mg</span><span>As needed — pain</span></div>
+      <div class="docrow"><span>Senna</span><span>8.6 mg</span><span>2 tabs at bedtime</span></div>
+      <p class="dnote">Generated from each resident's medication record — one tap.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Why Haven</span>
+      <h2>Made for the way care homes really run</h2>
+    </div>
+    <div class="why-grid">
+      <div class="why"><span class="num">01</span><div><h3>One login for the whole home</h3><p>Everything in a single place, so nothing lives in a binder nobody can find at 2am.</p></div></div>
+      <div class="why"><span class="num">02</span><div><h3>Staff actually use it</h3><p>Simple enough for the iPad at the med cart — no training binder required.</p></div></div>
+      <div class="why"><span class="num">03</span><div><h3>Inspection-ready, always</h3><p>Your compliance forms stay current because they come from daily work, not a separate chore.</p></div></div>
+      <div class="why"><span class="num">04</span><div><h3>Built by an operator</h3><p>Made by someone who ran an RCFE and got tired of the paperwork — so it fits how homes actually work.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="pricing">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Pricing</span>
+      <h2>Simple, transparent pricing</h2>
+      <p class="sub-note">14-day free trial · No credit card · Cancel anytime</p>
+    </div>
+    <div class="plans">
+      <div class="plan">
+        <span class="pname">Starter</span>
+        <div class="price">$129<span class="per">/mo</span></div>
+        <div class="annual">or $107/mo billed annually</div>
+        <p class="pdesc">For smaller homes getting organized.</p>
+        <ul>
+          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Up to 6 residents</li>
+          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>2 staff accounts</li>
+          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Resident profiles &amp; medications</li>
+          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Calendar, scheduling &amp; billing</li>
+          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Email support</li>
+        </ul>
+        <a class="btn btn-navy" href="https://havencare.app/signup" target="_blank" rel="noopener">Start free trial</a>
+      </div>
+      <div class="plan pop">
+        <span class="pbadge">Most Popular</span>
+        <span class="pname">Pro</span>
+        <div class="price">$249<span class="per">/mo</span></div>
+        <div class="annual">or $207/mo billed annually</div>
+        <p class="pdesc">For growing teams and busier facilities.</p>
+        <ul>
+          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Up to 18 residents</li>
+          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Everything in Starter</li>
+          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Unlimited staff accounts &amp; roles</li>
+          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Vitals, incidents &amp; family portal</li>
+          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Priority support</li>
+        </ul>
+        <a class="btn btn-navy" href="https://havencare.app/signup" target="_blank" rel="noopener">Start free trial</a>
+      </div>
+      <div class="plan">
+        <span class="pname">Enterprise</span>
+        <div class="price">From $499<span class="per">/mo</span></div>
+        <div class="annual">or from $415/mo billed annually</div>
+        <p class="pdesc">For multi-facility operators.</p>
+        <ul>
+          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Unlimited residents</li>
+          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Everything in Pro</li>
+          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Multiple facilities &amp; custom branding</li>
+          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>API access &amp; dedicated manager</li>
+          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Phone support &amp; SLA</li>
+        </ul>
+        <a class="btn btn-navy" href="https://havencare.app" target="_blank" rel="noopener">Contact us</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="quote">
+  <div class="wrap inner">
+    <blockquote>"Finally, everything our home needs in one place."</blockquote>
+    <cite>— Add a quote from your team or a family member</cite>
+  </div>
+</section>
+
+<section class="cta">
+  <div class="wrap">
+    <h2>See it on your own residents</h2>
+    <p>Set up your home in minutes and feel the difference on day one.</p>
+    <div class="actions">
+      <a class="btn btn-primary" href="https://havencare.app/signup" target="_blank" rel="noopener">Start your 14-day free trial →</a>
+      <a class="btn btn-ghost" href="https://havencare.app" target="_blank" rel="noopener">Visit havencare.app</a>
+    </div>
+    <div class="emailrow">
+      <span>Questions?</span><code id="supportEmail">support@havencare.app</code>
+      <button class="copybtn" id="copyBtn" type="button">Copy</button>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <a class="brand" href="https://havencare.app" target="_blank" rel="noopener">
+      <svg width="22" height="27" viewBox="0 0 24 30" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M2,28 L2,15 L12,6 L22,15 L22,28 Z" stroke="#8fb3d6" stroke-width="1.6" stroke-linejoin="round"/>
+        <rect x="4" y="20" width="5" height="8" fill="#8fb3d6" rx="0.5"/>
+        <rect x="13" y="18" width="5" height="5" stroke="#8fb3d6" stroke-width="1.6" fill="none" rx="0.5"/>
+        <circle cx="12" cy="1.6" r="1.6" fill="#378ADD"/>
+      </svg>
+      <span class="wm">haven</span>
+    </a>
+    <small>Senior living management, simplified. · havencare.app</small>
+  </div>
+</footer>
+
+<script>
+  (function(){
+    var btn = document.getElementById('copyBtn');
+    var email = 'support@havencare.app';
+    if(!btn) return;
+    btn.addEventListener('click', function(){
+      function done(){ var o=btn.textContent; btn.textContent='Copied'; setTimeout(function(){btn.textContent=o;},1500); }
+      try{
+        navigator.clipboard.writeText(email).then(done).catch(select);
+      }catch(e){ select(); }
+      function select(){
+        try{
+          var r=document.createRange(); r.selectNodeContents(document.getElementById('supportEmail'));
+          var s=window.getSelection(); s.removeAllRanges(); s.addRange(r); done();
+        }catch(e){}
+      }
+    });
+  })();
+</script>
+
+</body>
+</html>
