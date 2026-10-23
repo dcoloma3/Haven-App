@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Haven Starter Plan</title>
+<meta name="description" content="Haven Starter — $129/mo. Everything a small care home needs: residents, medications & MAR, billing, scheduling, and more. 14-day free trial.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://havencare.app/starter">
+<meta property="og:title" content="Haven Starter — $129/mo">
+<meta property="og:description" content="Everything a small care home needs in one simple system. Up to 6 residents. 14-day free trial, no credit card.">
+<meta property="og:image" content="https://havencare.app/api/og">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Haven Starter — $129/mo">
+<meta name="twitter:description" content="Everything a small care home needs. Up to 6 residents. 14-day free trial.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#042C53; --navy2:#0a3d6b; --blue:#185FA5; --sky:#378ADD;
+    --ink:#0f172a; --slate:#475569; --muted:#64748b;
+    --mist:#f4f7fb; --line:#e4e9f0; --paper:#ffffff;
+    --disp:'Plus Jakarta Sans', system-ui, sans-serif;
+    --body:'Inter', system-ui, sans-serif;
+    color-scheme: light;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--body); line-height:1.6; -webkit-font-smoothing:antialiased}
+  h1,h2,h3{font-family:var(--disp); letter-spacing:-.02em; text-wrap:balance; margin:0}
+  p{margin:0}
+  .wrap{max-width:900px; margin:0 auto; padding-left:max(20px,env(safe-area-inset-left,0px)); padding-right:max(20px,env(safe-area-inset-right,0px))}
+  .eyebrow{font-family:var(--disp); font-weight:700; font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--sky)}
+  .btn{display:inline-flex; align-items:center; gap:8px; font-family:var(--disp); font-weight:700; font-size:15px; text-decoration:none; border-radius:11px; padding:13px 22px; transition:transform .15s, box-shadow .15s}
+  .btn-primary{background:var(--sky); color:#042033; box-shadow:0 8px 22px rgba(55,138,221,.35)}
+  .btn-primary:hover{transform:translateY(-1px)}
+  .btn-ghost{background:rgba(255,255,255,.08); color:#fff; border:1px solid rgba(255,255,255,.28)}
+  .btn-navy{background:var(--navy); color:#fff}
+  .btn-navy:hover{transform:translateY(-1px)}
+
+  header.site{position:sticky; top:env(safe-area-inset-top,0px); z-index:20; background:rgba(4,44,83,.92); backdrop-filter:blur(8px); border-bottom:1px solid rgba(255,255,255,.1)}
+  header .wrap{display:flex; align-items:center; justify-content:space-between; padding-block:12px}
+  .brand{display:flex; align-items:center; gap:9px; color:#fff; text-decoration:none}
+  .brand .wm{font-family:var(--disp); font-weight:700; font-size:21px}
+  header .btn{padding:9px 16px; font-size:13.5px}
+
+  .hero{position:relative; background:linear-gradient(160deg,#021a33,var(--navy) 50%,var(--navy2)); color:#fff; overflow:hidden; text-align:center}
+  .hero .glow{position:absolute; width:560px; height:560px; border-radius:50%; top:-220px; left:50%; transform:translateX(-50%); background:radial-gradient(circle,rgba(55,138,221,.4),transparent 68%); pointer-events:none}
+  .hero .wrap{position:relative; padding-block:60px 64px}
+  .hero h1{font-size:clamp(30px,5.5vw,46px); font-weight:800; line-height:1.08; max-width:16ch; margin:14px auto 0}
+  .price{display:flex; align-items:baseline; justify-content:center; gap:4px; margin-top:26px}
+  .price .amt{font-family:var(--disp); font-weight:800; font-size:clamp(44px,9vw,64px); color:#fff; line-height:1}
+  .price .per{font-size:18px; color:#aecbe8; font-weight:600}
+  .annual{color:#9fc1e6; font-size:14px; margin-top:8px}
+  .hero .actions{display:flex; justify-content:center; flex-wrap:wrap; gap:12px; margin-top:26px}
+  .hero .trust{display:flex; justify-content:center; flex-wrap:wrap; gap:8px 18px; margin-top:22px; color:#9fc1e6; font-size:13.5px}
+  .hero .trust span{display:inline-flex; align-items:center; gap:7px}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--sky);display:inline-block}
+
+  section{padding-block:clamp(48px,7vw,72px)}
+  .sec-head{text-align:center; max-width:46ch; margin:0 auto}
+  .sec-head h2{font-size:clamp(24px,4vw,34px); font-weight:800; color:var(--navy); margin-top:10px}
+  .sec-head p{font-size:16px; color:var(--slate); margin-top:12px}
+
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:14px; margin-top:36px}
+  .item{display:flex; gap:13px; align-items:flex-start; background:#fff; border:1px solid var(--line); border-radius:14px; padding:16px 18px}
+  .ic{width:38px;height:38px;border-radius:10px;background:linear-gradient(145deg,#eaf3fd,#d7e8fa);color:var(--blue);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .ic svg{width:20px;height:20px;stroke:currentColor;stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .item h3{font-size:15px;font-weight:700;color:var(--ink)}
+  .item p{font-size:13px;color:var(--muted);margin-top:3px;line-height:1.45}
+
+  .grow{background:var(--mist)}
+  .growcard{max-width:720px;margin:28px auto 0;background:linear-gradient(165deg,var(--navy),#06345f);color:#fff;border-radius:18px;padding:28px;text-align:center}
+  .growcard .pname{font-family:var(--disp);font-weight:700;font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--sky)}
+  .growcard h3{font-size:22px;font-weight:800;color:#fff;margin-top:8px}
+  .growcard .gp{color:#cfe2f5;font-size:15px;margin-top:12px;line-height:1.6}
+  .growcard b{color:#fff}
+
+  .cta{background:linear-gradient(160deg,var(--navy),#083a68);color:#fff;text-align:center}
+  .cta h2{font-size:clamp(26px,4.5vw,38px);font-weight:800;color:#fff;max-width:18ch;margin:0 auto}
+  .cta p{color:#bcd6f0;font-size:16px;margin-top:14px}
+  .cta .actions{display:flex;justify-content:center;flex-wrap:wrap;gap:12px;margin-top:26px}
+  .emailrow{display:inline-flex;align-items:center;gap:10px;margin-top:24px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:8px 8px 8px 16px;font-size:14px;color:#dcebf9}
+  .emailrow code{font-family:var(--body);color:#fff;font-weight:600}
+  .copybtn{font-family:var(--disp);font-weight:700;font-size:12.5px;background:#fff;color:var(--navy);border:0;border-radius:999px;padding:7px 13px;cursor:pointer}
+
+  footer{background:#021a33;color:#8fb3d6}
+  footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;align-items:center;padding-block:24px}
+  footer small{font-size:12.5px;color:#6f93b8}
+  @media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="https://havencare.app" target="_blank" rel="noopener">
+      <svg width="26" height="32" viewBox="0 0 24 30" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M2,28 L2,15 L12,6 L22,15 L22,28 Z" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/>
+        <rect x="4" y="20" width="5" height="8" fill="#fff" rx="0.5"/>
+        <rect x="13" y="18" width="5" height="5" stroke="#fff" stroke-width="1.6" fill="none" rx="0.5"/>
+        <circle cx="12" cy="1.6" r="1.6" fill="#378ADD"/>
+      </svg>
+      <span class="wm">haven</span>
+    </a>
+    <a class="btn btn-primary" href="https://havencare.app/signup" target="_blank" rel="noopener">Start free trial</a>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="glow"></div>
+  <div class="wrap">
+    <span class="eyebrow">Starter plan</span>
+    <h1>Everything a small home needs</h1>
+    <div class="price"><span class="amt">$129</span><span class="per">/month</span></div>
+    <div class="annual">or $107/month billed annually — save ~17%</div>
+    <div class="actions">
+      <a class="btn btn-primary" href="https://havencare.app/signup" target="_blank" rel="noopener">Start your 14-day free trial →</a>
+      <a class="btn btn-ghost" href="https://havencare.app" target="_blank" rel="noopener">See it live</a>
+    </div>
+    <div class="trust">
+      <span><span class="dot"></span>Up to 6 residents</span>
+      <span><span class="dot"></span>No credit card to start</span>
+      <span><span class="dot"></span>Cancel anytime</span>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">What's included</span>
+      <h2>One simple system to run your home</h2>
+      <p>Built for smaller homes getting organized — everything in one login, on your phone, tablet, or computer.</p>
+    </div>
+    <div class="grid">
+      <div class="item">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg></div>
+        <div><h3>Up to 6 residents</h3><p>Perfect for a six-bed home.</p></div>
+      </div>
+      <div class="item">
+        <div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
+        <div><h3>Resident profiles &amp; photos</h3><p>Care level, room, lifestyle preferences — all in one place.</p></div>
+      </div>
+      <div class="item">
+        <div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="9" width="18" height="6" rx="3"/><path d="M12 9v6"/></svg></div>
+        <div><h3>Medication tracking</h3><p>Digital med pass, PRNs, and a monthly MAR.</p></div>
+      </div>
+      <div class="item">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
+        <div><h3>Emergency contacts</h3><p>Key contacts and relationships for every resident.</p></div>
+      </div>
+      <div class="item">
+        <div class="ic"><svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
+        <div><h3>Lease &amp; billing terms</h3><p>Track rates and generate monthly statements.</p></div>
+      </div>
+      <div class="item">
+        <div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+        <div><h3>Calendar &amp; appointments</h3><p>Schedule and keep track of resident appointments.</p></div>
+      </div>
+      <div class="item">
+        <div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/><path d="M8 14h.01M12 14h.01M16 14h.01"/></svg></div>
+        <div><h3>Staff scheduling</h3><p>Build and manage your team's schedule.</p></div>
+      </div>
+      <div class="item">
+        <div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
+        <div><h3>Photo &amp; document storage</h3><p>Keep resident photos and files secure.</p></div>
+      </div>
+      <div class="item">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <div><h3>2 staff accounts</h3><p>You plus one team member.</p></div>
+      </div>
+      <div class="item">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M4 4h16v12H5.17L4 17.17V4z"/></svg></div>
+        <div><h3>Email support</h3><p>We're here to help you get set up.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="grow">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Room to grow</span>
+      <h2>Need more? Step up anytime</h2>
+    </div>
+    <div class="growcard">
+      <div class="pname">Pro · $249/mo</div>
+      <h3>For growing teams and busier homes</h3>
+      <p class="gp">Everything in Starter, plus <b>up to 18 residents</b>, <b>unlimited staff accounts</b>, <b>vitals &amp; incident tracking</b>, a <b>family portal</b>, advanced reporting, and priority support. Upgrade whenever you're ready — your data comes with you.</p>
+    </div>
+  </div>
+</section>
+
+<section class="cta">
+  <div class="wrap">
+    <h2>Try it on your own residents</h2>
+    <p>Set up your home in minutes. Free for 14 days, no credit card.</p>
+    <div class="actions">
+      <a class="btn btn-primary" href="https://havencare.app/signup" target="_blank" rel="noopener">Start your free trial →</a>
+      <a class="btn btn-ghost" href="https://havencare.app" target="_blank" rel="noopener">Visit havencare.app</a>
+    </div>
+    <div class="emailrow">
+      <span>Questions?</span><code id="supportEmail">support@havencare.app</code>
+      <button class="copybtn" id="copyBtn" type="button">Copy</button>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <a class="brand" href="https://havencare.app" target="_blank" rel="noopener">
+      <svg width="22" height="27" viewBox="0 0 24 30" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M2,28 L2,15 L12,6 L22,15 L22,28 Z" stroke="#8fb3d6" stroke-width="1.6" stroke-linejoin="round"/>
+        <rect x="4" y="20" width="5" height="8" fill="#8fb3d6" rx="0.5"/>
+        <rect x="13" y="18" width="5" height="5" stroke="#8fb3d6" stroke-width="1.6" fill="none" rx="0.5"/>
+        <circle cx="12" cy="1.6" r="1.6" fill="#378ADD"/>
+      </svg>
+      <span class="wm" style="font-family:var(--disp);font-weight:700;font-size:18px">haven</span>
+    </a>
+    <small>Senior living management, simplified · havencare.app</small>
+  </div>
+</footer>
+
+<script>
+  (function(){
+    var btn=document.getElementById('copyBtn'); if(!btn) return;
+    btn.addEventListener('click',function(){
+      function done(){var o=btn.textContent;btn.textContent='Copied';setTimeout(function(){btn.textContent=o;},1500);}
+      function sel(){try{var r=document.createRange();r.selectNodeContents(document.getElementById('supportEmail'));var s=getSelection();s.removeAllRanges();s.addRange(r);done();}catch(e){}}
+      try{navigator.clipboard.writeText('support@havencare.app').then(done).catch(sel);}catch(e){sel();}
+    });
+  })();
+</script>
+</body>
+</html>

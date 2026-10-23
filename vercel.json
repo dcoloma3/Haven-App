@@ -1,6 +1,7 @@
 {
   "rewrites": [
     { "source": "/for-operators", "destination": "/for-operators.html" },
+    { "source": "/starter", "destination": "/starter.html" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }
