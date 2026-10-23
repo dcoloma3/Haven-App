@@ -249,16 +249,18 @@ export default function Navbar() {
         {/* Seasonal / holiday flourish */}
         <HolidayBadge />
 
-        {/* Desktop: search bar — absolutely centered */}
+        {/* Desktop: search bar — flows between the logo and the right cluster so it never overlaps */}
         {!isMobile && (
-          <div className="absolute left-1/2 -translate-x-1/2 w-full max-w-md px-4">
-            <GlobalSearch />
+          <div className="flex-1 flex justify-center min-w-0 px-4">
+            <div className="w-full max-w-md">
+              <GlobalSearch />
+            </div>
           </div>
         )}
 
         {/* Desktop: community dropdown + staff view toggle + user menu */}
         {!isMobile && (
-          <div className="flex items-center gap-3 flex-shrink-0 ml-auto">
+          <div className="flex items-center gap-3 flex-shrink-0">
             <DateTimeClock />
             <div className="w-px h-5 bg-white/20" />
             <CommunityDropdown community={community} memberships={memberships} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} onSwitch={setCommunityId} onNew={() => setShowNewCommunity(true)} />
