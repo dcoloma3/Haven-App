@@ -177,8 +177,31 @@ function DeleteCommunityModal({ community, onClose, onDeleted, reloadAllCommunit
   )
 }
 
+// ─── Billing date helpers ──────────────────────────────────────────────────────
+function firstOfNextMonth() {
+  const d = new Date()
+  const n = new Date(d.getFullYear(), d.getMonth() + 1, 1)
+  const pad = x => String(x).padStart(2, '0')
+  return `${n.getFullYear()}-${pad(n.getMonth() + 1)}-01`
+}
+// From a stored anchor date (YYYY-MM-DD), the next billing date that is today or later.
+function nextBillingDate(anchorStr) {
+  if (!anchorStr) return null
+  const [y, m, d] = anchorStr.split('-').map(Number)
+  const dt = new Date(y, m - 1, d)
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  while (dt < today) dt.setMonth(dt.getMonth() + 1)
+  return dt
+}
+function fmtBill(dt) {
+  return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
 // Fix 3 & 4 — Updated CommunityRow with plan badge and delete link
-function CommunityRow({ c, s, isMine, grouped, onEnter, onDelete }) {
+function CommunityRow({ c, s, isMine, grouped, onEnter, onDelete, onBilling }) {
+  const showBilling = !isMine && c.plan && c.plan !== 'trial'
+  const nextBill = showBilling ? nextBillingDate(c.billing_date) : null
+  const billSoon = nextBill && (nextBill.getTime() - new Date().getTime()) <= 7 * 86400000
   return (
     <div className={`flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors ${isMine ? 'bg-amber-50/40' : ''}`}>
       {/* Icon */}
@@ -224,6 +247,19 @@ function CommunityRow({ c, s, isMine, grouped, onEnter, onDelete }) {
           )}
         </div>
         {c.address && <p className="text-xs text-slate-400 mt-0.5 truncate">{c.address}</p>}
+        {showBilling && (
+          <div className="mt-0.5">
+            {nextBill ? (
+              <span className={`text-xs ${billSoon ? 'text-amber-700 font-semibold' : 'text-slate-500'}`}>
+                Next bill: <span className={billSoon ? '' : 'text-slate-700 font-medium'}>{fmtBill(nextBill)}</span>
+                {billSoon && <span className="ml-1 bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full text-[10px] font-semibold">due soon</span>}
+                {onBilling && <button onClick={() => onBilling(c)} className="ml-2 text-[#185FA5] hover:text-[#0C447C]">Edit</button>}
+              </span>
+            ) : (
+              onBilling && <button onClick={() => onBilling(c)} className="text-xs text-[#185FA5] hover:text-[#0C447C]">+ Set billing date</button>
+            )}
+          </div>
+        )}
         {onDelete && (
           <button
             onClick={() => onDelete(c)}
@@ -308,10 +344,51 @@ function ExtendTrialModal({ community, onClose, onSaved }) {
   )
 }
 
+// ─── Billing Date Modal ────────────────────────────────────────────────────────
+
+function BillingDateModal({ community, onClose, onSaved }) {
+  const [date, setDate] = useState(community.billing_date || firstOfNextMonth())
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleSave() {
+    setSaving(true); setError('')
+    const { error: err } = await supabase.from('communities').update({ billing_date: date || null }).eq('id', community.id)
+    setSaving(false)
+    if (err) { setError(err.message); return }
+    onSaved(); onClose()
+  }
+
+  const preview = date ? nextBillingDate(date) : null
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-sm p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="font-semibold text-slate-800">Billing date</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
+        </div>
+        <p className="text-sm text-slate-500 mb-4">Set the billing date for <strong>{community.name}</strong>. It recurs monthly on this day.</p>
+        <label className="block text-xs font-medium text-slate-600 mb-1">First / anchor billing date</label>
+        <input type="date" value={date ?? ''} onChange={e => setDate(e.target.value)} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent mb-2" />
+        {preview && <p className="text-xs text-slate-500 mb-4">Next bill: <span className="font-medium text-slate-700">{fmtBill(preview)}</span></p>}
+        {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-3">{error}</p>}
+        <div className="flex gap-3">
+          <button onClick={onClose} className="flex-1 border border-slate-300 text-slate-700 rounded-lg py-2 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
+          <button onClick={handleSave} disabled={saving} className="flex-1 bg-[#042C53] hover:bg-[#0B3D6E] disabled:opacity-50 text-white rounded-lg py-2 text-sm font-medium transition-colors">
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Convert to Active Modal ───────────────────────────────────────────────────
 
 function ConvertPlanModal({ community, onClose, onSaved }) {
   const [plan, setPlan] = useState('starter')
+  const [billingDate, setBillingDate] = useState(firstOfNextMonth())
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -319,7 +396,7 @@ function ConvertPlanModal({ community, onClose, onSaved }) {
     setSaving(true)
     const { error: err } = await supabase
       .from('communities')
-      .update({ plan, trial_end_date: null, trial_start_date: null })
+      .update({ plan, trial_end_date: null, trial_start_date: null, billing_date: billingDate || null })
       .eq('id', community.id)
     setSaving(false)
     if (err) { setError(err.message); return }
@@ -353,6 +430,11 @@ function ConvertPlanModal({ community, onClose, onSaved }) {
               <p className="text-xs text-slate-500 mt-0.5">{p.desc}</p>
             </button>
           ))}
+        </div>
+        <div className="mb-4">
+          <label className="block text-xs font-medium text-slate-600 mb-1">Billing date</label>
+          <input type="date" value={billingDate} onChange={e => setBillingDate(e.target.value)} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent" />
+          <p className="text-xs text-slate-400 mt-1">Recurs monthly on this day. You can change it later.</p>
         </div>
         {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-3">{error}</p>}
         <div className="flex gap-3">
@@ -603,6 +685,7 @@ export default function SuperAdmin() {
   const [search, setSearch] = useState('')
   const [extendTarget, setExtendTarget] = useState(null)
   const [convertTarget, setConvertTarget] = useState(null)
+  const [billingTarget, setBillingTarget] = useState(null)
   // Fix 4 — delete community state
   const [deleteTarget, setDeleteTarget] = useState(null)
   // Users panel
@@ -612,6 +695,14 @@ export default function SuperAdmin() {
 
   // Communities the owner is personally a member of
   const myMembershipIds = new Set(memberships.map(m => m.communities?.id).filter(Boolean))
+
+  // Clear the active community on entering the owner panel, so you're not
+  // "inside" a community here. Safe because /superadmin is requireCommunity=false
+  // (clearing it in the nav click handler races the route change → bounces to
+  // the community picker).
+  useEffect(() => {
+    if (communityId) setCommunityId(null)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!isSuperAdmin) { navigate('/dashboard', { replace: true }); return }
@@ -839,6 +930,7 @@ export default function SuperAdmin() {
                           grouped
                           onEnter={enterCommunity}
                           onDelete={setDeleteTarget}
+                          onBilling={setBillingTarget}
                         />
                       ))}
                     </div>
@@ -1046,6 +1138,14 @@ export default function SuperAdmin() {
         <ConvertPlanModal
           community={convertTarget}
           onClose={() => setConvertTarget(null)}
+          onSaved={reloadAllCommunities}
+        />
+      )}
+
+      {billingTarget && (
+        <BillingDateModal
+          community={billingTarget}
+          onClose={() => setBillingTarget(null)}
           onSaved={reloadAllCommunities}
         />
       )}

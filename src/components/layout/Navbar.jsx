@@ -22,7 +22,6 @@ function ChevronDown() {
 function CommunityDropdown({ community, memberships, isAdmin, isSuperAdmin, onSwitch, onNew }) {
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
-  const { setCommunityId } = useCommunity()
 
   return (
     <div className="relative">
@@ -83,7 +82,7 @@ function CommunityDropdown({ community, memberships, isAdmin, isSuperAdmin, onSw
               <>
                 <div className="border-t border-slate-100" />
                 <button
-                  onClick={() => { navigate('/superadmin'); setTimeout(() => setCommunityId(null), 50); setOpen(false) }}
+                  onClick={() => { navigate('/superadmin'); setOpen(false) }}
                   className="w-full text-left px-4 py-2.5 text-sm text-amber-700 hover:bg-amber-50 transition-colors font-medium flex items-center gap-2"
                 >
                   <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
