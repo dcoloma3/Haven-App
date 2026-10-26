@@ -994,6 +994,8 @@ export default function MedicationList({ residentId, onMedStatusChange: _onMedSt
   const [editing, setEditing] = useState(null)
   const [openManage, setOpenManage] = useState(true)
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const [confirmStop, setConfirmStop] = useState(null)
+  const [actionError, setActionError] = useState(null)   // { id, msg }
   const [showLIC622, setShowLIC622] = useState(false)
   const [lic622Generating, setLic622Generating] = useState(false)
   const [lic622Error, setLic622Error] = useState('')
@@ -1007,8 +1009,32 @@ export default function MedicationList({ residentId, onMedStatusChange: _onMedSt
       .then(({ data }) => { setMedications(data ?? []); setLoading(false) })
   }, [residentId])
 
+  // Discontinue a medication: set its end date to today so it stops showing
+  // for dispensing, while keeping the medication and all its recorded doses
+  // (so the MAR still reflects what was given).
+  async function handleStop(med) {
+    const d = new Date()
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const { data, error } = await supabase
+      .from('medications')
+      .update({ end_date: today })
+      .eq('id', med.id)
+      .select()
+      .single()
+    if (error) { setActionError({ id: med.id, msg: error.message }); return }
+    setActionError(null)
+    setMedications(prev => prev.map(m => (m.id === med.id ? (data ?? { ...m, end_date: today }) : m)))
+  }
+
+  // Hard delete — only for mistaken entries. The DB blocks deleting a med that
+  // has recorded doses (FK), so if that happens we steer the user to Stop.
   async function handleDelete(id) {
-    await supabase.from('medications').delete().eq('id', id)
+    const { error } = await supabase.from('medications').delete().eq('id', id)
+    if (error) {
+      setActionError({ id, msg: 'This medication has recorded doses, so it can’t be deleted. Use “Stop” to discontinue it — all past records are kept.' })
+      return
+    }
+    setActionError(null)
     setMedications(prev => prev.filter(m => m.id !== id))
   }
 
@@ -1180,30 +1206,67 @@ export default function MedicationList({ residentId, onMedStatusChange: _onMedSt
                             </div>
                           )}
                         </div>
-                        <div className="flex items-center gap-3 flex-shrink-0 mt-0.5">
-                          <button onClick={() => setEditing(med)} className="text-xs text-[#185FA5] hover:text-[#0C447C] transition-colors">Edit</button>
-                          {confirmDelete === med.id ? (
-                            <div className="flex items-center gap-2">
+                        <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-0.5">
+                          <div className="flex items-center gap-3">
+                            <button onClick={() => setEditing(med)} className="text-xs text-[#185FA5] hover:text-[#0C447C] transition-colors">Edit</button>
+
+                            {(() => {
+                              const nowStr = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` })()
+                              const stopped = med.end_date && med.end_date <= nowStr
+                              if (stopped) {
+                                return <span className="text-xs text-slate-400">Stopped {shortDate(med.end_date)}</span>
+                              }
+                              return confirmStop === med.id ? (
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => { handleStop(med); setConfirmStop(null) }}
+                                    className="text-xs text-amber-700 font-semibold hover:text-amber-900 transition-colors"
+                                  >
+                                    Yes, stop
+                                  </button>
+                                  <button
+                                    onClick={() => setConfirmStop(null)}
+                                    className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => { setConfirmStop(med.id); setConfirmDelete(null); setActionError(null) }}
+                                  className="text-xs text-amber-600 hover:text-amber-800 transition-colors"
+                                >
+                                  Stop
+                                </button>
+                              )
+                            })()}
+
+                            {confirmDelete === med.id ? (
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => { handleDelete(med.id); setConfirmDelete(null) }}
+                                  className="text-xs text-red-600 font-semibold hover:text-red-800 transition-colors"
+                                >
+                                  Yes, delete
+                                </button>
+                                <button
+                                  onClick={() => setConfirmDelete(null)}
+                                  className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
                               <button
-                                onClick={() => { handleDelete(med.id); setConfirmDelete(null) }}
-                                className="text-xs text-red-600 font-semibold hover:text-red-800 transition-colors"
+                                onClick={() => { setConfirmDelete(med.id); setConfirmStop(null); setActionError(null) }}
+                                className="text-xs text-red-300 hover:text-red-500 transition-colors"
                               >
-                                Yes, delete
+                                Delete
                               </button>
-                              <button
-                                onClick={() => setConfirmDelete(null)}
-                                className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => setConfirmDelete(med.id)}
-                              className="text-xs text-red-400 hover:text-red-600 transition-colors"
-                            >
-                              Delete
-                            </button>
+                            )}
+                          </div>
+                          {actionError?.id === med.id && (
+                            <p className="text-xs text-red-600 text-right max-w-[220px] leading-snug">{actionError.msg}</p>
                           )}
                         </div>
                       </div>
