@@ -136,8 +136,10 @@ export default function ResidentMedHistory({ residentId }) {
         .from('prn_administrations')
         .select('*')
         .eq('resident_id', residentId)
-        .gte('administered_at', from + 'T00:00:00')
-        .lte('administered_at', to + 'T23:59:59')
+        // Bound by LOCAL day: convert the local range edges to their UTC
+        // instants so evening doses near the boundary aren't missed/duplicated.
+        .gte('administered_at', new Date(from + 'T00:00:00').toISOString())
+        .lte('administered_at', new Date(to + 'T23:59:59.999').toISOString())
         .order('administered_at', { ascending: false }),
     ])
     setRoutineRecords(routine ?? [])
@@ -232,7 +234,10 @@ export default function ResidentMedHistory({ residentId }) {
       map[d].routine.push(r)
     })
     filteredPrn.forEach(r => {
-      const d = r.administered_at.split('T')[0]
+      // Group by LOCAL date — administered_at is a UTC timestamp, so splitting
+      // the ISO string put evening doses on the next day (e.g. a 9 PM Oct 18
+      // dose showed under Oct 19). localDateStr converts to the local day.
+      const d = localDateStr(new Date(r.administered_at))
       if (!map[d]) map[d] = { routine: [], prn: [] }
       map[d].prn.push(r)
     })
