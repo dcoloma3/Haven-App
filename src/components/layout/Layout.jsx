@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'
 import Navbar from './Navbar'
 import Sidebar from './Sidebar'
 import MobileNav from './MobileNav'
+import PendingInvites from '../invites/PendingInvites'
 import TrialBanner from './TrialBanner'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import { useCommunity } from '../../context/CommunityContext'
@@ -66,6 +67,7 @@ export default function Layout({ children }) {
           key={location.pathname}
           className={`max-w-5xl mx-auto px-4 py-5 sm:px-6 animate-page-in ${isMobile ? 'pb-28' : 'pb-8'}`}
         >
+          <PendingInvites />
           {children}
         </div>
       </main>

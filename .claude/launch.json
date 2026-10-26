@@ -7,6 +7,13 @@
       "runtimeArgs": ["run", "dev"],
       "port": 5173,
       "cwd": "/Users/dominickcoloma/haven-app"
+    },
+    {
+      "name": "haven-staging",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:staging"],
+      "port": 5174,
+      "cwd": "/Users/dominickcoloma/haven-app"
     }
   ]
 }

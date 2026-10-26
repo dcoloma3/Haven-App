@@ -41,8 +41,8 @@ alter table resident_compliance_items enable row level security;
 
 drop policy if exists "community members can manage compliance items" on resident_compliance_items;
 create policy "community members can manage compliance items" on resident_compliance_items
-  using  (community_id = any(public.user_community_ids()))
-  with check (community_id = any(public.user_community_ids()));
+  using  (community_id in (select public.user_community_ids()))
+  with check (community_id in (select public.user_community_ids()));
 
 -- ── Phase 1c: compliance_audit_log — append-only ────────────────────────────
 
@@ -64,11 +64,11 @@ alter table compliance_audit_log enable row level security;
 
 drop policy if exists "community members can read audit log" on compliance_audit_log;
 create policy "community members can read audit log" on compliance_audit_log
-  for select using (community_id = any(public.user_community_ids()));
+  for select using (community_id in (select public.user_community_ids()));
 
 drop policy if exists "community members can insert audit log" on compliance_audit_log;
 create policy "community members can insert audit log" on compliance_audit_log
-  for insert with check (community_id = any(public.user_community_ids()));
+  for insert with check (community_id in (select public.user_community_ids()));
 
 -- intentionally no update or delete policy — audit log is immutable
 
