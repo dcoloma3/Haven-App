@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useCommunity } from '../../context/CommunityContext'
 import { useProfile } from '../../context/ProfileContext'
+import { localDateTimeInput } from '../../lib/dateUtils'
 
 function isOutOfRange(field, value) {
   if (value == null || value === '') return false
@@ -72,7 +73,7 @@ const RANGES = {
 }
 
 const EMPTY_FORM = {
-  recorded_at: new Date().toISOString().slice(0, 16),
+  recorded_at: '',   // set to local "now" when the add modal opens
   systolic: '',
   diastolic: '',
   pulse: '',
@@ -115,14 +116,14 @@ export default function VitalsLog({ residentId, resident: _resident }) {
 
   function openNew() {
     setEditRecord(null)
-    setForm(EMPTY_FORM)
+    setForm({ ...EMPTY_FORM, recorded_at: localDateTimeInput() })
     setShowModal(true)
   }
 
   function openEdit(r) {
     setEditRecord(r)
     setForm({
-      recorded_at: r.recorded_at ? r.recorded_at.slice(0, 16) : new Date().toISOString().slice(0, 16),
+      recorded_at: r.recorded_at ? localDateTimeInput(new Date(r.recorded_at)) : localDateTimeInput(),
       systolic: r.systolic ?? '',
       diastolic: r.diastolic ?? '',
       pulse: r.pulse ?? '',
@@ -150,7 +151,7 @@ export default function VitalsLog({ residentId, resident: _resident }) {
       community_id: communityId,
       resident_id: residentId,
       recorded_by_name: authorName,
-      recorded_at: form.recorded_at || new Date().toISOString(),
+      recorded_at: form.recorded_at ? new Date(form.recorded_at).toISOString() : new Date().toISOString(),
       systolic: form.systolic !== '' ? parseInt(form.systolic) : null,
       diastolic: form.diastolic !== '' ? parseInt(form.diastolic) : null,
       pulse: form.pulse !== '' ? parseInt(form.pulse) : null,

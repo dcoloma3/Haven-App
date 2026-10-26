@@ -29,7 +29,7 @@ import { supabase } from '../lib/supabase'
 import { useCommunity } from '../context/CommunityContext'
 import { useProfile } from '../context/ProfileContext'
 import Layout from '../components/layout/Layout'
-import { localDateStr } from '../lib/dateUtils'
+import { localDateStr, localDateTimeInput } from '../lib/dateUtils'
 
 function isOutOfRange(field, value) {
   if (value == null || value === '') return false
@@ -160,7 +160,7 @@ function RecordVitalsModal({ resident, communityId, onClose, onSaved }) {
   const { profile } = useProfile()
   const [form, setForm] = useState({
     ...EMPTY_FORM,
-    recorded_at: new Date().toISOString().slice(0, 16),
+    recorded_at: localDateTimeInput(),
   })
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
@@ -179,7 +179,7 @@ function RecordVitalsModal({ resident, communityId, onClose, onSaved }) {
       community_id: communityId,
       resident_id: resident.id,
       recorded_by_name: authorName,
-      recorded_at: form.recorded_at || new Date().toISOString(),
+      recorded_at: form.recorded_at ? new Date(form.recorded_at).toISOString() : new Date().toISOString(),
       systolic: form.systolic !== '' ? parseInt(form.systolic) : null,
       diastolic: form.diastolic !== '' ? parseInt(form.diastolic) : null,
       pulse: form.pulse !== '' ? parseInt(form.pulse) : null,
