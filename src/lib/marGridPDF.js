@@ -346,7 +346,7 @@ export async function generateMarGridPDF({ residentId, communityId, month, year,
     const chunk = meds.slice(pageIdx * MEDS_PER_PAGE, (pageIdx + 1) * MEDS_PER_PAGE)
     drawHeader(doc, resName, community.name || '', month, year)
     drawColHeaders(doc, days)
-    drawMedBlocks(doc, chunk, adminLookup, deniedLookup, days)
+    drawMedBlocks(doc, chunk, adminLookup, deniedLookup, days, month, year)
     drawFooter(doc, staffUsed, month, year, pageIdx + 1, totalPages)
   }
 
@@ -488,12 +488,26 @@ function drawColHeaders(doc, days) {
   doc.line(GRID_X, hy, GRID_X, hy + COL_HDR_H)
 }
 
-function drawMedBlocks(doc, meds, adminLookup, deniedLookup, days) {
+function drawMedBlocks(doc, meds, adminLookup, deniedLookup, days, month, year) {
   // Always render a full page of MEDS_PER_PAGE blocks; pad with blank rows
   // (matches a real MAR form — blank blocks leave room for handwritten meds)
   for (let i = 0; i < MEDS_PER_PAGE; i++) {
     const med    = meds[i] || null
     const blockY = CONTENT_Y + i * MED_H
+
+    // Discontinued ("stopped") medication: end_date on/before this report month.
+    // Keep it on the MAR for recordkeeping — label it D/C and shade the days
+    // after it was stopped so the record clearly shows it was discontinued.
+    let dcDate = null        // 'YYYY-MM-DD' when discontinued on/before this month
+    let dcShadeAfter = null  // cells with day-of-month > this are shaded inactive
+    if (med && med.end_date) {
+      const [ey, em, ed] = med.end_date.split('-').map(Number)
+      const endYM = ey * 12 + em
+      const reportYM = year * 12 + month
+      if (endYM < reportYM) { dcDate = med.end_date; dcShadeAfter = 0 }
+      else if (endYM === reportYM) { dcDate = med.end_date; dcShadeAfter = ed }
+      // endYM > reportYM: still active this month → no marker
+    }
 
     // ── Left panel text (plain black on white — matches reference) ─────────────
     if (med) {
@@ -512,6 +526,16 @@ function drawMedBlocks(doc, meds, adminLookup, deniedLookup, days) {
       } else {
         doc.text(nameLines.slice(0, 2), LEFT_TEXT, blockY + ROW_H * 0.4, { lineHeightFactor: 1.15 })
       }
+    }
+
+    // Discontinued marker (red, top-right of the medication panel)
+    if (med && dcDate) {
+      const [yy, mm, dd] = dcDate.split('-')
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(5.6)
+      doc.setTextColor(190, 30, 30)
+      doc.text(`D/C ${mm}/${dd}/${yy}`, LEFT_W - 2, blockY + ROW_H * 0.72, { align: 'right' })
+      doc.setTextColor(...BLACK)
     }
 
     // Detail lines — Strength / RX Number / Dosage / Instructions.
@@ -559,6 +583,11 @@ function drawMedBlocks(doc, meds, adminLookup, deniedLookup, days) {
 
         if (d > days) {
           doc.setFillColor(243, 243, 243)
+          doc.rect(cx, rowY, DAY_W, ROW_H, 'F')
+        } else if (med && dcShadeAfter !== null && d > dcShadeAfter) {
+          // Days after the medication was discontinued — shade to show it was
+          // no longer active (the dose record before the D/C date still prints).
+          doc.setFillColor(237, 237, 237)
           doc.rect(cx, rowY, DAY_W, ROW_H, 'F')
         }
 
