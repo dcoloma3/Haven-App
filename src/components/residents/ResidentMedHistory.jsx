@@ -99,6 +99,8 @@ export default function ResidentMedHistory({ residentId }) {
   const [timeDraft, setTimeDraft] = useState('')
   const [savingId, setSavingId] = useState(null)
   const [editError, setEditError] = useState('')
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null)
+  const [deletingId, setDeletingId] = useState(null)
 
   const { from, to } = getDateRange(rangePreset, customFrom, customTo)
 
@@ -172,8 +174,31 @@ export default function ResidentMedHistory({ residentId }) {
     loadRecords()
   }
 
+  // Remove a charted dose that shouldn't be there (e.g. a PRN logged by mistake).
+  // `table` is 'medication_administrations' (routine) or 'prn_administrations'.
+  async function handleDeleteRecord(record, table) {
+    setDeletingId(record.id)
+    setEditError('')
+    const { error } = await supabase.from(table).delete().eq('id', record.id)
+    setDeletingId(null)
+    setConfirmDeleteId(null)
+    if (error) { setEditError(error.message); return }
+    loadRecords()
+  }
+
   // Given-time cell with inline edit, shared by routine + PRN rows.
   function renderGivenTime(record, table) {
+    if (confirmDeleteId === record.id) {
+      return (
+        <div className="flex items-center justify-end gap-2">
+          <span className="text-[11px] text-slate-500">Remove this entry?</span>
+          <button onClick={() => handleDeleteRecord(record, table)} disabled={deletingId === record.id} className="text-[11px] text-red-600 font-semibold hover:text-red-800 disabled:opacity-50">
+            {deletingId === record.id ? 'Removing…' : 'Yes, remove'}
+          </button>
+          <button onClick={() => setConfirmDeleteId(null)} className="text-[11px] text-slate-400 hover:text-slate-600">Cancel</button>
+        </div>
+      )
+    }
     if (editingId === record.id) {
       return (
         <div className="flex flex-col items-end gap-1.5">
@@ -202,6 +227,13 @@ export default function ResidentMedHistory({ residentId }) {
           title="Edit administered time"
         >
           Edit
+        </button>
+        <button
+          onClick={() => { setEditError(''); setEditingId(null); setConfirmDeleteId(record.id) }}
+          className="text-[11px] text-red-400 hover:text-red-600 transition-colors"
+          title="Remove this entry (e.g. charted by mistake)"
+        >
+          Remove
         </button>
       </div>
     )
