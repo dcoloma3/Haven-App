@@ -571,6 +571,8 @@ export default function Dispense() {
   const [savingNotGiven, setSavingNotGiven] = useState(false)
   const [refusedForm, setRefusedForm] = useState(null) // { key, med, time, notes }
   const [savingRefused, setSavingRefused] = useState(false)
+  const [heldForm, setHeldForm] = useState(null) // { key, med, time, notes }
+  const [savingHeld, setSavingHeld] = useState(false)
   const [expandedTimes, setExpandedTimes] = useState(new Set())
   const [expandedResidents, setExpandedResidents] = useState(new Set()) // 'time::residentId'
   const { communityId } = useCommunity()
@@ -808,6 +810,28 @@ export default function Dispense() {
     if (data) setNotGiven(prev => { const n = new Map(prev); n.set(key, data); return n })
     setSavingRefused(false)
     setRefusedForm(null)
+  }
+
+  async function handleHeldSubmit() {
+    if (!heldForm || !heldForm.notes.trim()) return
+    const { key, med, time, notes } = heldForm
+    setSavingHeld(true)
+    const { data: { session } } = await supabase.auth.getSession()
+    const { data } = await insertWithAttribution('medication_not_given', {
+      medication_id: med.id,
+      resident_id: med.resident_id,
+      community_id: communityId,
+      scheduled_time: time,
+      administered_date: dateStr,
+      reason: 'held',
+      notes: notes.trim(),
+      recorded_by: session?.user?.id ?? null,
+      administered_by_name: activeCaregiver?.name?.trim() || null,
+      administered_by_caregiver_id: activeCaregiver?.caregiverId ?? null,
+    })
+    if (data) setNotGiven(prev => { const n = new Map(prev); n.set(key, data); return n })
+    setSavingHeld(false)
+    setHeldForm(null)
   }
 
   // Called after the user confirms undoing a dose
@@ -1171,11 +1195,13 @@ export default function Dispense() {
                                     const ngRecord = isNotGiven ? notGiven.get(mKey) : null
                                     const isRefused = isNotGiven && ngRecord?.reason === 'refused'
                                     const isRefusedFormOpen = refusedForm?.key === mKey
+                                    const isHeld = isNotGiven && ngRecord?.reason === 'held'
+                                    const isHeldFormOpen = heldForm?.key === mKey
 
                                     return (
                                       <div
                                         key={mKey}
-                                        className={`px-4 py-3.5 ${mIdx !== 0 ? `border-t ${dividerCls(timeStatus)}` : ''} ${isDone ? 'bg-emerald-50/40' : isNotGiven ? 'bg-rose-50/30' : ''}`}
+                                        className={`px-4 py-3.5 ${mIdx !== 0 ? `border-t ${dividerCls(timeStatus)}` : ''} ${isDone ? 'bg-emerald-50/40' : isHeld ? 'bg-amber-50/40' : isNotGiven ? 'bg-rose-50/30' : ''}`}
                                       >
                                         {/* Med info */}
                                         <div className="flex items-start gap-3 ml-1">
@@ -1192,6 +1218,9 @@ export default function Dispense() {
                                             {isRefused && ngRecord?.notes && (
                                               <p className="text-xs text-rose-600 mt-0.5 italic">Refused: {ngRecord.notes}</p>
                                             )}
+                                            {isHeld && ngRecord?.notes && (
+                                              <p className="text-xs text-amber-700 mt-0.5 italic">Held: {ngRecord.notes}</p>
+                                            )}
                                           </div>
                                           <Link
                                             to={`/residents/${rid}`}
@@ -1207,12 +1236,12 @@ export default function Dispense() {
                                         <div className="flex gap-2 mt-3 ml-1">
                                           {/* Given */}
                                           <button
-                                            onClick={e => { e.stopPropagation(); isDone ? setConfirmUndo({ med, time, record: administered.get(mKey) }) : (!isNotGiven && !isRefusedFormOpen && handleToggle(med, time)) }}
-                                            disabled={isTogg || isNotGiven || isRefusedFormOpen}
+                                            onClick={e => { e.stopPropagation(); isDone ? setConfirmUndo({ med, time, record: administered.get(mKey) }) : (!isNotGiven && !isRefusedFormOpen && !isHeldFormOpen && handleToggle(med, time)) }}
+                                            disabled={isTogg || isNotGiven || isRefusedFormOpen || isHeldFormOpen}
                                             className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border text-xs font-semibold transition-colors ${
                                               isDone
                                                 ? 'bg-emerald-500 border-emerald-500 text-white'
-                                                : isNotGiven || isRefusedFormOpen
+                                                : isNotGiven || isRefusedFormOpen || isHeldFormOpen
                                                 ? 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'
                                                 : 'bg-white border-slate-200 text-slate-500 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 active:scale-95'
                                             }`}
@@ -1230,15 +1259,16 @@ export default function Dispense() {
                                               if (isRefused) { handleUndoNotGiven(med, time); return }
                                               if (isDone || isNotGiven) return
                                               if (isRefusedFormOpen) { setRefusedForm(null); return }
+                                              setHeldForm(null)
                                               setRefusedForm({ key: mKey, med, time, notes: '' })
                                             }}
-                                            disabled={isDone || (isNotGiven && !isRefused)}
+                                            disabled={isDone || isHeldFormOpen || (isNotGiven && !isRefused)}
                                             className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border text-xs font-semibold transition-colors ${
                                               isRefused
                                                 ? 'bg-rose-500 border-rose-500 text-white'
                                                 : isRefusedFormOpen
                                                 ? 'bg-rose-50 border-rose-300 text-rose-700'
-                                                : isDone || (isNotGiven && !isRefused)
+                                                : isDone || isHeldFormOpen || (isNotGiven && !isRefused)
                                                 ? 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'
                                                 : 'bg-white border-slate-200 text-slate-500 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-700 active:scale-95'
                                             }`}
@@ -1247,6 +1277,33 @@ export default function Dispense() {
                                               <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                                             </svg>
                                             Refused
+                                          </button>
+
+                                          {/* Held */}
+                                          <button
+                                            onClick={e => {
+                                              e.stopPropagation()
+                                              if (isHeld) { handleUndoNotGiven(med, time); return }
+                                              if (isDone || isNotGiven) return
+                                              if (isHeldFormOpen) { setHeldForm(null); return }
+                                              setRefusedForm(null)
+                                              setHeldForm({ key: mKey, med, time, notes: '' })
+                                            }}
+                                            disabled={isDone || isRefusedFormOpen || (isNotGiven && !isHeld)}
+                                            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border text-xs font-semibold transition-colors ${
+                                              isHeld
+                                                ? 'bg-amber-500 border-amber-500 text-white'
+                                                : isHeldFormOpen
+                                                ? 'bg-amber-50 border-amber-300 text-amber-700'
+                                                : isDone || isRefusedFormOpen || (isNotGiven && !isHeld)
+                                                ? 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'
+                                                : 'bg-white border-slate-200 text-slate-500 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-700 active:scale-95'
+                                            }`}
+                                          >
+                                            <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                              <rect x="6" y="5" width="4" height="14" rx="1" /><rect x="14" y="5" width="4" height="14" rx="1" />
+                                            </svg>
+                                            Held
                                           </button>
                                         </div>
 
@@ -1276,6 +1333,37 @@ export default function Dispense() {
                                                 className="flex-1 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-xs font-semibold py-1.5 rounded-lg transition-colors"
                                               >
                                                 {savingRefused ? 'Saving…' : 'Record Refusal'}
+                                              </button>
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {/* Inline held reason form */}
+                                        {isHeldFormOpen && (
+                                          <div className="mt-3 ml-1 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                                            <p className="text-xs font-semibold text-amber-800 mb-2">Why was the dose held? <span className="text-amber-600">*</span></p>
+                                            <input
+                                              autoFocus
+                                              type="text"
+                                              value={heldForm.notes}
+                                              onChange={e => setHeldForm(f => ({ ...f, notes: e.target.value }))}
+                                              onKeyDown={e => { if (e.key === 'Enter' && heldForm.notes.trim()) handleHeldSubmit(); if (e.key === 'Escape') setHeldForm(null) }}
+                                              placeholder="e.g. Held per MD — BP 104/54"
+                                              className="w-full border border-amber-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent mb-2"
+                                            />
+                                            <div className="flex gap-2">
+                                              <button
+                                                onClick={e => { e.stopPropagation(); setHeldForm(null) }}
+                                                className="flex-1 border border-slate-300 bg-white text-slate-600 text-xs font-medium py-1.5 rounded-lg hover:bg-slate-50 transition-colors"
+                                              >
+                                                Cancel
+                                              </button>
+                                              <button
+                                                onClick={e => { e.stopPropagation(); handleHeldSubmit() }}
+                                                disabled={savingHeld || !heldForm.notes.trim()}
+                                                className="flex-1 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-xs font-semibold py-1.5 rounded-lg transition-colors"
+                                              >
+                                                {savingHeld ? 'Saving…' : 'Record Hold'}
                                               </button>
                                             </div>
                                           </div>
