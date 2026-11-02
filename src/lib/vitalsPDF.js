@@ -45,7 +45,7 @@ export function generateVitalsPDF({ resident, communityName, records }) {
 
   autoTable(doc, {
     startY: 42,
-    head: [['Date / Time', 'BP (mmHg)', 'Pulse', 'Temp (°F)', 'O₂ %', 'Glucose', 'Weight (lbs)', 'Pain', 'Recorded By', 'Notes']],
+    head: [['Date / Time', 'BP (mmHg)', 'Pulse', 'Temp (°F)', 'O2 %', 'Glucose', 'Weight (lbs)', 'Pain', 'Recorded By', 'Notes']],
     body: rows.length ? rows : [['No readings recorded', '', '', '', '', '', '', '', '', '']],
     headStyles: { fillColor: [24, 95, 165], textColor: 255, fontStyle: 'bold', fontSize: 7.5 },
     bodyStyles: { fontSize: 7.5, textColor: [30, 41, 59] },
