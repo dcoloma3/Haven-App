@@ -12,6 +12,7 @@ import { supabase } from '../../lib/supabase'
 import { useCommunity } from '../../context/CommunityContext'
 import { useProfile } from '../../context/ProfileContext'
 import { localDateTimeInput } from '../../lib/dateUtils'
+import { generateVitalsPDF } from '../../lib/vitalsPDF'
 
 function isOutOfRange(field, value) {
   if (value == null || value === '') return false
@@ -86,7 +87,7 @@ const EMPTY_FORM = {
 }
 
 export default function VitalsLog({ residentId, resident: _resident }) {
-  const { communityId, isAdmin } = useCommunity()
+  const { communityId, isAdmin, community } = useCommunity()
   const { profile } = useProfile()
   const [records, setRecords] = useState([])
   const [loading, setLoading] = useState(true)
@@ -193,15 +194,29 @@ export default function VitalsLog({ residentId, resident: _resident }) {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-slate-700">Vital Signs Log</h3>
-        <button
-          onClick={openNew}
-          className="bg-[#042C53] hover:bg-[#0B3D6E] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2"
-        >
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          Record Vitals
-        </button>
+        <div className="flex items-center gap-2">
+          {records.length > 0 && (
+            <button
+              onClick={() => generateVitalsPDF({ resident: _resident, communityName: community?.name, records })}
+              className="border border-slate-300 text-slate-600 hover:bg-slate-50 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2"
+              title="Export this resident's vitals as a PDF"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Export PDF
+            </button>
+          )}
+          <button
+            onClick={openNew}
+            className="bg-[#042C53] hover:bg-[#0B3D6E] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Record Vitals
+          </button>
+        </div>
       </div>
 
       {records.length === 0 ? (
