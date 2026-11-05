@@ -2,8 +2,8 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { localDateStr } from './dateUtils'
 
-// Per-patient vital signs report — full history for one resident.
-export function generateVitalsPDF({ resident, communityName, records }) {
+// Per-patient vital signs report — full history (or a chosen date range) for one resident.
+export function generateVitalsPDF({ resident, communityName, records, rangeLabel }) {
   const doc = new jsPDF({ orientation: 'landscape' })
 
   const name = resident
@@ -26,7 +26,8 @@ export function generateVitalsPDF({ resident, communityName, records }) {
     communityName || null,
   ].filter(Boolean).join('   ·   ')
   if (sub) doc.text(sub, 14, 32)
-  doc.text(`Generated ${new Date().toLocaleString()}   ·   ${records.length} reading${records.length === 1 ? '' : 's'}`, 14, 37)
+  const period = rangeLabel ? `${rangeLabel}   ·   ` : ''
+  doc.text(`${period}${records.length} reading${records.length === 1 ? '' : 's'}   ·   Generated ${new Date().toLocaleString()}`, 14, 37)
 
   const rows = [...records]
     .sort((a, b) => new Date(b.recorded_at) - new Date(a.recorded_at))

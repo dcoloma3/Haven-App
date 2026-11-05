@@ -11,7 +11,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useCommunity } from '../../context/CommunityContext'
 import { useProfile } from '../../context/ProfileContext'
-import { localDateTimeInput } from '../../lib/dateUtils'
+import { localDateTimeInput, localDateStr } from '../../lib/dateUtils'
 import { generateVitalsPDF } from '../../lib/vitalsPDF'
 
 function isOutOfRange(field, value) {
@@ -96,6 +96,9 @@ export default function VitalsLog({ residentId, resident: _resident }) {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [form, setForm] = useState(EMPTY_FORM)
+  const [exportOpen, setExportOpen] = useState(false)
+  const [exportFrom, setExportFrom] = useState('')
+  const [exportTo, setExportTo] = useState('')
 
   const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#185FA5] focus:border-transparent'
 
@@ -188,6 +191,48 @@ export default function VitalsLog({ residentId, resident: _resident }) {
     await fetchRecords()
   }
 
+  function openExport() {
+    // default range: full history (earliest recorded reading → today)
+    const earliest = records.length
+      ? localDateStr(new Date(records[records.length - 1].recorded_at))
+      : localDateStr()
+    setExportFrom(earliest)
+    setExportTo(localDateStr())
+    setExportOpen(true)
+  }
+
+  // records are ordered newest-first; filter by local calendar date, inclusive
+  const exportRecords = records.filter(r => {
+    const d = localDateStr(new Date(r.recorded_at))
+    if (exportFrom && d < exportFrom) return false
+    if (exportTo && d > exportTo) return false
+    return true
+  })
+
+  function setPreset(preset) {
+    const today = new Date()
+    if (preset === 'all') {
+      setExportFrom(records.length ? localDateStr(new Date(records[records.length - 1].recorded_at)) : localDateStr())
+      setExportTo(localDateStr())
+    } else if (preset === 'month') {
+      setExportFrom(localDateStr(new Date(today.getFullYear(), today.getMonth(), 1)))
+      setExportTo(localDateStr())
+    } else if (preset === '30') {
+      const from = new Date(today)
+      from.setDate(from.getDate() - 29)
+      setExportFrom(localDateStr(from))
+      setExportTo(localDateStr())
+    }
+  }
+
+  function runExport() {
+    const label = exportFrom || exportTo
+      ? `${exportFrom || '—'} to ${exportTo || '—'}`
+      : 'All readings'
+    generateVitalsPDF({ resident: _resident, communityName: community?.name, records: exportRecords, rangeLabel: label })
+    setExportOpen(false)
+  }
+
   if (loading) return <p className="text-slate-400 text-sm">Loading vitals…</p>
 
   return (
@@ -197,7 +242,7 @@ export default function VitalsLog({ residentId, resident: _resident }) {
         <div className="flex items-center gap-2">
           {records.length > 0 && (
             <button
-              onClick={() => generateVitalsPDF({ resident: _resident, communityName: community?.name, records })}
+              onClick={openExport}
               className="border border-[#185FA5] text-[#185FA5] hover:bg-[#185FA5]/5 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2"
               title="Export this resident's vitals as a PDF"
             >
@@ -313,6 +358,63 @@ export default function VitalsLog({ residentId, resident: _resident }) {
               {r.notes && <p className="text-xs text-slate-500 mt-3 pt-3 border-t border-slate-100">{r.notes}</p>}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Export (date range) Modal */}
+      {exportOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-md">
+            <div className="border-b border-slate-200 px-5 py-4 flex items-center justify-between">
+              <h2 className="font-bold text-slate-800 text-lg">Export Vitals PDF</h2>
+              <button onClick={() => setExportOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+            <div className="px-5 py-5 space-y-4">
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { key: 'all', label: 'All readings' },
+                  { key: 'month', label: 'This month' },
+                  { key: '30', label: 'Last 30 days' },
+                ].map(p => (
+                  <button
+                    key={p.key}
+                    type="button"
+                    onClick={() => setPreset(p.key)}
+                    className="border border-slate-300 text-slate-600 hover:bg-slate-50 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">From</label>
+                  <input type="date" value={exportFrom} max={exportTo || undefined} onChange={e => setExportFrom(e.target.value)} className={inputCls} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">To</label>
+                  <input type="date" value={exportTo} min={exportFrom || undefined} onChange={e => setExportTo(e.target.value)} className={inputCls} />
+                </div>
+              </div>
+              <p className="text-xs text-slate-500">
+                {exportRecords.length} reading{exportRecords.length === 1 ? '' : 's'} in this range.
+              </p>
+            </div>
+            <div className="border-t border-slate-200 px-5 py-4 flex gap-3">
+              <button onClick={() => setExportOpen(false)} className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm hover:bg-slate-50 transition-colors">Cancel</button>
+              <button
+                onClick={runExport}
+                disabled={exportRecords.length === 0}
+                className="flex-1 bg-[#185FA5] hover:bg-[#0C447C] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors"
+              >
+                Download PDF
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
