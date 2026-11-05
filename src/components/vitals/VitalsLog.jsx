@@ -198,7 +198,7 @@ export default function VitalsLog({ residentId, resident: _resident }) {
           {records.length > 0 && (
             <button
               onClick={() => generateVitalsPDF({ resident: _resident, communityName: community?.name, records })}
-              className="border border-slate-300 text-slate-600 hover:bg-slate-50 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2"
+              className="border border-[#185FA5] text-[#185FA5] hover:bg-[#185FA5]/5 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2"
               title="Export this resident's vitals as a PDF"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
