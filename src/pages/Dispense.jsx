@@ -289,6 +289,8 @@ function PRNResidentRow({ resident, communityId, staffMap: _staffMap, activeCare
         .eq('resident_id', resident.id)
         .eq('community_id', communityId)
         .eq('frequency_type', 'prn')
+        // Exclude PRNs that have been stopped (end_date in the past)
+        .or(`end_date.is.null,end_date.gte.${localDateStr()}`)
         .order('medication_name'),
       supabase
         .from('prn_administrations')
@@ -493,6 +495,8 @@ function PRNTab({ communityId, activeCaregiver }) {
       .select('resident_id, residents!resident_id(id, first_name, middle_name, last_name, full_name, room_number, avatar_url, status)')
       .eq('community_id', communityId)
       .eq('frequency_type', 'prn')
+      // Exclude PRNs that have been stopped (end_date in the past)
+      .or(`end_date.is.null,end_date.gte.${localDateStr()}`)
       .then(({ data }) => {
         // Deduplicate by resident id
         const seen = new Set()
